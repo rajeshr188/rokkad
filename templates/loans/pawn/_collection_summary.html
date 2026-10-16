@@ -1,0 +1,18 @@
+{% load loans_display %}
+{% if loan.state == 'ACTIVE' %}
+<section class="card mb-3" data-loan-block="balance" aria-label="Current collection summary">
+  <div class="card-header">{% if collection_position.balance_basis == 'COLLECTION_WITH_UNPOSTED_INTEREST' %}Amount to collect{% else %}Recorded amount pending{% endif %} as of {{ today|date:"d/m/Y" }}</div>
+  <div class="card-body">
+    {% if collection_position %}{% with amount=collection_position.balance %}
+    <div class="row g-3">
+      <div class="col-6 col-md-3"><div class="small text-body-secondary">Principal pending</div>&#8377;{{ amount.principal_outstanding|indian_money }}</div>
+      <div class="col-6 col-md-3"><div class="small text-body-secondary">Interest pending</div>&#8377;{{ amount.interest_outstanding|indian_money }}</div>
+      <div class="col-6 col-md-3"><div class="small text-body-secondary">Fees pending</div>&#8377;{{ amount.fees_outstanding|indian_money }}</div>
+      <div class="col-6 col-md-3"><div class="small text-body-secondary">{% if collection_position.balance_basis == 'COLLECTION_WITH_UNPOSTED_INTEREST' %}Total to collect{% else %}Recorded total{% endif %}</div><strong>&#8377;{{ amount.total_due|indian_money }}</strong></div>
+    </div>
+    <p class="small text-body-secondary mt-3 mb-0">{% if collection_position.balance_basis == 'COLLECTION_WITH_UNPOSTED_INTEREST' %}Includes eligible interest awaiting collection. {% else %}This retained contract supplies recorded debt only. {% endif %}The payment or release review checks the exact amount before confirmation. Scheduled payments and monitoring exposure are shown separately.</p>
+    {% if evidence_quality and not evidence_quality.transactions.complete %}<p class="small text-warning mt-2 mb-0">Position needs review: {{ evidence_quality.transactions.message }}</p>{% endif %}
+    {% endwith %}{% else %}<p class="mb-0">Collection amount unavailable. {{ collection_error }}</p>{% endif %}
+  </div>
+</section>
+{% endif %}

@@ -1,3 +1,4 @@
+from .counter_navigation import preserve_counter_return
 """Ordinary Django adapters for PawnLoan renewal actions."""
 
 import uuid
@@ -59,6 +60,7 @@ def _render_action(request, loan, form, title, description, extra_context=None):
     return render(request, "loans/pawn/action_form.html", context)
 
 @loans_workspace_required
+@preserve_counter_return
 def pawn_loan_renew(request, pk):
     if request.POST.get("entry_mode") == "paper" or request.GET.get("entry_mode") == "paper":
         from .recorded_servicing import renewal
@@ -264,6 +266,7 @@ def pawn_loan_renew(request, pk):
 
 
 @loans_setup_required
+@preserve_counter_return
 def pawn_loan_renewal_reverse(request, renewal_pk):
     renewal = _pawn_renewal_for_workspace(request, renewal_pk)
     form = PawnReversalForm(request.POST or None)

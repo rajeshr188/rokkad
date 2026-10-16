@@ -1,3 +1,4 @@
+from .counter_navigation import preserve_counter_return
 """Ordinary forms for later paper closure and a known paper renewal."""
 import json
 from decimal import Decimal
@@ -93,6 +94,7 @@ class PaperHandoverForm(forms.Form):
 
 @loans_workspace_required
 @require_http_methods(["GET", "POST"])
+@preserve_counter_return
 def handover(request, pk):
     request.loans_workspace_access.require("loan.release")
     loan = get_object_or_404(PawnLoan, pk=pk, workspace=request.loans_workspace)
@@ -149,11 +151,13 @@ def _action(request, pk, *, renewal):
 
 @loans_workspace_required
 @require_http_methods(["GET", "POST"])
+@preserve_counter_return
 def closure(request, pk):
     request.loans_workspace_access.require("loan.release")
     return _action(request, pk, renewal=False)
 
 
+@preserve_counter_return
 def renewal(request, pk):
     request.loans_workspace_access.require("data.create")
     request.loans_workspace_access.require("loan.release")

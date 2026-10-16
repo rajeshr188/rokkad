@@ -7,6 +7,65 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+## Counter release authorization (16 October)
+
+The owner requests FW-024 recording followed by commit, push and deployment.
+Cleanup itself stays future work. Preserve existing live fixes and verify the
+combined source/migration boundary before releasing the counter improvements.
+
+## Repository cleanup review (16 October)
+
+See the [inventory and recommended order](implementation/repository-cleanup-review-20261016.md).
+Ignored `.tmp`/`outputs` contain mixed recovery/source/acceptance material, and
+several browser checks require Bootstrap cached in outputs. Make fixtures
+reproducible before cleanup; preserve dirty worktrees and pending counter/JSK work.
+
+## Everyday counter implementation verified locally (16 October)
+
+The owner accepts the counter review's order; implement EC-01/02, return context,
+measured read reuse, compact list/entry and daily Dashboard work in that sequence.
+See the [plan](plans/everyday-counter-improvements-20261016.md) and
+[decision](adr/2026-10-16-everyday-counter-summaries.md). Collection summaries use
+existing servicing positions and explicit bases; prepared inputs stay request-local
+and scoped. Optional book assurance never becomes a fictitious checked-through
+claim. Navigation is an allowlisted Workspace-local hint. Daily figures include
+actual-date repayment/release receipts with current reversal knowledge; exclude
+renewal offsets, auction recovery and Khata, and never assert physical cash.
+Final detail observations improve from 275/303 to 192/203 queries for native/
+paper fixtures; these are small local comparisons, not capacity targets. The
+[acceptance record](implementation/everyday-counter-improvements-20261016.md)
+records the passing affected checks, 12 JavaScript cases, 18 new desktop/phone
+states, 24 detail-tab selections and six browser unsaved-edit assertions. System
+and model-drift checks pass. No deployment, commit or worker optimization is selected.
+
+## JSK WH original gold-rate correction basis (16 October)
+
+The owner confirms 1.1% monthly was intended **from each original loan date** for
+the 826 active WH gold loans still saved at 2%. This is an original-terms correction,
+not a later rate concession. Read-only production verification finds 824 retained
+opening/2 loans and two native policy-1 loans; both are outside current correction
+contracts. There are no recorded post-origin financial events on this cohort, but
+685 imported openings contain unpaid interest. Preserve raw source 2% evidence,
+owner clarification, actual cash and history limits. No live correction is applied.
+See the [audit and feasibility sequence](implementation/jsk-wh-interest-verification-20261016.md).
+
+## Everyday counter review (16 October)
+
+The owner requests review of the four most-used areas. The
+[review record](implementation/everyday-counter-workflow-review-20261016.md)
+uses committed local f1ebb75a/42564f6d, not a new production inspection. Confirmed:
+routine paper admission with confirmed_complete=False and no transaction review
+still renders "paper activity was checked through" and obsolete mandatory-book
+guidance. Shared represented-position coverage itself is correct. Native detail
+can prominently show INR 1,000 "Total due" while the existing servicing summary
+correctly includes INR 80 unposted interest (INR 1,080 collection amount). Propose
+fixing these presentation semantics first; no financial formula change is implied.
+Then preserve list/queue return context, measure repeated detail reads, compact
+list/entry and define actual collections on Dashboard. Small fixtures observe
+275/303 detail queries, not a production capacity result. Three review tests,
+18 rendered desktop/phone states and 24 tab selections pass. The audit changes
+documentation only; implementation, commit and deployment remain separate.
+
 ## Worker future work and Git consolidation (16 October)
 
 The owner requests adding remaining worker scheduling findings/actions to future

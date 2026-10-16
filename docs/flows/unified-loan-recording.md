@@ -7,6 +7,15 @@ tags: [loans, paper-entry, workflow, historical-evidence, risk]
 
 # Record business when it happens or enter it afterward
 
+The locally prepared [counter improvements](../plans/everyday-counter-improvements-20261016.md)
+keep a compact entered-principal strip visible during entry and warn before losing
+unsaved edits. Existing direct draft saving, review/confirmation and photograph
+handling remain. Routine policy/number explanations are disclosures. No borrower
+facts are saved to browser storage or posted by the entry guard. Active detail uses
+the shared collection position with explicit basis and keeps recorded debt separate.
+List/queue return context survives supported entry/payment/release workflows;
+it is validated navigation only. Broad directory amounts are optional and page-bound.
+
 The approved [14 October consolidation](../implementation/loan-origination-consolidation-20261014.md)
 adds **Use an existing register** to ordinary series setup: review the last used
 counter and book reference, confirm, then begin new lending above that range.

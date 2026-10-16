@@ -1,3 +1,4 @@
+from .counter_navigation import preserve_counter_return
 from django import forms
 from decimal import Decimal
 from apps.onboarding.navigation import setup_saved_redirect
@@ -40,6 +41,7 @@ def loan_workflow_settings(request):
 
 @loans_owner_required
 @never_cache
+@preserve_counter_return
 def pawn_loan_review_disburse(request, pk):
     loan = get_object_or_404(PawnLoan.objects.select_related("borrower", "license", "series"), pk=pk, workspace=request.loans_workspace)
     form = ReviewForm(request.POST if request.method == "POST" else None, initial={"effective_date": timezone.localdate()})
@@ -113,6 +115,7 @@ class CompletedPayoutForm(forms.Form):
 @loans_action_required("data.edit")
 @loans_action_required("loan.disburse")
 @never_cache
+@preserve_counter_return
 def pawn_loan_record_completed_payout(request, pk):
     from apps.tenant_apps.loans.services.completed_payouts import require_unpaid_draft, completed_payout_adapter
     from .recorded_history import paper_history_entry
@@ -181,6 +184,7 @@ def _completed_payout_review(request, loan):
 @loans_action_required("data.edit")
 @loans_action_required("loan.disburse")
 @never_cache
+@preserve_counter_return
 def pawn_loan_correct_origination(request, pk):
     from apps.tenant_apps.loans.services.origination_corrections import correction_source
     from .recorded_history import paper_history_entry
@@ -197,6 +201,7 @@ def pawn_loan_correct_origination(request, pk):
 
 @loans_workspace_required
 @never_cache
+@preserve_counter_return
 def pawn_loan_record_earlier_payout(request, pk):
     get_object_or_404(PawnLoan, pk=pk, workspace=request.loans_workspace)
     if request.method != "POST":

@@ -1,5 +1,6 @@
 {% load orgs_tags %}
 {% navigation_actions as dashboard_actions %}
+{% include 'company/_daily_counter.html' %}
 <p class="small text-muted">Work queues for {{ counter_work.as_of_date }}.</p>
 {% if counter_work.queues.review.count %}
 <div class="alert alert-warning" role="status">
@@ -16,6 +17,4 @@ Payment queues are incomplete: {{ counter_work.queues.review.count }} active loa
 </div>
 </a>
 </div>{% endfor %}</div>
-{% if selected_queue.key != 'overdue' %}
 {% include 'company/_counter_queue.html' %}
-{% endif %}

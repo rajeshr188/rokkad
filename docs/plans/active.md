@@ -7,6 +7,12 @@ tags: [plans, active]
 
 # Active work
 
+**Everyday counter improvements (16 October):** the owner-selected sequence is
+implemented and verified locally. See the [delivery plan](everyday-counter-improvements-20261016.md)
+and [acceptance record](../implementation/everyday-counter-improvements-20261016.md).
+Truthful amounts/assurance, return context, request read reuse, compact list/entry
+and daily activity are ready for review. Commit and release remain pending.
+
 **Loans architecture hardening (owner approval, 16 October):** the follow-up
 recommendations are selected for implementation in order. The
 [delivery plan](loans-architecture-hardening-20261016.md) covers entry-policy

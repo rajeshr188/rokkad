@@ -114,3 +114,39 @@ def _activity(workspace_id, start, end, today):
         average_per_day=Decimal(counts["new_loans"]) / Decimal(days),
         new_loan_cash=cash if not unavailable else None,
         unavailable_cash_count=unavailable)
+
+
+def get_daily_counter_activity(*, workspace, as_of_date=None):
+    """Corrected effective-day ordinary-loan receipts, never a cash attestation."""
+    if current_tenant_workspace_id() != workspace.pk:
+        raise ValueError("Daily activity requires the matching Workspace context.")
+    day = as_of_date or timezone.localdate()
+    if day > timezone.localdate():
+        raise ValueError("Daily activity cannot include future dates.")
+    reversals = PawnLoanEvent.objects.filter(workspace_id=workspace.pk,
+        reversal_of_id=OuterRef('pk'), effective_date__lte=timezone.localdate())
+    receipts = PawnLoanEvent.objects.filter(workspace_id=workspace.pk,
+        effective_date=day, event_kind__in=('REPAYMENT', 'RELEASE_RECEIPT')).filter(~Exists(reversals))
+    principal = interest = fees = ZERO
+    count = unavailable = 0
+    for payload in receipts.values_list('payload', flat=True).iterator(chunk_size=250):
+        count += 1
+        try:
+            values = payload['values']
+            amounts = tuple(Decimal(str(values[key])) for key in ('principal', 'interest')) + (Decimal(str(values.get('fees', '0'))),)
+            if any(not amount.is_finite() or amount < ZERO for amount in amounts):
+                raise ValueError('Invalid receipt components')
+            received = payload.get('repayment', {}).get('amount_received')
+            if received is not None and Decimal(str(received)) != sum(amounts, ZERO):
+                raise ValueError('Receipt amount does not reconcile')
+            principal += amounts[0]
+            interest += amounts[1]
+            fees += amounts[2]
+        except (KeyError, TypeError, ValueError, InvalidOperation, AttributeError):
+            unavailable += 1
+    issues = _activity(workspace.pk, day, day, timezone.localdate())
+    return dict(as_of_date=day, new_loans=issues['new_loans'], proceeds=issues['new_loan_cash'],
+        unavailable_proceeds=issues['unavailable_cash_count'], receipts_count=count,
+        unavailable_receipts=unavailable, principal=None if unavailable else principal,
+        interest=None if unavailable else interest, fees=None if unavailable else fees,
+        total=None if unavailable else principal + interest + fees)

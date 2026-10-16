@@ -167,7 +167,7 @@ def resolve_servicing_contract(loan, *, as_of_date):
         anniversary_rule="DAY_AFTER_ORIGINAL_ANNIVERSARY" if policy and policy.policy_version == 2 else "FROZEN_NATIVE_PERIODS", principal_reduction_rule="FROZEN_NATIVE_CONTRACT")
 
 
-def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_coverage=False):
+def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_coverage=False, financial_inputs=None):
     """Return supported collection debt, including eligible monthly charges.
 
     Closed opening reminders use only the recorded fold, as before. Active opening
@@ -177,7 +177,13 @@ def get_servicing_position(loan, *, as_of_date, operation="REPAYMENT", include_c
     if operation not in {"REPAYMENT", "NOTICE"}:
         raise ServicingContractError("Unsupported servicing position operation.")
     from .continuation import resolve_loan_continuation
-    continuation = resolve_loan_continuation(loan, as_of_date=as_of_date)
+    if financial_inputs is not None:
+        financial_inputs.require(loan.pk, as_of_date)
+        if loan.workspace_id != current_tenant_workspace_id():
+            raise ServicingContractError("Prepared collection inputs require the loan's Workspace.")
+        continuation = financial_inputs.position
+    else:
+        continuation = resolve_loan_continuation(loan, as_of_date=as_of_date)
     contract = continuation.contract
     basis = "RECORDED_DEBT"
     if contract.profile in {"loan-terminal-position/1", "loan-closed-position/1"}:

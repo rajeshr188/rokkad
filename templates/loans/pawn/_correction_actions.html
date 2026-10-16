@@ -1,3 +1,4 @@
+{% load counter_navigation %}
 {% if can_administer %}
 {% if loan.state == "ACTIVE" or loan.state == "CLOSED" %}
 <details class="mb-3" id="loan-corrections" data-loan-block="more">
@@ -5,13 +6,13 @@
   <div class="border rounded p-3 mt-2">
     <p class="small">Correct facts entered wrongly. Review the effect before confirming; original records remain available. For something that happened afterward, record the business action.</p>
     <div class="d-flex flex-wrap gap-2">
-      {% if loan.state == "ACTIVE" %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_correct_borrower' request.workspace.slug loan.pk %}">Borrower</a>{% endif %}
+      {% if loan.state == "ACTIVE" %}<a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_correct_borrower' request.workspace.slug loan.pk %}">Borrower</a>{% endif %}
       <a class="btn btn-outline-primary" href="#loan-collateral">Collateral details</a>
       <a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_agreement_correct' request.workspace.slug loan.pk %}">Agreement details</a>
       {% if recorded_history %}
-        <a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_correct_paper_history' request.workspace.slug loan.pk %}">Transaction history</a>
+        <a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_correct_paper_history' request.workspace.slug loan.pk %}">Transaction history</a>
       {% else %}<a class="btn btn-outline-primary" href="#business-events">Financial events</a>{% endif %}
-      {% if can_correct_paper_closing %}<a class="btn btn-outline-primary" href="{% url 'workspace_loans:pawn_loan_correct_paper_closing' request.workspace.slug loan.pk %}">Closing facts</a>{% endif %}
+      {% if can_correct_paper_closing %}<a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_correct_paper_closing' request.workspace.slug loan.pk %}">Closing facts</a>{% endif %}
     </div>
     <p class="small text-muted mt-2 mb-0">Agreement and transaction corrections use the supported review for their affected history. Linked loans, funding and auctions may need a connected reconciliation.</p>
   </div>

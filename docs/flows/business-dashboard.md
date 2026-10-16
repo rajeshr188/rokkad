@@ -1,11 +1,21 @@
 ---
 status: implemented
 owner: loans
-updated: 2026-10-12
+updated: 2026-10-16
 tags: [dashboard, metrics, loans]
 ---
 
 # Business dashboard
+
+The locally prepared [counter improvements](../plans/everyday-counter-improvements-20261016.md)
+add today's ordinary-loan issuance/proceeds and repayment/release receipt amounts
+to the existing queue section. Figures follow actual transaction dates and current
+corrections, excluding reversed records. Receipt principal, interest and fees are
+separate; incomplete amount evidence yields Unavailable. Paper amounts do not
+certify physical cash. Renewal offsets, auctions and Khata are outside this daily
+block. Scheduled payments remain separate. Dashboard shows up to five overdue
+loans with a link to the complete work page. Default deferred loading is retained.
+These changes require a release before appearing in production.
 
 Open the Workspace **Dashboard**. Search and daily work precede Business overview,
 Financial health and Lending activity. Loan sections require the existing

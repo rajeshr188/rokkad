@@ -1,8 +1,8 @@
 {% extends "base_tenant.html" %}
-{% load loans_display %}
+{% load loans_display counter_navigation %}
 {% block title %}{{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
-<a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}">&larr; Loans</a>
+<a href="{% counter_back %}">&larr; Loans</a>
 <h1 class="h3 mt-3">{{ loan.loan_number }}</h1>
 <p><a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}?borrower={{ loan.borrower_id }}">{{ loan.borrower.display_name }}</a> &middot; {{ loan.license.license_number }} / {{ loan.series.pawn_display_name }}</p>
 <section class="alert alert-success">

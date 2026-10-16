@@ -1,3 +1,4 @@
+from .counter_navigation import preserve_counter_return
 """Ordinary Django adapters for PawnLoan draft origination."""
 
 from decimal import Decimal
@@ -47,6 +48,7 @@ def _pawn_loan_for_workspace(request, pk):
 
 @loans_action_required("data.create")
 @never_cache
+@preserve_counter_return
 def pawn_loan_create(request):
     from .entry_presentation import entry_presentation, presentation_errors
     selected, presentation = entry_presentation(request)
@@ -169,6 +171,7 @@ def _can_review_payout(request):
 
 @loans_action_required("data.edit")
 @never_cache
+@preserve_counter_return
 def pawn_loan_update(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     if loan.state != PawnLoanState.DRAFT.value:
@@ -242,6 +245,7 @@ def pawn_loan_update(request, pk):
 
 @loans_action_required("data.edit")
 @loans_action_required("data.create")
+@preserve_counter_return
 def pawn_loan_split(request, pk):
     from apps.tenant_apps.loans.forms import PawnDraftSplitForm
     from apps.tenant_apps.loans.services.pawn_draft_split import (
@@ -302,6 +306,7 @@ def pawn_loan_split(request, pk):
 
 @loans_action_required("data.edit")
 @require_POST
+@preserve_counter_return
 def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
     from apps.tenant_apps.loans.models import PawnCollateralPhoto
     from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
@@ -319,6 +324,7 @@ def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
 
 @loans_action_required("data.edit")
 @require_POST
+@preserve_counter_return
 def pawn_collateral_photo_add(request, pk, item_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
@@ -341,6 +347,7 @@ def pawn_collateral_photo_add(request, pk, item_pk):
 
 @loans_action_required("loan.approve")
 @require_POST
+@preserve_counter_return
 def pawn_loan_approve(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
@@ -352,11 +359,13 @@ def pawn_loan_approve(request, pk):
 
 
 @loans_action_required("data.edit")
+@preserve_counter_return
 def pawn_loan_reopen(request, pk):
     return _reason_transition(request, pk, "reopen")
 
 
 @loans_action_required("data.edit")
+@preserve_counter_return
 def pawn_loan_cancel(request, pk):
     return _reason_transition(request, pk, "cancel")
 

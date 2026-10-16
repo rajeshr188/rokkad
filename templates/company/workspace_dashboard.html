@@ -1,5 +1,5 @@
 {% extends 'base_tenant.html' %}
-{% load static humanize orgs_tags %}
+{% load static humanize orgs_tags counter_navigation %}
 {% block title %}{{ workspace.name }} Dashboard{% endblock %}
 {% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/management.css' %}">{% endblock %}
 {% block breadcrumbs %}
@@ -12,7 +12,7 @@
 <h1 class="h3">{{ workspace.name }} Dashboard</h1>
 <p class="text-muted mb-0">Your daily loan activity{% if counter_work %} for {{ counter_work.as_of_date }}{% endif %}.</p>
 </div>
-<div class="d-flex flex-wrap gap-2">{% if can_create_loan and workspace_can_write %}<a class="btn btn-primary" href="{% url 'workspace_slug_loan_create' workspace_slug=workspace.slug %}">New loan</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_selector' %}">All Workspaces</a>
+<div class="d-flex flex-wrap gap-2">{% if can_create_loan and workspace_can_write %}<a class="btn btn-primary" href="{% counter_url 'workspace_slug_loan_create' workspace_slug=workspace.slug from_page=True %}">New loan</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'workspace_selector' %}">All Workspaces</a>
 </div>
 </div>
 {% if can_use_counter %}

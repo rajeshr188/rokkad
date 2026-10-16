@@ -7,6 +7,75 @@ tags: [status, architecture]
 
 # Status
 
+## Counter release selected (16 October, preparation)
+
+The owner requests recording the repository findings as
+[FW-024](plans/future-work.md#fw-024-repository-hygiene-and-reproducible-development-artifacts),
+then commit, push and production deployment of the completed changes. Cleanup
+execution remains deferred. Verify exact current production source, preserve any
+newer live fix, run affected checks and coordinate compatible readers/migrations
+before switching. Existing encrypted operational backups remain authorized.
+
+## Repository cleanup review (16 October, local inventory)
+
+The [review](implementation/repository-cleanup-review-20261016.md) finds 661 tracked
+generated static files, oversized required-reading documents, ignored-output browser
+dependencies and branch/CI drift. Local `.tmp` plus `outputs` total 9.16 GiB but mix
+disposable artifacts with source/recovery evidence. Preserve pending changes and
+dirty worktrees; classify before deletion. No cleanup, Git rewrite or runtime change.
+
+## Everyday counter implementation (16 October, verified locally)
+
+The owner accepts the review's order. Delivery follows the
+[counter plan](plans/everyday-counter-improvements-20261016.md) and
+[summary decision](adr/2026-10-16-everyday-counter-summaries.md). Local source now
+shows truthful optional assurance, based collection/recorded amounts, validated
+list/queue return context, shared prepared financial reads, compact filters and
+page-only amount/payment rows, a compact entry summary/unsaved guard, and actual-date
+daily receipts/issuance plus a five-loan overdue preview. Financial actions retain
+their existing reviewed commands and source/permission checks. No migration or
+worker change. The affected regression, corrected overdue-preview/access check,
+12 JavaScript cases and final desktop/phone acceptance pass. Detail queries fall
+from 275/303 to 192/203 in the same small native/paper fixtures. See the
+[acceptance record](implementation/everyday-counter-improvements-20261016.md) for
+overlapping test selections, scope and limits. Model drift and system checks pass.
+Changes remain uncommitted locally; no production change.
+
+## JSK WH gold-rate verification (16 October, read-only production)
+
+WH currently resolves to 1.1% monthly, but 903 loans with operational gold items
+retain 2%: 826 active and 77 closed. Another 190 use 1.1%. Of the exceptions, 901
+are imported openings whose retained source item rates also say 2%; two early
+Rokkad loans froze the original Workspace default. The 1,226 older gold closed
+positions have no operative rate and retain source items at both rates. No
+financial records, policies or application code change. Any retrospective
+correction needs its effective-date and dependent financial review. See the
+[scoped verification](implementation/jsk-wh-interest-verification-20261016.md).
+
+The owner confirms 1.1% should apply from each original loan date. Read-only
+feasibility checks find no later financial events recorded on the 826 active
+exceptions, but all 824 opening/2 loans and both native policy-1 loans fall outside
+the existing correction contracts. 685 openings contain nonzero unpaid interest.
+Prepare compatibility and complete-position correction/rehearsal before any live
+write; do not bulk-update rate fields or fabricate historical cash. No correction
+has been implemented or applied by this review.
+
+## Everyday counter workflow review (16 October, local review only)
+
+The owner selects Dashboard, paper/direct loan entry, Loans list and details for
+review. The [review](implementation/everyday-counter-workflow-review-20261016.md)
+identifies seven focused improvements. First fix a confirmed false checked-through
+claim on an unconfirmed paper admission and stale mandatory-book guidance, then
+clarify native recorded debt versus the current collection amount. Preserve task
+navigation/filter context, measure repeated detail reads, compact the list/editor
+and add clearly defined actual daily collection reporting. Existing shared entry,
+collateral previews, filtered Excel and deferred dashboard loading are retained.
+Three synthetic review tests pass, including 18 desktop/phone states and 24 detail
+tab selections; 275/303 detail queries are local small-fixture observations, not
+production timings. This was the review checkpoint; the later approved local
+implementation is recorded above. The review itself changed no application code,
+live data, worker, deployment or commit.
+
 ## Worker follow-up and combined commit (16 October)
 
 The owner requests retaining the remaining scheduling optimizations as future work

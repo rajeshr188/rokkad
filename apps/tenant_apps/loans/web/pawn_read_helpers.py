@@ -11,7 +11,7 @@ from apps.tenant_apps.loans.models import PawnLoan
 
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
-        PawnLoan.objects.select_related("borrower", "license", "series", "created_by").prefetch_related(
+        PawnLoan.objects.select_related("borrower", "license", "series", "created_by", "product_version__product", "policy_snapshot").prefetch_related(
             "series__number_sequences",
             "collateral_items",
             "collateral_items__photos",
@@ -25,6 +25,7 @@ def _pawn_loan_for_workspace(request, pk):
             "loan_events__repayment_allocation_lines__collateral_item",
             "releases__items__collateral_item",
             "approval_snapshots__approved_by",
+            "transaction_reviews",
         ),
         pk=pk,
         workspace=request.loans_workspace,

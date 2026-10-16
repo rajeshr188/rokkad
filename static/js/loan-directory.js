@@ -48,8 +48,8 @@
     const field = document.getElementById(link.hash.slice(1));
     if (!field) return;
     event.preventDefault();
-    const disclosure = field?.closest('details');
-    if (disclosure) disclosure.open = true;
+    let disclosure = field?.closest('details');
+    while (disclosure) { disclosure.open = true; disclosure = disclosure.parentElement?.closest('details'); }
     field?.focus();
   });
 })();

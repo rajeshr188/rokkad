@@ -523,7 +523,7 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         queues.assert_not_called()
         overview.assert_not_called()
 
-    def test_overdue_page_keeps_details_off_dashboard_and_enforces_access(self):
+    def test_overdue_dashboard_preview_is_bounded_and_complete_page_enforces_access(self):
         self.workspace = self._workspace("Overdue Follow Up")
         self._setup_loans()
         party = self._party()
@@ -553,8 +553,11 @@ class MVPOperatorJourneyTests(TransactionTestCase):
         self.assertContains(dashboard, overdue_url)
         self.assertContains(dashboard, "View overdue payments")
         self.assertContains(dashboard, "Business overview")
-        self.assertNotContains(dashboard, 'id="queue-title"')
-        self.assertNotContains(dashboard, "FOLLOW-UP-000")
+        self.assertContains(dashboard, 'id="queue-title"')
+        self.assertContains(dashboard, "FOLLOW-UP-000")
+        self.assertNotContains(dashboard, "FOLLOW-UP-005")
+        self.assertEqual(len(dashboard.context['work_page']), 5)
+        self.assertContains(dashboard, 'Open all 23 overdue loans')
         with patch("apps.tenant_apps.loans.web.counter_work.get_workspace_counter_work", return_value=work) as selector:
             page = self._get(overdue_url + "?" + query + "&page=2")
         self.assertEqual(selector.call_args.kwargs["workspace"].pk, self.workspace.pk)

@@ -1,0 +1,16 @@
+{% load loans_display counter_navigation %}
+{% if loan.state == 'ACTIVE' %}
+  {% if show_amounts %}
+  <div class="border-top mt-2 pt-2" data-directory-amounts>
+    {% if row.collection_position %}{% with amount=row.collection_position.balance %}
+    <div class="row g-2 small">
+      <div class="col-6 col-md-3"><span class="text-body-secondary">Principal pending</span><div>&#8377;{{ amount.principal_outstanding|indian_money }}</div></div>
+      <div class="col-6 col-md-3"><span class="text-body-secondary">Interest pending</span><div>&#8377;{{ amount.interest_outstanding|indian_money }}</div></div>
+      <div class="col-6 col-md-3"><span class="text-body-secondary">Fees pending</span><div>&#8377;{{ amount.fees_outstanding|indian_money }}</div></div>
+      <div class="col-6 col-md-3"><span class="text-body-secondary">{% if row.collection_position.balance_basis == 'COLLECTION_WITH_UNPOSTED_INTEREST' %}Total to collect{% else %}Recorded total{% endif %}</span><div class="fw-semibold">&#8377;{{ amount.total_due|indian_money }}</div></div>
+    </div>{% endwith %}
+    {% else %}<p class="small text-warning mb-0">Current amount unavailable: {{ row.collection_error }}</p>{% endif %}
+  </div>
+  {% endif %}
+  {% if can_collect %}<p class="mt-2 mb-0"><a class="btn btn-sm btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_repay' request.workspace.slug loan.pk from_page=True %}">Record payment</a></p>{% endif %}
+{% endif %}

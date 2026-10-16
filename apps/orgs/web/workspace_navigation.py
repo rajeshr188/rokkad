@@ -205,6 +205,11 @@ def workspace_dashboard(request, workspace_id):
         context.update(counter_work=work, work_queues=work["queues"].values(),
                        selected_queue=selected,
                        work_page=Paginator(selected["rows"], 20).get_page(request.GET.get("page")))
+        from apps.tenant_apps.loans.selectors.business_overview import get_daily_counter_activity
+        context['daily_activity'] = get_daily_counter_activity(workspace=workspace)
+        context['overdue_preview'] = selected['key'] == 'overdue'
+        if context['overdue_preview']:
+            context['work_page'] = Paginator(selected['rows'][:5], 5).get_page(1)
     if fragment:
         # Partials need the checked request/permissions, not global shell processors.
         template = "company/_dashboard_queues.html" if section == "queues" else "company/_business_overview.html"

@@ -1,11 +1,11 @@
-{% load loans_display i18n %}
+{% load loans_display i18n counter_navigation %}
 <header class="loan-detail-header loan-enhanced-only mb-4" data-loan-block="header">
   <div class="loan-record-navigation d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <a href="{% url 'workspace_loans:pawn_loan_list' request.workspace.slug %}" class="small text-decoration-none">&larr; {% translate "Loans" %}</a>
+    <a href="{% counter_back %}" class="small text-decoration-none">&larr; {% translate "Loans" %}</a>
     <nav class="d-flex align-items-center gap-3 small" aria-label="{% translate 'Loans in this series' %}">
-      {% if previous_loan %}<a rel="prev" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug previous_loan.pk %}" class="text-decoration-none" title="{{ previous_loan.loan_number }}">&larr; {% translate "Previous" %}</a>{% else %}<span class="text-body-secondary" aria-disabled="true">&larr; {% translate "Previous" %}</span>{% endif %}
+      {% if previous_loan %}<a rel="prev" href="{% counter_url 'workspace_loans:pawn_loan_detail' request.workspace.slug previous_loan.pk %}" class="text-decoration-none" title="{{ previous_loan.loan_number }}">&larr; {% translate "Previous" %}</a>{% else %}<span class="text-body-secondary" aria-disabled="true">&larr; {% translate "Previous" %}</span>{% endif %}
       <span class="text-body-secondary">{% translate "Series" %} <strong>{{ loan.series.pawn_display_name }}</strong></span>
-      {% if next_loan %}<a rel="next" href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug next_loan.pk %}" class="text-decoration-none" title="{{ next_loan.loan_number }}">{% translate "Next" %} &rarr;</a>{% else %}<span class="text-body-secondary" aria-disabled="true">{% translate "Next" %} &rarr;</span>{% endif %}
+      {% if next_loan %}<a rel="next" href="{% counter_url 'workspace_loans:pawn_loan_detail' request.workspace.slug next_loan.pk %}" class="text-decoration-none" title="{{ next_loan.loan_number }}">{% translate "Next" %} &rarr;</a>{% else %}<span class="text-body-secondary" aria-disabled="true">{% translate "Next" %} &rarr;</span>{% endif %}
     </nav>
   </div>
   <div class="d-flex flex-wrap align-items-center gap-3 mb-2">

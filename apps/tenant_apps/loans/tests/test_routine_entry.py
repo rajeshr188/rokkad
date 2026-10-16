@@ -463,7 +463,7 @@ class RoutineEntryTests(WorkspaceTestCase):
         with patch("apps.tenant_apps.loans.services.paper_entry_terms.paper_entry_terms", side_effect=no_current_monitoring):
             response = client.post(path, data)
         self.assertContains(response, "data-paper-monitoring-attention")
-        self.assertContains(response, "Current collateral valuation setup needs attention")
+        self.assertContains(response, "Saved valuation/reference evidence needs attention")
         self.assertContains(response, "#calculation-policy")
         self.assertNotContains(response, "Complete the current monitoring policy")
         self.assertIsNotNone(response.context["review"], response.context["form"].errors)

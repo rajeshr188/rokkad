@@ -14,7 +14,10 @@ not an instruction to reintroduce it.
 
 ## Current work and decisions
 
+- [Repository cleanup review](implementation/repository-cleanup-review-20261016.md): generated Git artifacts, required-reading size, local retention, browser-fixture reproducibility and branch/CI alignment; no removals performed.
+
 - [Status](STATUS.md): checkpoint, validation and remaining acceptance.
+- [Everyday counter improvements](implementation/everyday-counter-improvements-20261016.md): approved local delivery and acceptance for truthful amounts/assurance, navigation, shared reads, list/entry usability and daily Dashboard activity; [original review](implementation/everyday-counter-workflow-review-20261016.md).
 - [Loans architecture hardening](implementation/loans-architecture-hardening-20261016.md): locally verified policy lifecycle/review, readiness, optional cohort assurance and staff work views; [worker scheduling follow-up](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity) remains deferred. The [original audit](architecture/loans-architecture-followup-20261016.md) retains the findings and delivery order.
 - [Monitoring portability and JCL coverage follow-up](implementation/monitoring-portability-followup-20261014.md): locally verified package v3, live worker frequency and separate appraisal/book gaps.
 - [Agent memory](AGENT_MEMORY.md): stable decisions and owner constraints.

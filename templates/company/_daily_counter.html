@@ -1,0 +1,13 @@
+{% load loans_display %}
+{% if daily_activity %}
+<section class="mb-3" aria-labelledby="daily-counter-title">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"><h2 id="daily-counter-title" class="h5 mb-0">Today's ordinary-loan activity</h2><a class="small" href="{% url 'workspace_loans:pawn_loan_reports' workspace.slug %}?section=daily&amp;as_of={{ daily_activity.as_of_date|date:'Y-m-d' }}">Daily activity records</a></div>
+  <div class="row g-2">
+    <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-body-secondary">Loans issued</div><div class="h4">{{ daily_activity.new_loans }}</div><div class="small">Recorded payout proceeds: {% if daily_activity.proceeds != None %}&#8377;{{ daily_activity.proceeds|indian_money }}{% else %}Unavailable{% endif %}</div></div></div></div>
+    <div class="col-6"><div class="card h-100"><div class="card-body"><div class="small text-body-secondary">Payment / release receipts</div><div class="h4">{% if daily_activity.total != None %}&#8377;{{ daily_activity.total|indian_money }}{% else %}Unavailable{% endif %}</div><div class="small">{{ daily_activity.receipts_count }} receipt{{ daily_activity.receipts_count|pluralize }}</div></div></div></div>
+  </div>
+  {% if daily_activity.total != None %}<p class="small mt-2 mb-1">Receipts: principal &#8377;{{ daily_activity.principal|indian_money }} &middot; interest &#8377;{{ daily_activity.interest|indian_money }} &middot; fees &#8377;{{ daily_activity.fees|indian_money }}.</p>{% endif %}
+  {% if daily_activity.unavailable_receipts or daily_activity.unavailable_proceeds %}<p class="small text-warning" role="status">Some amounts need evidence review. Incomplete totals are shown as unavailable.</p>{% endif %}
+  <details class="small text-body-secondary"><summary>What today's figures include</summary><p class="mb-0">Actual transaction dates, using current corrected records; reversed receipts are excluded. Includes entered paper payments and release settlements. These figures do not certify physical cash. Excludes renewal offsets, auction recoveries and Khata; scheduled payments appear in the work queues.</p></details>
+</section>
+{% endif %}

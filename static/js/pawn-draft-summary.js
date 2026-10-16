@@ -9,7 +9,10 @@ function initPawnDraftSummary() {
     const select = form.elements.namedItem(name);
     return select?.value ? select.selectedOptions[0]?.textContent.trim() : '';
   };
-  const set = (key, text) => { summary.querySelector(`[data-summary-${key}]`).textContent = text; };
+  const set = (key, text) => {
+    const nodes = key === 'principal' ? document.querySelectorAll('[data-summary-principal]') : summary.querySelectorAll(`[data-summary-${key}]`);
+    nodes.forEach(node => { node.textContent = text; });
+  };
   function update() {
     set('borrower', label('borrower') || label('borrower_id') || 'Choose a borrower');
     set('series', label('series') || label('series_id') || 'Choose a series');

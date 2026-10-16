@@ -1,3 +1,4 @@
+from .counter_navigation import preserve_counter_return
 """Ordinary Django adapters for PawnLoan financial actions."""
 
 import uuid
@@ -74,6 +75,7 @@ def _can_administer(request):
 
 @loans_action_required("loan.disburse")
 @never_cache
+@preserve_counter_return
 def pawn_loan_disburse(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnDisbursalForm(
@@ -117,6 +119,7 @@ def pawn_loan_disburse(request, pk):
 
 @loans_action_required("loan.repay")
 @never_cache
+@preserve_counter_return
 def pawn_loan_repay(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     repayment_preview = None
@@ -236,6 +239,7 @@ def pawn_loan_repay(request, pk):
 
 
 @loans_action_required("loan.accrue")
+@preserve_counter_return
 def pawn_loan_accrue(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     from apps.tenant_apps.loans.services.pawn_interest import started_month_charge_allowed
@@ -272,6 +276,7 @@ def pawn_loan_accrue(request, pk):
 
 
 @loans_action_required("loan.capitalize")
+@preserve_counter_return
 def pawn_loan_capitalize(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     form = PawnCapitalizationForm(request.POST or None)
@@ -296,6 +301,7 @@ def pawn_loan_capitalize(request, pk):
     )
 
 @loans_setup_required
+@preserve_counter_return
 def pawn_loan_reverse_event(request, pk, event_pk):
     loan = _pawn_loan_for_workspace(request, pk)
     event = get_object_or_404(

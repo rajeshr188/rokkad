@@ -93,6 +93,15 @@ def pawn_loan_list(request):
         and request.headers.get("HX-Boosted") != "true"
     )
     readiness = None if fragment else get_pawn_draft_readiness(request.loans_workspace)
+    active_rows = [row for row in page_obj.object_list if row['kind'] == 'ordinary' and row['loan'].state == 'ACTIVE']
+    show_amounts = request.GET.get('amounts', '1' if request.GET.get('borrower') or (request.GET.get('q') and len(active_rows) <= 3) else '0') == '1'
+    if show_amounts:
+        from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
+        for row in active_rows:
+            try:
+                row['collection_position'] = get_servicing_position(row['loan'], as_of_date=timezone.localdate())
+            except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+                row['collection_error'] = str(exc)
     context = {
         "loans": [r['loan'] for r in page_obj.object_list if r['kind']=='ordinary'],
         "directory_rows": page_obj.object_list,
@@ -102,7 +111,19 @@ def pawn_loan_list(request):
         "selected_borrower": loan_filter.form.cleaned_data.get("borrower") if valid else None,
         "page_obj": page_obj,
         "can_export": request.loans_workspace_access.can("report.export"),
+        "show_amounts": show_amounts,
+        "amounts_date": timezone.localdate(),
+        "can_collect": workspace_activity(request.loans_workspace).can_write and request.loans_workspace_access.can('loan.repay'),
+        "applied_scope_filters": [],
     }
+    if valid:
+        for key in ('borrower', 'state', 'records', 'license', 'series', 'loan_date_from', 'loan_date_to'):
+            value = loan_filter.form.cleaned_data.get(key)
+            if value:
+                field = loan_filter.form.fields[key]
+                label = (dict(field.choices).get(value, value) if key in {'records', 'state'} else
+                         getattr(value, 'display_name', None) or getattr(value, 'pawn_display_name', None) or getattr(value, 'license_number', None) or value)
+                context['applied_scope_filters'].append(f'{field.label}: {label}')
     if not fragment:
         context.update({
             "readiness": readiness,
@@ -228,9 +249,15 @@ def pawn_loan_detail(request, pk):
             effective_time=parse_datetime(quote["effective_at"]),
             age_at_approval=evidence.get("quote_ages_days", {}).get(metal))
             for metal, quote in evidence.get("quotes", {}).items()]
+    financial_inputs = None
     if loan.state in {PawnLoanState.ACTIVE.value, PawnLoanState.CLOSED.value}:
+        from apps.tenant_apps.loans.selectors.financial_inputs import get_pawn_loan_financial_inputs
         try:
-            context["balance"] = get_pawn_loan_balance(
+            financial_inputs = get_pawn_loan_financial_inputs(loan.pk, as_of_date=context['today'])
+        except (ObjectDoesNotExist, ValidationError, ValueError):
+            pass  # Narrower recorded/collection reads can still be supported.
+        try:
+            context["balance"] = financial_inputs.balance if financial_inputs is not None else get_pawn_loan_balance(
                 loan.pk,
                 as_of_date=context["today"],
             )
@@ -240,12 +267,18 @@ def pawn_loan_detail(request, pk):
             context["exposure"] = get_pawn_loan_exposure(
                 loan.pk,
                 as_of_date=context["today"],
+                financial_inputs=financial_inputs,
             )
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["exposure_error"] = str(exc)
     if loan.state == PawnLoanState.ACTIVE.value:
+        from apps.tenant_apps.loans.selectors.servicing_contract import get_servicing_position
         try:
-            context["delinquency"] = get_pawn_loan_delinquency(loan.pk, as_of_date=context["today"])
+            context['collection_position'] = get_servicing_position(loan, as_of_date=context['today'], financial_inputs=financial_inputs)
+        except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
+            context['collection_error'] = str(exc)
+        try:
+            context["delinquency"] = get_pawn_loan_delinquency(loan.pk, as_of_date=context["today"], financial_inputs=financial_inputs)
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["risk_error"] = str(exc)
         try:
@@ -261,7 +294,7 @@ def pawn_loan_detail(request, pk):
         try:
             context["risk_assessment"] = get_pawn_loan_risk_assessment(loan.pk, as_of_date=context["today"],
                 _exposure=context.get("exposure"), _delinquency=context.get("delinquency"),
-                _collateral=context.get("collateral_valuation"))
+                _collateral=context.get("collateral_valuation"), financial_inputs=financial_inputs)
         except (ObjectDoesNotExist, ValidationError, ValueError) as exc:
             context["risk_error"] = str(exc)
     if loan.state == PawnLoanState.ACTIVE.value and not opening:
@@ -318,10 +351,13 @@ def pawn_loan_detail(request, pk):
     context["transaction_completeness"] = transaction_completeness(loan, context["today"])
     if loan.state in ("ACTIVE", "CLOSED"):
         from apps.tenant_apps.loans.selectors.evidence_quality import loan_evidence_quality
+        from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
+        coverage = recorded_position_coverage(loan, context['today'],
+            book_review=context['transaction_completeness'], servicing_position=context.get('collection_position'))
         context["evidence_quality"] = loan_evidence_quality(loan, as_of_date=context["today"],
             exposure=context.get("exposure"),
             observation=context.get("collateral_valuation") or context.get("collateral_observation"),
-            risk=context.get("risk_assessment"), live_error=context.get("risk_error", ""))
+            risk=context.get("risk_assessment"), live_error=context.get("risk_error", ""), transaction_coverage=coverage)
     context["can_review_transactions"] = request.loans_workspace_access.can("data.edit") and loan.state in ("ACTIVE", "CLOSED")
     context["can_confirm_paper_handover"] = (loan.state == "CLOSED" and request.loans_workspace_access.can("loan.release")
         and loan.collateral_items.filter(custody_state="PAPER_CLOSED").exists())
@@ -456,12 +492,12 @@ def _event_rows(loan, *, can_administer):
             reversed_event = None
         readiness = assess_pawn_loan_event_reversal(
             event, latest_event_id=latest_event_id
-        )
+        ) if can_administer else None
         rows.append(
             {
                 "event": event,
-                "can_reverse": can_administer and readiness.can_reverse,
-                "reversal_blocker": readiness.blocker,
+                "can_reverse": bool(readiness and readiness.can_reverse),
+                "reversal_blocker": readiness.blocker if readiness else '',
                 "reversed_event": reversed_event,
             }
         )

@@ -1,3 +1,4 @@
+from .counter_navigation import preserve_counter_return
 """Ordinary Django adapters for PawnLoan collateral release."""
 
 import uuid
@@ -38,6 +39,7 @@ def _full_release_quote(loan):
 
 @loans_action_required("loan.release")
 @never_cache
+@preserve_counter_return
 def pawn_loan_release_full(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     quote = _full_release_quote(loan)
@@ -92,6 +94,7 @@ def pawn_loan_release_full(request, pk):
 
 
 @loans_action_required("loan.release")
+@preserve_counter_return
 def pawn_loan_release_partial(request, pk):
     _pawn_loan_for_workspace(request, pk)
     return HttpResponseGone(

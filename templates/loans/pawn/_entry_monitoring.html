@@ -1,10 +1,10 @@
 {% if current_monitoring %}
-<aside class="border rounded p-3 mb-3" aria-label="Current monitoring policy">
-  <h3 class="h6">Current monitoring</h3>
+<details class="border rounded p-3 mb-3" aria-label="Current monitoring policy" {% if current_monitoring.error %}open{% endif %}>
+  <summary>Current monitoring{% if current_monitoring.policy %} &middot; Policy configured{% else %} &middot; Needs setup{% endif %}</summary>
   {% with policy=current_monitoring.policy %}{% if policy %}
   <p class="small mb-1">{{ policy.get_valuation_basis_display }} · {% if policy.license_id %}Licence override{% else %}Workspace default{% endif %} · v{{ policy.version }}, effective {{ policy.effective_from }}.</p>
   <p class="small mb-1">LTV warning / breach / critical: {{ policy.ltv_warning_ratio }} / {{ policy.ltv_breach_ratio }} / {{ policy.ltv_critical_ratio }}. Maximum price age: {{ policy.rate_freshness_days }} days; appraisal age: {{ policy.appraisal_freshness_days }} days.</p>
   {% else %}<p class="small mb-1">Monitoring unavailable: {{ current_monitoring.error }} An owner or administrator can configure it in Loan setup.</p>{% endif %}{% endwith %}
   <p class="small text-body-secondary mb-0">Current monitoring uses this separate policy and eligible evidence. Saved valuation/reference values retained with this entry are compatibility evidence, not a new approval or a change to this policy. Recording a completed payout does not supply prices, appraisals or book verification.</p>
-</aside>
+</details>
 {% endif %}
