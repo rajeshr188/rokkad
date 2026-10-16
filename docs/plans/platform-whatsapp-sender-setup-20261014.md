@@ -1,7 +1,7 @@
 ---
-status: pending-external-setup
+status: portfolio-created-number-pending
 owner: project
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [plan, whatsapp, pilot, sender]
 ---
 
@@ -12,8 +12,55 @@ support@rokkad.com. Sender/template setup is still needed. A restricted READ ONL
 production metadata check confirms deployed JCL (Workspace 1, owner 1) matches the
 privately supplied owner account and is active. The local JCL copy differs; do not
 substitute local IDs or change ownership to match the pilot. The personal email is
-not repeated here. Production has neither the platform_whatsapp app nor its tables.
-No deployment, migration, provider registration or send was done.
+not repeated here. At the 14 October check, production had neither the
+platform_whatsapp app nor its tables. The separate 15 October combined release
+has since deployed the app and four migrations, with WhatsApp still disabled;
+see the [release record](../implementation/reviewed-production-release-20261015.md).
+This onboarding work performs no additional deployment or activation.
+
+## 15 October Meta onboarding checkpoint
+
+Authenticated portal inspection found an existing developer app named rokkad,
+linked to a pre-existing pawn-broker portfolio. Its WhatsApp use case is present,
+but the app is unpublished and its webhook fields are empty. The production setup
+page explicitly warns that production callbacks require a published app.
+
+The existing portfolio has a WhatsApp restriction stating that its listed website
+could not be found, and business verification is Rejected. Its configured website
+is https://www.rokkad.com/. A direct live HTTPS check on 15 October confirms that
+this redirects to https://rokkad.com/ and returns HTTP 200; current reachability
+does not prove that Meta has cleared its restriction or accepted the business.
+The overview also lists an existing pawn-broker WhatsApp connection; it must not
+silently become Rokkad's platform sender. No existing account, number, ownership,
+website, restriction or verification evidence was changed.
+
+The owner explicitly chooses a separate Rokkad portfolio and supplies administrator
+details privately, with admin@rokkad.com as its business contact. A new dedicated
+mobile number is still to be obtained. The owner then reports creating the portfolio
+and accepting Meta's Commercial Terms personally. The live page confirms the new
+Rokkad portfolio. Remaining asset/people onboarding is completed with no Facebook/
+Instagram assets and only the supplied administrator. The selected Rokkad settings
+show that administrator with full access and no WhatsApp accounts added.
+
+The WhatsApp Business account draft has display name Rokkad, category Professional
+services, Asia/Calcutta time zone, https://rokkad.com/ and a truthful description of
+the pawn-lending management software, owner setup/subscription/service messages
+and support@rokkad.com. It is not submitted. Its subsequent stages require a phone
+number and phone verification; the dedicated number remains pending. The Continue
+control is currently disabled without a visible validation reason. The form also
+has separate WhatsApp Business and Cloud API hosting terms, which have not been
+accepted here; accepting portfolio terms does not record acceptance of those terms.
+
+A separate portfolio is for the platform's distinct business/sender scope; it is
+not evidence of eligibility or a way to clear the existing restriction. Follow
+Meta's review requirements for the actual business. No existing app/account or
+pawn-broker number is reassigned to the new portfolio.
+
+Private portal IDs, administrator details and review screenshots remain in ignored
+.tmp/whatsapp-onboarding-20261015. The portfolio is created; no WhatsApp account,
+app or number was created, template submitted, persistent credential generated
+or message sent. Verify real identity, permissible use and account status before
+choosing or connecting an app, registering the new number or configuring callbacks.
 
 ## Sender setup handoff
 
