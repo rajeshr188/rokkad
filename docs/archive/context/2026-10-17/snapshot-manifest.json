@@ -1,0 +1,50 @@
+{
+  "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+  "documents": [
+    {
+      "source": "docs/STATUS.md",
+      "archive": "docs/archive/context/2026-10-17/STATUS.md",
+      "bytes": 978077,
+      "sha256": "8e478ec8e084ba1f9376a866d2227604727b1ff0db791f209a948ef8020a70ca",
+      "relative_link_base": "docs",
+      "original": "docs/archive/context/2026-10-17/STATUS.md.source.txt",
+      "archive_sha256": "bd244d5b3d3b4c2f9b930b168b6b6b75b140f4563578c0556a5316bbe856e1fc"
+    },
+    {
+      "source": "docs/AGENT_MEMORY.md",
+      "archive": "docs/archive/context/2026-10-17/AGENT_MEMORY.md",
+      "bytes": 340700,
+      "sha256": "b2603198a99687105f310fba88c4031932dc84244e5739070748569f9a9bce97",
+      "relative_link_base": "docs",
+      "original": "docs/archive/context/2026-10-17/AGENT_MEMORY.md.source.txt",
+      "archive_sha256": "1d1d87302bcd8b296d32350ad3ee36d609be5b83aeeefb5d5584291a91e556cb"
+    },
+    {
+      "source": "docs/plans/active.md",
+      "archive": "docs/archive/context/2026-10-17/plans/active.md",
+      "bytes": 37016,
+      "sha256": "f8f87a55bf62aa3ee71c2fdb932c41f6d15e45f5580e8c3fa9fb6465f3da0907",
+      "relative_link_base": "docs/plans",
+      "original": "docs/archive/context/2026-10-17/plans/active.md.source.txt",
+      "archive_sha256": "69e03bbf1bf7099797773a9e402edeece6115c80c5120c75926b1ebc53d722ab"
+    },
+    {
+      "source": "CONTRIBUTING.md",
+      "archive": "docs/archive/context/2026-10-17/CONTRIBUTING.md",
+      "bytes": 481,
+      "sha256": "eabb8c843d7a416d69d2a39cab019b7059ffb1a5ccf473b98754a84deff62656",
+      "relative_link_base": ".",
+      "original": "docs/archive/context/2026-10-17/CONTRIBUTING.md.source.txt",
+      "archive_sha256": "c2c2341efff3f1c5a15a3d1c50757061a419b1c2e49ece612c7ac87a36bf8686"
+    },
+    {
+      "source": "README.md",
+      "archive": "docs/archive/context/2026-10-17/README.md",
+      "bytes": 10138,
+      "sha256": "0ed29f4b20a2c0655ffc82d82f6d50ce7c07543abbbe147e44b7ee3617c692a5",
+      "relative_link_base": ".",
+      "original": "docs/archive/context/2026-10-17/README.md.source.txt",
+      "archive_sha256": "aa03fa2be9644e1fb489e0937fb0770fc7dde9965888735b1b7acdc6b1bd324a"
+    }
+  ]
+}

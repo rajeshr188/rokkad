@@ -1,0 +1,11 @@
+# Preserve checksum-bound originals and reading copies across Windows/Linux.
+docs/archive/context/2026-10-17/** -text
+docs/archive/**/*.source.txt -text -diff
+docs/archive/apps/dea/*.md -text
+docs/archive/apps/loans/loans_vs_girvi_architecture_review.md -text
+docs/archive/implementation/dea-phase7-accounting-tools-inventory.md -text
+docs/archive/implementation/dea-phase7-business-event-completion-roadmap.md -text
+docs/archive/implementation/whatsapp-notifications-architecture-audit.md -text
+docs/archive/roadmaps/dea_commodity_accounting_refactor_plan.md -text
+scripts/fixtures/bootstrap-5.3.8/*.css -text
+scripts/fixtures/bootstrap-5.3.8/*.js -text

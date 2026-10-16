@@ -53,27 +53,27 @@ continued at **06703** at correction time, with WH then unchanged at WH02145. Fo
 allocation, deployed form previews and preservation checks pass. Review every
 active series during future cutover acceptance; never reimport the operational
 database to repair configuration. See
-[correction evidence](../STATUS.md#jsk-unnamed-series-continuation-corrected-2026-09-25).
+[correction evidence](../archive/context/2026-10-17/STATUS.md#jsk-unnamed-series-continuation-corrected-2026-09-25).
 
 Release `660571b9` also provides read-only reconstructed ticket previews for imported
 opening loans and prefix-based new-loan picker labels. The final deployed pages/PDFs
 pass checks in all three branches. See
-[preview evidence](../STATUS.md#imported-loan-ticket-preview-and-familiar-series-labels-2026-09-25).
+[preview evidence](../archive/context/2026-10-17/STATUS.md#imported-loan-ticket-preview-and-familiar-series-labels-2026-09-25).
 
 Release `55a6e0eb` adds the approved printable imported copy with a small provenance
 footer while retaining the marked preview. All three branches and nine active-series
 samples pass; no financial or numbering changes occur. See
-[copy evidence](../STATUS.md#printable-imported-loan-copies-2026-09-25).
+[copy evidence](../archive/context/2026-10-17/STATUS.md#printable-imported-loan-copies-2026-09-25).
 
 Release `a5a38bb9` corrects native ticket approval-evidence loss when photo fields
 are present. All 73 focused tests and actual C07548 issue/reprint checks pass.
 Shared display changes must include rich-photo native issuance UI coverage. See
-[fix evidence](../STATUS.md#native-ticket-photo-evidence-regression-2026-09-25).
+[fix evidence](../archive/context/2026-10-17/STATUS.md#native-ticket-photo-evidence-regression-2026-09-25).
 
 Release `e5822c02` adds licence proprietor capture and bold precision text.
 JCL's reviewed layout emphasizes the business name/principal and uses the source
 proprietor for each licence. Saved official issues retain original bytes. See
-[header evidence](../STATUS.md#jcl-ticket-header-and-amount-emphasis-2026-09-25).
+[header evidence](../archive/context/2026-10-17/STATUS.md#jcl-ticket-header-and-amount-emphasis-2026-09-25).
 
 The [dependency refresh](../implementation/dependency-refresh-20260924.md) clears the
 earlier candidate's known Python advisories, fixes upgraded Select2 borrower search,

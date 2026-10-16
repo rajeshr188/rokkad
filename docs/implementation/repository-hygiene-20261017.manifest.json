@@ -1,0 +1,65 @@
+{
+  "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+  "scope": "Local repository cleanup only; no production/database/customer-source changes",
+  "staticfiles": {
+    "untracked_files": 661,
+    "bytes_retained_on_disk": 7143159,
+    "static_manifest_sha256": "a317fedee72d37eb3408d7427b0b6f5ef50bab7012d642dc36673ad90b65bfd3"
+  },
+  "root_logs": {
+    "archived_files": 182,
+    "bytes": 12406539,
+    "destination": ".tmp/log-archive/20261017",
+    "all_sha256_verified": true
+  },
+  "source_bytecode": {
+    "removed_files": 2019,
+    "logical_bytes": 22673364
+  },
+  "private_inventory": {
+    "metadata_file": ".tmp/repository-hygiene-20261017/local-retention.jsonl",
+    "action_manifest": ".tmp/repository-hygiene-20261017/local-actions.json",
+    "worktrees": ".tmp/repository-hygiene-20261017/worktrees.json",
+    "retained_areas": {
+      ".tmp_files": 249975,
+      ".tmp_bytes": 6465153587,
+      "outputs_files": 4918,
+      "outputs_bytes": 3971729566,
+      "media_files": 18972,
+      "media_bytes": 3813599919,
+      ".local-backups_files": 6193,
+      ".local-backups_bytes": 75015229,
+      "backup_files": 3,
+      "backup_bytes": 4266468,
+      ".worktrees_files": 5051,
+      ".worktrees_bytes": 45950428,
+      "%SystemDrive%_files": 4,
+      "%SystemDrive%_bytes": 989184
+    }
+  },
+  "verification": {
+    "fresh_inputs": "HEAD archive plus changed/new source overlay, excluding output/staticfiles; no prior outputs directory",
+    "browser_tests": 9,
+    "browser_seconds": 101.564,
+    "collected_static_sources": 245,
+    "postprocessed_outputs": 679,
+    "current_doc_links": 2620,
+    "current_doc_sources": 758,
+    "preserved_originals": 22,
+    "python_guard_tests": 7,
+    "javascript_node_tests": 29,
+    "import_sources": 1256,
+    "git_index_checkout": "Fresh staged checkout: offline fixtures, exact originals/reading copies, full current links and hygiene unit tests",
+    "whitespace": "Git index check passes; exact historical source bytes are binary diff attachments"
+  },
+  "preservation_manifests": [
+    "docs/archive/context/2026-10-17/snapshot-manifest.json",
+    "docs/archive/retired-documents-20261017.json",
+    "docs/archive/reference/manifest.json"
+  ],
+  "retention_decisions": [
+    "Retain all five worktrees and all 17 local branches/checkpoints. Dirty secondary trees have 20 untracked files and 7 changed entries.",
+    "Retain mixed .tmp/outputs, source/media, backups, local recovery, environment and accidental Windows cache candidate.",
+    "Keep remote default and branch protection unchanged. Existing work branch is maintained integration and now matches push CI."
+  ]
+}

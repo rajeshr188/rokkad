@@ -1,4 +1,5 @@
-"""Check local links in curated current documentation, without network or Django."""
+"""Check current documentation links without network or Django; archives are frozen."""
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -7,6 +8,14 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = (
+    "CONTRIBUTING.md",
+    "docs/implementation/repository-hygiene-20261017.md",
+    "docs/implementation/repository-cleanup-review-20261016.md",
+    "docs/implementation/browser-layout-verification.md",
+    "docs/archive/context/2026-10-17/INDEX.md",
+    "docs/archive/reference/README.md",
+    "docs/apps/dea/README.md",
+    "scripts/fixtures/bootstrap-5.3.8/README.md",
     "docs/adr/2026-10-16-represented-position-transaction-coverage.md",
     "docs/implementation/represented-position-coverage-20261016.md",
     "docs/adr/2026-10-16-calculated-monitoring-default.md",
@@ -62,8 +71,18 @@ def anchors(path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--all-current", action="store_true",
+                        help="Also check every Markdown file outside docs/archive.")
+    args = parser.parse_args()
+    sources = list(SOURCES)
+    if args.all_current:
+        sources.extend(("AGENTS.md",))
+        sources.extend(path.relative_to(ROOT).as_posix() for path in sorted((ROOT / "docs").rglob("*.md"))
+                       if "archive" not in path.relative_to(ROOT / "docs").parts)
+        sources = list(dict.fromkeys(sources))
     errors, count = [], 0
-    for name in SOURCES:
+    for name in sources:
         source = ROOT / name
         text = source.read_text(encoding="utf-8")
         # Current guides use inline Markdown links; skip fenced examples.
@@ -81,7 +100,7 @@ def main():
     if errors:
         print("\n".join(errors))
         return 1
-    print(f"Checked {count} local links in {len(SOURCES)} curated documentation files.")
+    print(f"Checked {count} local links in {len(sources)} documentation files.")
     return 0
 
 

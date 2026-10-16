@@ -11,6 +11,8 @@ from django.template.loader import render_to_string
 from django.test import RequestFactory
 from playwright.sync_api import sync_playwright
 
+from scripts.browser_fixtures import bootstrap_assets
+
 from apps.tenant_apps.loans.tests.test_monitoring_presentation import MonitoringPresentationTests
 from apps.tenant_apps.loans.selectors.dashboard_health import get_dashboard_health_summary
 from apps.tenant_apps.loans.services.risk_snapshots import refresh_loan_risk_snapshot, RiskSnapshotRefreshError
@@ -47,9 +49,7 @@ class MonitoringEvidenceLayouts(MonitoringPresentationTests):
                 found = finders.find(asset.removeprefix("/static/"))
                 if found:
                     assets[asset] = Path(found)
-        cache = Path("outputs/loan-detail-mockups")
-        bootstrap = {name: cache / name for name in ("bootstrap.min.css", "bootstrap.bundle.min.js")}
-        self.assertTrue(all(path.is_file() for path in bootstrap.values()))
+        bootstrap = bootstrap_assets()
         output = Path("outputs/loan-boundary-ls05")
         output.mkdir(parents=True, exist_ok=True)
         with sync_playwright() as playwright:

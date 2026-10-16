@@ -16,12 +16,12 @@ not an instruction to reintroduce it.
 
 - [Counter and monitoring production release](implementation/counter-release-20261016.md): commit 1889e488, V13/policy lifecycle/represented coverage and counter workflows deployed 17 October after full CI and recovery acceptance.
 
-- [Repository cleanup review](implementation/repository-cleanup-review-20261016.md): generated Git artifacts, required-reading size, local retention, browser-fixture reproducibility and branch/CI alignment; no removals performed.
+- [Repository hygiene](implementation/repository-hygiene-20261017.md): preservation manifests, offline browser fixtures, generated-file guard, compact current guidance and local retention; [original review](implementation/repository-cleanup-review-20261016.md).
 
 - [Status](STATUS.md): checkpoint, validation and remaining acceptance.
 - [Everyday counter improvements](implementation/everyday-counter-improvements-20261016.md): delivered truthful amounts/assurance, navigation, shared reads, list/entry usability and daily Dashboard activity; [original review](implementation/everyday-counter-workflow-review-20261016.md).
 - [Loans architecture hardening](implementation/loans-architecture-hardening-20261016.md): deployed policy lifecycle/review, readiness, optional cohort assurance and staff work views; [worker scheduling follow-up](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity) remains deferred. The [original audit](architecture/loans-architecture-followup-20261016.md) retains the findings and delivery order.
-- [Monitoring portability and JCL coverage follow-up](implementation/monitoring-portability-followup-20261014.md): locally verified package v3, live worker frequency and separate appraisal/book gaps.
+- [Monitoring portability and JCL coverage follow-up](implementation/monitoring-portability-followup-20261014.md): dated package v3/coverage findings; package 4 is in the current release. Appraisal/book gaps remain separate.
 - [Agent memory](AGENT_MEMORY.md): stable decisions and owner constraints.
 - [New-user journey refinement](implementation/new-user-journey-refinement-20261014.md): approved contact/authentication handoffs, guided setup and phone improvements, verified locally; production/provider acceptance remains separate. The [earlier audit](implementation/new-user-journey-audit-20261014.md) retains the original findings.
 - [Active delivery](plans/active.md) and [hardening plan](plans/project-hardening.md).
@@ -29,7 +29,7 @@ not an instruction to reintroduce it.
 - [Portability completion](plans/data-portability-completion-20261010.md): current file restoration, capability coverage and ordered fresh-Workspace transfer work, based on the [10 October review](architecture/data-portability-review-20261010.md).
 - [Fresh business package](implementation/fresh-business-package-pc05.md): private operator export, rollback review and atomic restore into an empty unactivated destination, with explicit coverage and exclusions.
 - [Wider portable loan graphs](implementation/portable-graphs-pc06.md): explicit funding, storage/corrections, retained zero-item checkpoints, source-only licence/quote evidence and operational continuation verification.
-- [Unified loan recording](flows/unified-loan-recording.md): accepted real-time/paper-entry design and [tracked delivery](plans/unified-loan-recording.md); independent paper entry, servicing, supported corrections, native recovery and recorded-origin auction implemented locally; real-book/release acceptance pending.
+- [Unified loan recording](flows/unified-loan-recording.md): accepted real-time/paper-entry design and [tracked delivery](plans/unified-loan-recording.md); independent paper entry, servicing, supported corrections, native recovery and recorded-origin auction; current release identity is in Status and real-book limits remain explicit.
 - [Release Khata and paper-first recording together](flows/khata-and-paper-first-release.md): scoped commit, merged migration dependencies, separate staff acceptance and joint rollout/recovery.
 - [Roadmap](ROADMAP.md) and [Future work](plans/future-work.md): shelved ideas and resume conditions.
 - [Khata requirements](plans/khata-agreements.md): confirmed rules and remaining scenario/release gates.
@@ -99,3 +99,5 @@ files or apps that no longer exist. Prefer the current contracts and active plan
 Keep this index curated. Run `python scripts/check_current_docs.py` after changing
 current entry links; the CI check intentionally does not validate every archived
 historical claim or external URL.
+
+- [Browser verification](implementation/browser-layout-verification.md), [original reference assets](archive/reference/README.md) and [preserved context](archive/context/2026-10-17/INDEX.md).

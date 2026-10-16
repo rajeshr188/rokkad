@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 from django.contrib.staticfiles import finders
 from playwright.sync_api import sync_playwright
 
+from scripts.browser_fixtures import bootstrap_assets
+
 from apps.tenant_apps.loans.tests.test_completed_payout_review import CompletedFactReviewTests
 from apps.tenant_apps.rates.services import withdraw_quote
 
@@ -31,11 +33,7 @@ class CompletedPayoutLayouts(CompletedFactReviewTests):
                 found = finders.find(asset.removeprefix("/static/"))
                 if found:
                     assets[asset] = Path(found)
-        cache = Path("outputs/loan-detail-mockups")
-        bootstrap = {"bootstrap.min.css": cache / "bootstrap.min.css",
-            "bootstrap.bundle.min.js": cache / "bootstrap.bundle.min.js"}
-        for file in bootstrap.values():
-            self.assertTrue(file.is_file(), "Use the existing locally cached Bootstrap assets for browser verification.")
+        bootstrap = bootstrap_assets()
         output = Path("outputs/loan-boundary-ls02")
         output.mkdir(parents=True, exist_ok=True)
         with sync_playwright() as playwright:

@@ -39,7 +39,7 @@ or measure before changing anything. These are not claims of a production incide
 
 ### R01 — P1: CI still targets removed schema tenancy
 
-Evidence: [tenant-seed-smoke.yml](../../.github/workflows/tenant-seed-smoke.yml)
+Historical evidence: `.github/workflows/tenant-seed-smoke.yml` (retired).
 runs `migrate_schemas`, imports `django_tenants`, and names schema-based seed jobs.
 Push triggers cover `main` and `dea-kiss`, not the active `rls-mvp` branch. Python
 3.12 in CI is compatible with Django 6; the removed tenancy commands are the issue.
@@ -198,7 +198,7 @@ Evidence: [base.py](../../django_project/settings/base.py) retains clone-mode,
 found their definitions but no active application consumers. The naming and comments
 mislead operators about the actual RLS model.
 
-[check_dea_boundary.py](../../scripts/check_dea_boundary.py) guards a retired domain,
+The historical `scripts/check_dea_boundary.py` guarded a retired domain,
 allows its facade import and has stale allowlist paths. Replace it with a supported
 app import-boundary/retired-import check over tracked source files, not a recursive
 scan into local virtual environments. Remove confirmed unused settings with a

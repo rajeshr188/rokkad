@@ -15,6 +15,8 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from playwright.sync_api import sync_playwright
 
+from scripts.browser_fixtures import bootstrap_assets
+
 from apps.tenant_apps.loans.tests import test_routine_entry as entries
 from apps.tenant_apps.loans.tests import test_multi_item_paper as paper
 from apps.tenant_apps.loans.tests import test_monitoring_presentation as native
@@ -47,9 +49,7 @@ def browser(pages, records, prefix, responses=None):
             found = finders.find(path.removeprefix('/static/'))
             if found:
                 assets[path] = Path(found)
-    cache = Path('outputs/loan-detail-mockups')
-    bootstrap = {name: cache / name for name in ('bootstrap.min.css', 'bootstrap.bundle.min.js')}
-    assert all(p.is_file() for p in bootstrap.values())
+    bootstrap = bootstrap_assets()
     with sync_playwright() as pw:
         chromium = pw.chromium.launch()
         for width in (1365, 390):

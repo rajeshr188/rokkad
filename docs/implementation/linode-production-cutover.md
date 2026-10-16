@@ -178,7 +178,7 @@ enabled the reviewed branch memberships. Shankar now owns Lakshmi; Rajesh retain
 Admin access there and ownership of JCL/JSK. JCL Member includes the four approved
 daily financial actions for Umesh, and future users of that local role. The second
 Lakshmi account remains conditional on actual verified Google sign-in. See
-[staff application evidence](../STATUS.md#approved-staff-access-and-lakshmi-ownership-applied-2026-09-25).
+[staff application evidence](../archive/context/2026-10-17/STATUS.md#approved-staff-access-and-lakshmi-ownership-applied-2026-09-25).
 
 `temporary-production.json` is the current routing evidence. The old additive
 `Caddyfile.production-candidate` is stale after this decision: regenerate it from
@@ -190,7 +190,7 @@ reload the earlier candidate or reopen the practice container as production.
 Hourly server-only database backups are active under `backups/operational` with
 an initial archive check. Review capacity/retention and off-server recovery during
 the short transition; current copies have no pruning or external failure alerts.
-See [current evidence](../STATUS.md#production-on-temporary-hostname-2026-09-25).
+See [current evidence](../archive/context/2026-10-17/STATUS.md#production-on-temporary-hostname-2026-09-25).
 
 The owner selected a **separate Linode server** on September 22 and subsequently
 created it for hosted cutover rehearsal on September 23. Keep the existing `rokkad.com`
@@ -220,7 +220,7 @@ remaining operator/configuration/recovery and frozen-source cutover requirements
 The complete package is imported and reconciled in `rokkad_production_20260924`,
 with media attached and local recovery verified. Subsequent release `d078db38`
 supports the owner's explicit document deferral and approved branch lending setup.
-See the [current checkpoint](../STATUS.md#approved-lending-setup-applied-to-isolated-production-2026-09-25)
+See the [current checkpoint](../archive/context/2026-10-17/STATUS.md#approved-lending-setup-applied-to-isolated-production-2026-09-25)
 for image identity, settings and remaining cutover work. The source comparison
 below records the initial inspection, not the current admission status.
 
@@ -233,7 +233,7 @@ sign-in was subsequently verified at the temporary hostname. Temporary R2 creden
 the separately approved durable replacement is now installed and verified in the
 production runtime environment. Its bucket-level permissions do not enforce the
 application prefix; application configuration and admission target checks bind that
-prefix. See [the completed import checkpoint](../STATUS.md#final-import-media-and-local-recovery-verified-2026-09-25)
+prefix. See [the completed import checkpoint](../archive/context/2026-10-17/STATUS.md#final-import-media-and-local-recovery-verified-2026-09-25)
 for source-media attachment and recovery. No DNS
 switch is authorized until final reconciliation is presented and approved.
 
@@ -242,7 +242,7 @@ At the proprietor-header checkpoint the target used image
 its numeric-only register and continued at 06703 at correction time; WH then
 remained WH02145. Preserve subsequent allocations. Its audited
 forward-only reservation leaves financial rows and the sealed package intact.
-See [numbering evidence](../STATUS.md#jsk-unnamed-series-continuation-corrected-2026-09-25).
+See [numbering evidence](../archive/context/2026-10-17/STATUS.md#jsk-unnamed-series-continuation-corrected-2026-09-25).
 The owner explicitly defers original licence
 documents until later; all four licences carry audited owner-attested validity
 from the continuation date to January 10, 2030. This supersedes the immediate upload

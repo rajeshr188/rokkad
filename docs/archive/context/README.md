@@ -12,6 +12,12 @@ corrected. Historical architecture and "next" steps are not active instructions.
 Use [current documentation](../../README.md), [Status](../../STATUS.md) and
 [Agent memory](../../AGENT_MEMORY.md) first.
 
+## 2026-10-17 repository cleanup
+
+[Snapshot index](2026-10-17/INDEX.md) retains all five context documents, including
+exact original bytes, browsable copies and checksums. Current Status, memory and
+active work now describe current state instead of accumulating release history.
+
 ## 2026-09-09 documentation cleanup
 
 - [Agent memory](2026-09-09/AGENT_MEMORY.md): all earlier stable notes and historical additions.

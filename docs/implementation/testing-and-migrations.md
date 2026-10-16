@@ -53,3 +53,11 @@ Mock provider calls and mail in ordinary billing/notification checks. Razorpay s
 and external acceptance are shelved as [FW-002](../plans/future-work.md#fw-002-razorpay-setup-and-provider-test-mode-acceptance).
 Physical media/print and deployment acceptance must not be inferred from unit tests.
 Record commands, results and limits in [Status](../STATUS.md).
+
+## Repository and browser inputs
+
+Run `python scripts/check_repository_hygiene.py` and
+`python -m unittest scripts.test_repository_hygiene` for generated-file and fixture
+guards. [Browser layout verification](browser-layout-verification.md) lists the
+explicit fictional Playwright cases and pinned offline assets. Generated outputs
+are not test inputs. CI includes the directory and unsaved-entry JavaScript cases.

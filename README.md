@@ -51,21 +51,18 @@ be an ordinary browsable CLOSED loan without invented original payout/receipt hi
 
 ## Current status and limits
 
-As of **12 October 2026**, production includes unified recording/servicing,
-closed-position admission, MR-02–07 monitoring safeguards and the scoped dashboard
-monthly-evidence batching release. Web and the explicit-Workspace worker share
-the verified checkpoint. See [monitoring release](docs/implementation/monitoring-efficiency-mr07.md)
-and [dashboard release](docs/implementation/dashboard-performance-release-20261012.md)
-for dated source identities, recovery, backups and measured limits.
+As of **17 October 2026**, production runs the counter/monitoring release
+`1889e488`, runtime V13, Loans 0091 and portability 0030/package 4. Shared
+origination/corrections, represented-position servicing, current valuation policy
+and counter improvements passed full CI and isolated recovery/rehearsal gates.
+See the [release record](docs/implementation/counter-release-20261016.md) for exact
+identities and supported profile/graph limits. [Status](docs/STATUS.md) is the
+current delivery authority; older local-only notes remain historical evidence.
 
-PC-01–06 portability extensions are locally verified within profile/graph limits;
-their full production rollout is pending. Pending Party/dashboard changes are not
-implied to be deployed merely because they exist in this checkout. Existing import
-positions, financial-history transfer and the newer fresh-business package are
-distinct contracts. [Status](docs/STATUS.md) is the delivery authority.
-The [14 October monitoring-profile follow-up](docs/implementation/monitoring-portability-followup-20261014.md)
-adds locally verified fresh-business package version 3 for explicit current
-valuation choices; its production rollout remains separate.
+Repository hygiene is being implemented under
+[FW-024](docs/implementation/repository-hygiene-20261017.md), with full context
+snapshots and checksummed reference assets. It changes developer organization,
+fixtures and CI safeguards; no production/schema change is part of that work.
 
 Current assessment does not mean healthy, complete paper books or usable collateral.
 Monitoring does not post charges, send messages or choose recovery automatically.
@@ -77,7 +74,7 @@ coverage. See [future work](docs/plans/future-work.md).
 
 - **Owner:** Loan health → **Loan monitoring guide**, also linked from Operations
   console and Financial health. It covers metrics, examples, methods, paper books
-  and actions. The new in-app guide needs its own application release.
+  and actions. See Status for the current release boundary.
 - **Developer:** [Post-origination monitoring architecture](docs/architecture/post-origination-loan-monitoring.md).
 - **Operator:** [Loan health and refresh](docs/flows/loan-health-monitoring.md).
 - **Contracts:** [PawnLoan read models](docs/domain/pawn-loan-financial-read-models.md)
@@ -86,7 +83,7 @@ coverage. See [future work](docs/plans/future-work.md).
 ## Architecture and repository
 
 - `apps/orgs`, `onboarding`, `subscriptions`, `accounts`: control plane and auth.
-- `apps/tenant_apps/party`, `loans`, `rates`, `notify`: business domains.
+- `apps/tenant_apps/party`, `loans`, `rates`, `notify_v2`: business domains.
 - `apps/tenant_apps/data_portability`: bounded admission/exchange/restore adapters.
 - `apps/tenancy`: transaction-local Workspace context, registry, RLS and checks.
 - `django_project/settings`: dev/prod/migration/test/container settings.

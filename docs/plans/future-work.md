@@ -53,13 +53,19 @@ separate; the original audit is retained as before-change evidence.
 | FW-021 | Khata agreements with staged withdrawals and collateral exchange | Implemented locally; remaining development deferred at owner request, 3 October | Owner resumes a specified enhancement or selects pilot/release acceptance | Nine ordered local checkpoints delivered; broader exceptions/reminders and physical/hosted acceptance remain recorded; no production activation |
 | FW-022 | Main Loans-list search performance | Deployed and verified through IP-05 | Further measurement if staff report residual slowness | Complete queries, generated metadata and fragment readiness reduction; broad timing variability remains |
 | FW-023 | Database backup capacity and evidence storage | BS-03/04/05 live and accepted; ongoing growth/old-coverage follow-up | Monitor space/service failures and preserve uncovered old points | BS-05 release record confirms renewed recovery acceptance, 12 remote/38 local points and 9.155 GiB free; future admissions compact, old snapshots unchanged |
-| FW-024 | Repository hygiene and reproducible development artifacts | Recorded at owner request, 16 October; implementation deferred | Select a bounded cleanup after preserving pending work and fixing fixture dependencies | Tracked collected assets, oversized required-reading docs, mixed local retention and branch/CI drift; no bulk deletion |
+| FW-024 | Repository hygiene and reproducible development artifacts | Core cleanup implemented locally, 17 October; retention/default-branch follow-up retained | Review individual mixed artifacts and any explicit remote-default transition | Originals/checksums preserved, generated assets untracked, fixtures/CI/docs repaired; no bulk deletion |
 
 ## FW-024: Repository hygiene and reproducible development artifacts
 
-The owner selects retaining the [cleanup review](../implementation/repository-cleanup-review-20261016.md)
-as future work before committing and releasing the completed application changes.
-This records the cleanup; it does not execute file/branch/history removal.
+The owner recorded the [cleanup review](../implementation/repository-cleanup-review-20261016.md)
+on 16 October, then authorized execution on 17 October with explicit document
+preservation. The [implementation record](../implementation/repository-hygiene-20261017.md)
+and manifests retain all originals, reference assets and local retention decisions.
+The core source/organization pass is implemented locally: offline fixtures, clean
+static regeneration/untracking, compact current context, archived obsolete material,
+checksummed reference/log moves, source-bytecode cleanup and CI coverage. Mixed
+recovery/source artifacts and all worktrees/branches are retained. An explicit
+remote-default transition and further individually reviewed retention remain open.
 
 The local inventory finds 661 tracked collected-static files, required-reading
 STATUS/MEMORY at 14,319/4,561 lines, and 9.16 GiB under ignored `.tmp`/`outputs`.
@@ -69,7 +75,7 @@ Bootstrap cached under ignored outputs. Old worktrees include dirty/untracked
 content. The locally recorded default branch and checked-in push-CI filters differ
 from the branch currently used for development.
 
-Recommended order and acceptance:
+Recorded order and acceptance (see implementation record for evidence):
 
 1. Preserve pending source, independent verification notes and dirty worktrees.
 2. Provision pinned/verifiable browser fixtures independently of old outputs;

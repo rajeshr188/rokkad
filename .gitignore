@@ -19,11 +19,12 @@ __pycache__/
 /media/
 /staticfiles/
 /outputs/
+/output/
 /.tmp/
 /tmp/
 /.worktrees/
-/outputs/ticket-template-tests/
-/outputs/ticket-template-sandbox/
+/backup/
+/%SystemDrive%/
 
 # Database backups and dumps
 *.dump

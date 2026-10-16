@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "source": "template_pack.zip",
+      "destination": "docs/archive/reference/template-pack/template_pack.zip",
+      "bytes": 1027574,
+      "sha256": "d1357e6dea98cab4f6de1b572c16c052801113b8f7e8506239917bc8e89579fe",
+      "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+      "classification": "original reference pack"
+    },
+    {
+      "source": "output/pdf/form-e-a4-landscape-sample.pdf",
+      "destination": "docs/archive/reference/pdf-previews/form-e-a4-landscape-sample.pdf",
+      "bytes": 83966,
+      "sha256": "a7ed896d49c40501a20abc01e7ed59627731c6f3af7eec6aa67b34b6039b89aa",
+      "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+      "classification": "historical generated sample; retained as reference"
+    },
+    {
+      "source": "output/pdf/form-e-facing_a4-preview.pdf",
+      "destination": "docs/archive/reference/pdf-previews/form-e-facing_a4-preview.pdf",
+      "bytes": 66773,
+      "sha256": "25b715da25d5add744aa012694d132c9ebd9a96b4b1cb62c7f16b701b1dd31db",
+      "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+      "classification": "historical generated sample; retained as reference"
+    },
+    {
+      "source": "output/pdf/form-e-landscape_a4-preview.pdf",
+      "destination": "docs/archive/reference/pdf-previews/form-e-landscape_a4-preview.pdf",
+      "bytes": 66204,
+      "sha256": "4e3176e9fd9876990b9b4f02a3fb805de1b1136a228967e13268b4cd074491f0",
+      "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+      "classification": "historical generated sample; retained as reference"
+    },
+    {
+      "source": "output/pdf/khata-integration-sample.pdf",
+      "destination": "docs/archive/reference/pdf-previews/khata-integration-sample.pdf",
+      "bytes": 50524,
+      "sha256": "b2e4576c01dd36ea23ff466c391122e5c3b1f2c38b38d588af0788a5518fce5d",
+      "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+      "classification": "historical generated sample; retained as reference"
+    },
+    {
+      "source": "output/pdf/khata-label-sample.pdf",
+      "destination": "docs/archive/reference/pdf-previews/khata-label-sample.pdf",
+      "bytes": 52787,
+      "sha256": "3526c202d69dd7db8ae406356eda7ae43adcf9525dd059a49d9380f4c75d4229",
+      "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+      "classification": "historical generated sample; retained as reference"
+    }
+  ]
+}

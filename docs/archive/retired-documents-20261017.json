@@ -1,0 +1,93 @@
+{
+  "source_commit": "ebf2dd6e0180e68c384cc0d0e0e0d0cbd20fc5f3",
+  "files": [
+    {
+      "source": "docs/apps/dea/architecture.md",
+      "archive": "docs/archive/apps/dea/architecture.md",
+      "original": "docs/archive/apps/dea/architecture.md.source.txt",
+      "bytes": 8075,
+      "sha256": "298155e132206594d7a8f22dab671cdce4341f394ac9db883b620ce5fcc15c40",
+      "archive_sha256": "81208eaf2cb6aa328b9a7c5de969de16ec928264e85be541b22851eb0b218dc2"
+    },
+    {
+      "source": "docs/apps/dea/models.md",
+      "archive": "docs/archive/apps/dea/models.md",
+      "original": "docs/archive/apps/dea/models.md.source.txt",
+      "bytes": 11005,
+      "sha256": "2d78a3b5afd7ab8fbec487688f648fcb944a01af0d8f2ef389243966b6a22124",
+      "archive_sha256": "899d05e550a05866d7faffa0b194a2714a774b5673d68e5f225075c1f1d4761c"
+    },
+    {
+      "source": "docs/apps/dea/README.md",
+      "archive": "docs/archive/apps/dea/README.md",
+      "original": "docs/archive/apps/dea/README.md.source.txt",
+      "bytes": 2269,
+      "sha256": "1f39afdeb57623b772b8b411d5c09bb65e2dfa410ed01a36a84ae439f1953c5a",
+      "archive_sha256": "9fd0c0008cc1cf5061bcfb73879b893460d7490dab29aefb9f68365bfff2da88"
+    },
+    {
+      "source": "docs/apps/dea/refactor-plan.md",
+      "archive": "docs/archive/apps/dea/refactor-plan.md",
+      "original": "docs/archive/apps/dea/refactor-plan.md.source.txt",
+      "bytes": 6411,
+      "sha256": "b02a05263e11ed4934e52ea4cc9885bf1f7d1ac9afa20588793497bdc733dd8e",
+      "archive_sha256": "bea5f9676697d23dddf1a7f4aa80e355e73edcb409d7daeab91585844b530bc0"
+    },
+    {
+      "source": "docs/apps/dea/userflows.md",
+      "archive": "docs/archive/apps/dea/userflows.md",
+      "original": "docs/archive/apps/dea/userflows.md.source.txt",
+      "bytes": 5662,
+      "sha256": "cc1365a2289114951e20a04f86fc764207ac400fe05c2cb721e6c240448d2c32",
+      "archive_sha256": "91dc9a2fb3d9e34eeb5a2b162ea73597fffc1f30201dd8d8d268b90a585bca6d"
+    },
+    {
+      "source": "docs/apps/dea/workflows.md",
+      "archive": "docs/archive/apps/dea/workflows.md",
+      "original": "docs/archive/apps/dea/workflows.md.source.txt",
+      "bytes": 9531,
+      "sha256": "ecbbaf5e3970ab2c784e5547f6a250b7b9d99ec7385cd309b59e08662834bbbf",
+      "archive_sha256": "2fcbb66954736172dfbfd36fa6ed95e2fe14e99bc4a47fe374bafe0985a128eb"
+    },
+    {
+      "source": "docs/implementation/dea-phase7-accounting-tools-inventory.md",
+      "archive": "docs/archive/implementation/dea-phase7-accounting-tools-inventory.md",
+      "original": "docs/archive/implementation/dea-phase7-accounting-tools-inventory.md.source.txt",
+      "bytes": 30284,
+      "sha256": "4c6a4749569141f7a687e6c37376f6701ca61ec9432855db121af6588927c35b",
+      "archive_sha256": "aa38c1190e5f879d236c50cfae2c5688491e37923cdb8e1c6e6104579b29fca6"
+    },
+    {
+      "source": "docs/implementation/dea-phase7-business-event-completion-roadmap.md",
+      "archive": "docs/archive/implementation/dea-phase7-business-event-completion-roadmap.md",
+      "original": "docs/archive/implementation/dea-phase7-business-event-completion-roadmap.md.source.txt",
+      "bytes": 19230,
+      "sha256": "13620a2d5b2e9de9af1bfbc09d539b04164af593818a06f5c79775519d212e46",
+      "archive_sha256": "8406ae452b23213689b0bf0380e96f1e4f325a56b87c4db57ca19cf760cc4e97"
+    },
+    {
+      "source": "docs/roadmaps/dea_commodity_accounting_refactor_plan.md",
+      "archive": "docs/archive/roadmaps/dea_commodity_accounting_refactor_plan.md",
+      "original": "docs/archive/roadmaps/dea_commodity_accounting_refactor_plan.md.source.txt",
+      "bytes": 105905,
+      "sha256": "bab71ae61671c3b5f2f83ae0d2945686cdbdf1c7a0bb464613620a3a2988ba1f",
+      "archive_sha256": "01c78172cb2f3a279c717d0b9e10c77f110616b0caee1141e5586782c3951c1c"
+    },
+    {
+      "source": "docs/implementation/whatsapp-notifications-architecture-audit.md",
+      "archive": "docs/archive/implementation/whatsapp-notifications-architecture-audit.md",
+      "original": "docs/archive/implementation/whatsapp-notifications-architecture-audit.md.source.txt",
+      "bytes": 15990,
+      "sha256": "e0d01599960abcb6d3195b9388281d5775cdcdabce1331e69e754a74cd738eb7",
+      "archive_sha256": "d4e773bc7d65e9d48398ab0602ea9edd1fcc4b93f3caa26f4c33a5a3c4aaa450"
+    },
+    {
+      "source": "docs/apps/loans/loans_vs_girvi_architecture_review.md",
+      "archive": "docs/archive/apps/loans/loans_vs_girvi_architecture_review.md",
+      "original": "docs/archive/apps/loans/loans_vs_girvi_architecture_review.md.source.txt",
+      "bytes": 13735,
+      "sha256": "7b703c868f52cc5d46aa515c447c5082929d2968d4c18ca50e9183099f24bb40",
+      "archive_sha256": "7261db477afcb5b80c3f42480dce30e144d7cbfaad6af60c0a898d2cb087f17e"
+    }
+  ]
+}

@@ -13,6 +13,8 @@ from django.test import RequestFactory
 from django.urls import reverse
 from playwright.sync_api import sync_playwright
 
+from scripts.browser_fixtures import bootstrap_assets
+
 from apps.tenant_apps.loans.tests import test_monitoring_lifecycle as policies
 from apps.tenant_apps.loans.tests import test_cohort_transaction_reviews as cohorts
 from apps.tenant_apps.loans import models as m
@@ -27,9 +29,7 @@ def capture(case,pages):
             found=finders.find(name.removeprefix('/static/'))
             if found:
                 assets[name]=Path(found)
-    cache=Path('outputs/loan-detail-mockups')
-    bootstrap={name:cache/name for name in ('bootstrap.min.css','bootstrap.bundle.min.js')}
-    case.assertTrue(all(path.is_file() for path in bootstrap.values()))
+    bootstrap = bootstrap_assets()
     output=Path('outputs/loans-architecture-hardening-20261016')
     output.mkdir(parents=True,exist_ok=True)
     with sync_playwright() as playwright:

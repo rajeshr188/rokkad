@@ -15,6 +15,8 @@ from django.test import Client
 from django.urls import reverse
 from playwright.sync_api import sync_playwright
 
+from scripts.browser_fixtures import bootstrap_assets
+
 from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.models import PawnLoan
 from apps.tenant_apps.loans.tests.test_pawn_draft_ui import PawnDraftUiTests
@@ -26,14 +28,11 @@ SECTIONS = ('overview', 'money', 'collateral', 'documents', 'history', 'followup
 
 def exercise_pages(pages):
     OUTPUT.mkdir(parents=True, exist_ok=True)
-    from urllib.request import urlopen
-    bootstrap = {}
-    for folder, name in (('css', 'bootstrap.min.css'), ('js', 'bootstrap.bundle.min.js')):
-        url = f'https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/{folder}/{name}'
-        cached = OUTPUT.parent / name
-        if not cached.exists():
-            cached.write_bytes(urlopen(url, timeout=20).read())
-        bootstrap[url] = cached
+    bootstrap = {
+        f'https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/{folder}/{name}': path
+        for name, path in bootstrap_assets().items()
+        for folder in ('css' if name.endswith('.css') else 'js',)
+    }
     # Resolve static assets before Playwright starts its synchronous event loop.
     assets = {}
     import re
