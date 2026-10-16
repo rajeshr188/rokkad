@@ -38,7 +38,7 @@ class PawnRepaymentAllocationTests(TestCase):
 
     def test_repayment_command_scopes_same_loan_identifier_to_active_workspace(self):
         queryset = MagicMock()
-        queryset.select_for_update.return_value.select_related.return_value = queryset
+        queryset.select_for_update.return_value = queryset
         queryset.get.side_effect = [PawnLoan.DoesNotExist, PawnLoan.DoesNotExist]
 
         with patch(

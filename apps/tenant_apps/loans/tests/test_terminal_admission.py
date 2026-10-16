@@ -111,7 +111,8 @@ class TerminalAdmissionTests(RecordedOriginationTests):
         row = next(r for r in after["loans"] if r["loan_id"] == loan.pk)
         self.assertEqual(row["contract_profile"], "loan-terminal-position/1")
         self.assertEqual(row["recorded_due"], 0)
-        self.assertFalse(row["transactions"]["complete"])
+        self.assertTrue(row["transactions"]["complete"])
+        self.assertEqual(row["transactions"]["status"], "RECORDED_POSITION")
         self.assertEqual(row["servicing_prerequisites"], {})
 
     def test_returned_checkpoint_is_known_position_without_fake_return_event(self):

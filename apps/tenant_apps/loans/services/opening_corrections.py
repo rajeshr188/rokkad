@@ -20,7 +20,10 @@ def effective_opening(loan, origin):
     """An explicit compensation changes the checkpoint, never its source event."""
     if not getattr(origin, "pk", None) or not hasattr(loan, "loan_events"):
         return origin
-    corrections = list(loan.loan_events.filter(event_kind="OPENING_CORRECTION").order_by("pk"))
+    cached = getattr(loan, '_prefetched_objects_cache', {}).get('loan_events')
+    corrections = (sorted((event for event in cached if event.event_kind == 'OPENING_CORRECTION'),
+                          key=lambda event: event.pk) if cached is not None else
+                   list(loan.loan_events.filter(event_kind="OPENING_CORRECTION").order_by("pk")))
     previous, opening = origin, origin.payload["opening"]
     for revision, event in enumerate(corrections, 1):
         evidence = event.payload.get("agreement_correction", {})
@@ -103,7 +106,8 @@ def _source(loan, facts):
     blockers=opening_correction_blockers(loan)
     if blockers:
         raise ValueError(' '.join(blockers))
-    origins=list(loan.loan_events.filter(event_kind='MIGRATION_OPENING'))
+    events = list(loan.loan_events.order_by('pk'))
+    origins = [event for event in events if event.event_kind == 'MIGRATION_OPENING']
     origin = origins[0]
     from .opening_evidence import read_opening_evidence
     opening = read_opening_evidence(loan, origin)

@@ -7,6 +7,18 @@ tags: [status, architecture]
 
 # Status
 
+## Full-suite release gate (16 October, production unchanged)
+
+The pushed `a68dbcb0` candidate passes five CI groups and the isolated server
+rehearsal, but the full 2,695-case Loans selection finds 18 failures/10 errors.
+Hold deployment. Correct the undefined checkpoint source-event variable, terminal
+position obligation classification and per-loan revision reads; keep existing
+bounded-query assertions. Update obsolete optional-book/UI review expectations,
+the isolated repayment mock and the aware-cutoff comparison fixture. Focused
+follow-up passes 225/226 cases; the remaining batch lookup is repaired and the
+final 65-case monthly/agreement/counter selection passes. No selected failure
+remains unresolved. A fresh exact-source release and full CI are being prepared.
+
 ## Counter release selected (16 October, preparation)
 
 The owner requests recording the repository findings as

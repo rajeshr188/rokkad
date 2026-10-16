@@ -150,7 +150,13 @@ class OriginationMonitoringCompatibilityTests(AdmissionFixture):
                     _, token = preview_transaction_review(loan.pk, actor=self.actor, **facts)
                     confirm_transaction_review(loan.pk, actor=self.actor, **facts, review_token=token, acknowledged=True)
                     loan.refresh_from_db()
-                    self.assertTrue(loan_evidence_quality(loan, as_of_date=day)["transactions"]["complete"])
+                    # Confirmation changes optional book assurance. Refresh the
+                    # saved assessment before asserting its new position evidence.
+                    refresh_loan_risk_snapshot(loan.pk, as_of_date=day)
+                    loan.refresh_from_db()
+                    quality = loan_evidence_quality(loan, as_of_date=day)
+                    self.assertTrue(quality["transactions"]["complete"])
+                    self.assertTrue(quality["book_review"]["complete"])
                     self.assertEqual(frozen, list(loan.loan_events.values_list("pk", "payload_fingerprint")))
                     if loan.pk in (self.paper.pk, self.imported.pk):
                         self.assertFalse(loan.approval_snapshots.exists())

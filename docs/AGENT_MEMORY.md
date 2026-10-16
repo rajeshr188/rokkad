@@ -7,6 +7,14 @@ tags: [agents, context, architecture]
 
 # Agent Memory
 
+## Full Loans CI release gate (16 October)
+
+Do not deploy `a68dbcb0`: full CI exposes checkpoint `_source`'s undefined events,
+terminal evidence missing grace fields, and revision lookup N+1 reads, plus older
+book-assurance/review expectations. Production remains V11/53f6dd38. Repair and
+validate all affected classes, preserve the query bounds, and rebuild/recover a
+new exact-source candidate before retrying deployment.
+
 ## Counter release authorization (16 October)
 
 The owner requests FW-024 recording followed by commit, push and deployment.

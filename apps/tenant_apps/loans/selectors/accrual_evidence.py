@@ -108,5 +108,15 @@ def load_pawn_accrual_evidence(loans):
                 row.loan_event.loan_id if name.endswith("_lines") else row.loan_id)
             rows[loan_id].append(row)
         grouped[name] = rows
+    # Revision-aware calculations use the current disbursal snapshot. It is
+    # already among the loaded source rows; keep that relation request-local so
+    # batched previews do not introduce one extra query per loan or period.
+    snapshots = {row.pk: row for rows in grouped['disbursals'].values() for row in rows}
+    for loan in loans:
+        if loan.disbursal_snapshot_id:
+            snapshot = snapshots.get(loan.disbursal_snapshot_id)
+            if snapshot is None:
+                raise ValueError('Accrual evidence requires the matching current disbursal snapshot.')
+            loan.disbursal_snapshot = snapshot
     return {loan.pk: PawnAccrualEvidence(loan=loan, events=tuple(loan.loan_events.all()),
         **{name: tuple(rows[loan.pk]) for name, rows in grouped.items()}) for loan in loans}

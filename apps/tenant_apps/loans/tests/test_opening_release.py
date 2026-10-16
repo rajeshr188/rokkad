@@ -181,7 +181,8 @@ class OpeningReleaseTests(OpeningReleaseFixture):
         self.assertContains(detail, "Close / release loan")
         self.assertContains(detail, reverse("workspace_loans:pawn_loan_close",
             kwargs={"workspace_slug": self.tenant.slug, "pk": self.loan.pk}))
-        self.assertNotContains(detail, reverse("workspace_loans:pawn_loan_auction_initiate", kwargs={"workspace_slug": self.tenant.slug, "pk": self.loan.pk}))
+        self.assertContains(detail, reverse("workspace_loans:pawn_loan_auction_initiate", kwargs={"workspace_slug": self.tenant.slug, "pk": self.loan.pk}))
+        self.assertFalse(self.loan.transaction_reviews.exists())
         self.assertContains(client.get(url), "1010.00")
         response = client.post(url, {"settlement_amount": "1010", "request_key": "http-opening-release", "confirm_collateral_handoff": "on"})
         self.assertEqual(response.status_code, 302)

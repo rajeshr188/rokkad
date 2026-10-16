@@ -87,7 +87,7 @@ def _obligation_inputs(loan: PawnLoan, as_of_date: date, balance: PawnLoanBalanc
         origin = loan.loan_events.get(event_kind="MIGRATION_OPENING")
         opening = read_opening_evidence(loan, origin)
     closed_position = opening is not None and opening["profile"] in {
-        "loan-closed-position-evidence/1", "loan-closed-position-evidence/2"}
+        "loan-closed-position-evidence/1", "loan-closed-position-evidence/2", "loan-terminal-evidence/1"}
     schedule = None if closed_position else get_active_repayment_schedule_as_of(loan, as_of_date)
     grace_days = 0 if closed_position else loan.product_version.operational_grace_days
     # Decode retained opening evidence here, never in risk/DPD consumers.

@@ -249,10 +249,13 @@ class QuoteAgeTests(WorkspaceTestCase):
         values.update(version=2, supersedes_id=self.policy.pk, amendment_reason="Monitoring needs today's price", rate_freshness_days=0)
         LoanMonitoringPolicy.objects.create(**values)
         count = self.loan.loan_events.count()
-        before = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
-        self.assertIn("STALE_RATE", before.items[0].blockers)
-        self.limit(30)
-        after = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
+        # Both reads must use the same aware evidence cutoff. Changing the
+        # origination limit cannot affect monitoring's retained result.
+        with patch('django.utils.timezone.now', return_value=timezone.now()):
+            before = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
+            self.assertIn("STALE_RATE", before.items[0].blockers)
+            self.limit(30)
+            after = get_pawn_loan_collateral_valuation(self.loan.pk, as_of_date=self.today)
         self.assertEqual(before, after)
         self.assertEqual(self.loan.loan_events.count(), count)
 

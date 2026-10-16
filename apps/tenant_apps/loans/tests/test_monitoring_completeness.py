@@ -1,4 +1,5 @@
 import uuid
+import re
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -323,7 +324,7 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
         page = pawn_economics_setup(request)
         self.assertContains(page, "Review the limits before saving")
         self.assertContains(page, "Amend monitoring policy")
-        self.assertContains(page, "Save new policy version")
+        self.assertContains(page, "Preview monitoring change")
         self.assertContains(page, f'value="{self.policy.pk}"')
         data = self.amendment_data()
         data["license"], data["supersedes"] = "", self.policy.pk
@@ -343,9 +344,15 @@ class MonitoringPortfolioTests(WorkspaceTestCase):
             with patch("apps.tenant_apps.loans.web.economic_setup.messages.success"):
                 return pawn_economics_setup(request)
 
-        self.assertContains(post(), "Save new policy version")
+        self.assertContains(post(), "Preview monitoring change")
         self.assertEqual(LoanMonitoringPolicy.objects.count(), 1)
         payload["monitoring-amendment_reason"] = "Review evidence limits"
+        preview = post()
+        self.assertContains(preview, "Confirm policy version")
+        self.assertEqual(LoanMonitoringPolicy.objects.count(), 1)
+        token = re.search(r'name="monitoring_review_token" value="([^"]+)"', preview.content.decode())
+        self.assertIsNotNone(token)
+        payload.update(monitoring_confirm="1", monitoring_acknowledged="on", monitoring_review_token=token.group(1))
         self.assertEqual(post().status_code, 302)
         self.assertEqual(LoanMonitoringPolicy.objects.count(), 2)
         self.assertEqual(post().status_code, 200)

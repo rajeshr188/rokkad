@@ -83,6 +83,8 @@ Recommended order and acceptance:
    existing custody/retention rules. Retire only reviewed worktrees through Git.
 5. Choose the maintained integration/release branch and align required CI. Prune
    only reviewed obsolete refs, preserving checkpoints and other sessions' work.
+   Include the directory and unsaved-entry JavaScript regression scripts in the
+   recurring CI selection; the counter release runs these explicitly locally.
 
 Do not use blanket `git clean`, age-only deletion, history rewriting, dependency
 removal or production/media cleanup as shortcuts. Confirm clean Git status for
