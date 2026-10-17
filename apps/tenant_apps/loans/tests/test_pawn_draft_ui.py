@@ -42,7 +42,9 @@ from apps.tenant_apps.loans.services.pawn_draft_split import (
     ROOT_URLCONF="django_project.workspace_urls",
     STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
     },
 )
 class PawnDraftUiTests(WorkspaceTestCase):
@@ -69,7 +71,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         tenant.creator = owner
         tenant.save()
         owner_role, _ = Role.objects.get_or_create(name="Owner")
-        Membership.objects.get_or_create(user=owner, company=tenant, defaults={"role": owner_role})
+        Membership.objects.get_or_create(
+            user=owner, company=tenant, defaults={"role": owner_role}
+        )
 
     def setUp(self):
         super().setUp()
@@ -85,28 +89,51 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.client.force_login(self.owner)
         self.party = Party.objects.create(display_name="Draft Borrower")
         self.product_version = _seed_default_loan_products()[0]
-        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(
+            status="ACTIVE"
+        )
 
     def test_servicing_permissions_block_http_and_direct_commands(self):
         from django.core.exceptions import PermissionDenied
         from apps.tenant_apps.loans.services import (
-            record_pawn_loan_repayment, release_pawn_loan_in_full,
-            approve_pawn_loan, disburse_pawn_loan, reopen_pawn_loan, cancel_pawn_loan,
-            finalize_pawn_loan_accrual, capitalize_pawn_loan_interest, renew_pawn_loan,
+            record_pawn_loan_repayment,
+            release_pawn_loan_in_full,
+            approve_pawn_loan,
+            disburse_pawn_loan,
+            reopen_pawn_loan,
+            cancel_pawn_loan,
+            finalize_pawn_loan_accrual,
+            capitalize_pawn_loan_interest,
+            renew_pawn_loan,
         )
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
-        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        self.client.post(
+            reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            {"effective_date": "2026-07-18"},
+        )
         loan.refresh_from_db()
         self.assertEqual(loan.state, "ACTIVE")
         viewer = get_user_model().objects.create_user(username="servicing-viewer")
         role, _ = Role.objects.get_or_create(name="Viewer")
-        membership = Membership.objects.create(user=viewer, company=self.tenant, role=role)
+        membership = Membership.objects.create(
+            user=viewer, company=self.tenant, role=role
+        )
         self.client.force_login(viewer)
-        routes = ("pawn_loan_repay", "pawn_loan_release_full", "pawn_loan_release_partial",
-                  "pawn_loan_accrue", "pawn_loan_capitalize", "pawn_loan_renew", "pawn_loan_transfer_setup")
+        routes = (
+            "pawn_loan_repay",
+            "pawn_loan_release_full",
+            "pawn_loan_release_partial",
+            "pawn_loan_accrue",
+            "pawn_loan_capitalize",
+            "pawn_loan_renew",
+            "pawn_loan_transfer_setup",
+        )
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertEqual(detail.status_code, 200)
         for route in routes:
@@ -120,12 +147,25 @@ class PawnDraftUiTests(WorkspaceTestCase):
             (reopen_pawn_loan, {"reason": "denied"}),
             (cancel_pawn_loan, {"reason": "denied"}),
             (record_pawn_loan_repayment, {"amount": "100", "request_key": "denied"}),
-            (release_pawn_loan_in_full, {"settlement_amount": "10000", "request_key": "denied"}),
+            (
+                release_pawn_loan_in_full,
+                {"settlement_amount": "10000", "request_key": "denied"},
+            ),
             (finalize_pawn_loan_accrual, {"period_number": 1}),
             (capitalize_pawn_loan_interest, {"through_period_number": 1}),
-            (renew_pawn_loan, {"mode": "RENEW", "renewal_date": date(2026, 9, 9),
-                "principal_paid": "0", "top_up_amount": "0", "successor_license_id": license.pk,
-                "successor_series_id": series.pk, "tenure_months": 3, "request_key": "denied"}),
+            (
+                renew_pawn_loan,
+                {
+                    "mode": "RENEW",
+                    "renewal_date": date(2026, 9, 9),
+                    "principal_paid": "0",
+                    "top_up_amount": "0",
+                    "successor_license_id": license.pk,
+                    "successor_series_id": series.pk,
+                    "tenure_months": 3,
+                    "request_key": "denied",
+                },
+            ),
         )
         before = loan.loan_events.count()
         for actor in (viewer, None):
@@ -145,16 +185,26 @@ class PawnDraftUiTests(WorkspaceTestCase):
         # and disbursal are already delegated.
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
+
         ct = ContentType.objects.get_for_model(Company)
         delegated = Role.objects.create(name="RenewalDelegate")
         Membership.objects.create(user=viewer, company=self.tenant, role=delegated)
         codes = ("data_view", "loan_release", "loan_approve", "loan_disburse")
         grants = {}
         for code in codes:
-            grants[code], _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+            grants[code], _ = Permission.objects.get_or_create(
+                content_type=ct, codename=code, defaults={"name": code}
+            )
         for missing in codes[1:]:
-            delegated.permissions.set([grant for code, grant in grants.items() if code != missing])
-            self.assertEqual(self.client.post(reverse("loans:pawn_loan_renew", args=[loan.pk]), {}).status_code, 403)
+            delegated.permissions.set(
+                [grant for code, grant in grants.items() if code != missing]
+            )
+            self.assertEqual(
+                self.client.post(
+                    reverse("loans:pawn_loan_renew", args=[loan.pk]), {}
+                ).status_code,
+                403,
+            )
             command, kwargs = commands[-1]
             with self.assertRaises(PermissionDenied):
                 command(loan.pk, actor=viewer, **kwargs)
@@ -168,34 +218,73 @@ class PawnDraftUiTests(WorkspaceTestCase):
         from django.contrib.contenttypes.models import ContentType
         from django.core.exceptions import PermissionDenied
         from apps.tenant_apps.loans.services import record_pawn_loan_repayment
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
-        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        self.client.post(
+            reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            {"effective_date": "2026-07-18"},
+        )
         staff = get_user_model().objects.create_user(username="repayment-only")
         role = Role.objects.create(name="RepaymentOnly")
         content_type = ContentType.objects.get_for_model(Company)
         for code in ("data_view", "loan_repay"):
-            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            permission, _ = Permission.objects.get_or_create(
+                content_type=content_type, codename=code, defaults={"name": code}
+            )
             workspace_role_permissions(role, self.tenant).add(permission)
         Membership.objects.create(user=staff, company=self.tenant, role=role)
         self.client.force_login(staff)
-        self.assertEqual(self.client.get(reverse("loans:pawn_loan_repay", args=[loan.pk])).status_code, 200)
-        for route in ("pawn_loan_release_full", "pawn_loan_accrue", "pawn_loan_capitalize", "pawn_loan_renew"):
-            self.assertEqual(self.client.post(reverse("loans:" + route, args=[loan.pk]), {}).status_code, 403)
-        result = record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
-        replay = record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
+        self.assertEqual(
+            self.client.get(
+                reverse("loans:pawn_loan_repay", args=[loan.pk])
+            ).status_code,
+            200,
+        )
+        for route in (
+            "pawn_loan_release_full",
+            "pawn_loan_accrue",
+            "pawn_loan_capitalize",
+            "pawn_loan_renew",
+        ):
+            self.assertEqual(
+                self.client.post(
+                    reverse("loans:" + route, args=[loan.pk]), {}
+                ).status_code,
+                403,
+            )
+        result = record_pawn_loan_repayment(
+            loan.pk, amount="100", request_key="scoped-repayment", actor=staff
+        )
+        replay = record_pawn_loan_repayment(
+            loan.pk, amount="100", request_key="scoped-repayment", actor=staff
+        )
         self.assertEqual(result.loan_event.pk, replay.loan_event.pk)
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, 'href="#payment-receipts"')
         self.assertContains(detail, "Print payment receipt")
-        self.assertEqual([row["event"].pk for row in detail.context["repayment_rows"]], [result.loan_event.pk])
+        self.assertEqual(
+            [row["event"].pk for row in detail.context["repayment_rows"]],
+            [result.loan_event.pk],
+        )
         before = loan.loan_events.count()
-        workspace_role_permissions(role, self.tenant).remove(Permission.objects.get(content_type=content_type, codename="loan_repay"))
+        workspace_role_permissions(role, self.tenant).remove(
+            Permission.objects.get(content_type=content_type, codename="loan_repay")
+        )
         with self.assertRaises(PermissionDenied):
-            record_pawn_loan_repayment(loan.pk, amount="100", request_key="scoped-repayment", actor=staff)
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_repay", args=[loan.pk]), {}).status_code, 403)
+            record_pawn_loan_repayment(
+                loan.pk, amount="100", request_key="scoped-repayment", actor=staff
+            )
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_repay", args=[loan.pk]), {}
+            ).status_code,
+            403,
+        )
         self.assertEqual(loan.loan_events.count(), before)
 
     def test_interest_and_release_grants_are_independent(self):
@@ -203,61 +292,103 @@ class PawnDraftUiTests(WorkspaceTestCase):
         from django.contrib.contenttypes.models import ContentType
         from django.core.exceptions import PermissionDenied
         from apps.tenant_apps.loans.services import (
-            finalize_pawn_loan_accrual, capitalize_pawn_loan_interest,
-            preview_pawn_loan_full_release, release_pawn_loan_in_full,
+            finalize_pawn_loan_accrual,
+            capitalize_pawn_loan_interest,
+            preview_pawn_loan_full_release,
+            release_pawn_loan_in_full,
         )
         from apps.tenant_apps.loans.services.pawn_interest import PawnInterestError
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
-        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
-        staff = get_user_model().objects.create_user(username="interest-release-delegate")
+        self.client.post(
+            reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            {"effective_date": "2026-07-18"},
+        )
+        staff = get_user_model().objects.create_user(
+            username="interest-release-delegate"
+        )
         role = Role.objects.create(name="ServicingDelegate")
         ct = ContentType.objects.get_for_model(Company)
         grants = {}
         for code in ("data_view", "loan_accrue", "loan_capitalize", "loan_release"):
-            grants[code], _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+            grants[code], _ = Permission.objects.get_or_create(
+                content_type=ct, codename=code, defaults={"name": code}
+            )
         Membership.objects.create(user=staff, company=self.tenant, role=role)
         self.client.force_login(staff)
-        workspace_role_permissions(role, self.tenant).set([grants["data_view"], grants["loan_accrue"]])
-        with patch("apps.tenant_apps.loans.services.pawn_interest.timezone.localdate", return_value=date(2026, 9, 9)):
+        workspace_role_permissions(role, self.tenant).set(
+            [grants["data_view"], grants["loan_accrue"]]
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_interest.timezone.localdate",
+            return_value=date(2026, 9, 9),
+        ):
             result = finalize_pawn_loan_accrual(loan.pk, period_number=1, actor=staff)
         self.assertEqual(result.accrual.period_number, 1)
-        workspace_role_permissions(role, self.tenant).set([grants["data_view"], grants["loan_capitalize"]])
+        workspace_role_permissions(role, self.tenant).set(
+            [grants["data_view"], grants["loan_capitalize"]]
+        )
         with self.assertRaises(PermissionDenied):
             finalize_pawn_loan_accrual(loan.pk, period_number=1, actor=staff)
-        self.assertEqual(self.client.get(reverse("loans:pawn_loan_capitalize", args=[loan.pk])).status_code, 200)
+        self.assertEqual(
+            self.client.get(
+                reverse("loans:pawn_loan_capitalize", args=[loan.pk])
+            ).status_code,
+            200,
+        )
         # A grant permits the command but does not bypass the simple-interest policy.
         with self.assertRaisesRegex(PawnInterestError, "Only a compound"):
             capitalize_pawn_loan_interest(loan.pk, through_period_number=1, actor=staff)
-        workspace_role_permissions(role, self.tenant).set([grants["data_view"], grants["loan_release"]])
+        workspace_role_permissions(role, self.tenant).set(
+            [grants["data_view"], grants["loan_release"]]
+        )
         with self.assertRaises(PermissionDenied):
             capitalize_pawn_loan_interest(loan.pk, through_period_number=1, actor=staff)
-        with patch("apps.tenant_apps.loans.services.pawn_release.timezone.localdate", return_value=date(2026, 9, 9)):
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_release.timezone.localdate",
+            return_value=date(2026, 9, 9),
+        ):
             quote = preview_pawn_loan_full_release(loan.pk)
-            result = release_pawn_loan_in_full(loan.pk, settlement_amount=quote.minimum_settlement,
-                request_key="release-only", actor=staff)
+            result = release_pawn_loan_in_full(
+                loan.pk,
+                settlement_amount=quote.minimum_settlement,
+                request_key="release-only",
+                actor=staff,
+            )
         loan.refresh_from_db()
         self.assertEqual(loan.state, "CLOSED")
         workspace_role_permissions(role, self.tenant).set([grants["data_view"]])
         with self.assertRaises(PermissionDenied):
-            release_pawn_loan_in_full(loan.pk, settlement_amount=quote.minimum_settlement,
-                request_key="release-only", actor=staff)
+            release_pawn_loan_in_full(
+                loan.pk,
+                settlement_amount=quote.minimum_settlement,
+                request_key="release-only",
+                actor=staff,
+            )
         self.assertEqual(loan.releases.count(), 1)
 
     def test_notice_and_export_http_permissions_are_independent(self):
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         user = get_user_model().objects.create_user(username="report-reader")
         role = Role.objects.create(name="ReportReader")
         ct = ContentType.objects.get_for_model(Company)
         grants = {}
         for code in ("data_view", "data_edit", "report_export"):
-            grants[code], _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+            grants[code], _ = Permission.objects.get_or_create(
+                content_type=ct, codename=code, defaults={"name": code}
+            )
         workspace_role_permissions(role, self.tenant).add(grants["data_view"])
         Membership.objects.create(user=user, company=self.tenant, role=role)
         self.client.force_login(user)
@@ -268,8 +399,14 @@ class PawnDraftUiTests(WorkspaceTestCase):
         for url in (create, retry):
             self.assertEqual(self.client.post(url, {}).status_code, 403)
         self.assertEqual(self.client.get(create).status_code, 403)
-        exports = [reverse("loans:pawn_loan_report_export", args=["active", fmt]) for fmt in ("csv", "xlsx", "pdf")]
-        exports += [reverse("loans:pawn_party_statement_export", args=[self.party.pk, fmt]) for fmt in ("csv", "xlsx", "pdf")]
+        exports = [
+            reverse("loans:pawn_loan_report_export", args=["active", fmt])
+            for fmt in ("csv", "xlsx", "pdf")
+        ]
+        exports += [
+            reverse("loans:pawn_party_statement_export", args=[self.party.pk, fmt])
+            for fmt in ("csv", "xlsx", "pdf")
+        ]
         for url in exports:
             self.assertEqual(self.client.get(url).status_code, 403)
         self.assertEqual(self.client.get(statement).status_code, 200)
@@ -286,27 +423,45 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_document_service_checks_reader_before_reusing_an_issue(self):
         from django.core.exceptions import PermissionDenied
-        from apps.tenant_apps.loans.services.document_issuance import issue_configurable_document
+        from apps.tenant_apps.loans.services.document_issuance import (
+            issue_configurable_document,
+        )
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         reader = get_user_model().objects.create_user(username="document-reader")
         role, _ = Role.objects.get_or_create(name="Viewer")
         member = Membership.objects.create(user=reader, company=self.tenant, role=role)
-        kwargs = dict(workspace=self.tenant, loan=loan,
-            payload=SimpleNamespace(document_type="loan_ticket"), source_type="PawnLoan",
-            source_id=loan.pk, source_fingerprint="test")
-        with patch("apps.tenant_apps.loans.services.document_issuance.LoanDocumentLayoutService.find_official_issue") as find:
+        kwargs = dict(
+            workspace=self.tenant,
+            loan=loan,
+            payload=SimpleNamespace(document_type="loan_ticket"),
+            source_type="PawnLoan",
+            source_id=loan.pk,
+            source_fingerprint="test",
+        )
+        with patch(
+            "apps.tenant_apps.loans.services.document_issuance.LoanDocumentLayoutService.find_official_issue"
+        ) as find:
             cached = object()
             find.return_value = cached
-            self.assertIs(issue_configurable_document(actor=reader, **kwargs).issue, cached)
+            self.assertIs(
+                issue_configurable_document(actor=reader, **kwargs).issue, cached
+            )
             find.reset_mock()
             for flag in ("fixed_recovery", "legacy_profile_recovery"):
                 with self.assertRaises(PermissionDenied):
-                    issue_configurable_document(actor=reader, **dict(kwargs, **{flag: True}))
+                    issue_configurable_document(
+                        actor=reader, **dict(kwargs, **{flag: True})
+                    )
             with self.assertRaises(PermissionDenied):
                 issue_configurable_document(actor=None, **kwargs)
-            mismatched = dict(kwargs, workspace=SimpleNamespace(pk=self.tenant.pk + 1000))
+            mismatched = dict(
+                kwargs, workspace=SimpleNamespace(pk=self.tenant.pk + 1000)
+            )
             with self.assertRaises(PermissionDenied):
                 issue_configurable_document(actor=reader, **mismatched)
             member.delete()
@@ -316,20 +471,30 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_owner_simple_workflow_is_atomic_and_replay_safe(self):
         from apps.tenant_apps.loans.services.loan_workflow import make_review
+
         setup = reverse("loans:loan_workflow_settings")
         self.assertEqual(self.client.post(setup, {"mode": "SIMPLE"}).status_code, 302)
         self.tenant.refresh_from_db()
         self.assertEqual(self.tenant.loan_workflow, "SIMPLE")
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
         response = self.client.get(url)
         self.assertContains(response, "Confirm payout")
         self.assertContains(response, "9,800")
         _, token = make_review(loan)
-        data = {"effective_date": "2026-07-18", "review_token": token, "confirmed": "on"}
-        with patch("apps.tenant_apps.loans.services.loan_workflow.disburse_pawn_loan", side_effect=ValueError("Payment record failed")):
+        data = {
+            "effective_date": "2026-07-18",
+            "review_token": token,
+            "confirmed": "on",
+        }
+        with patch(
+            "apps.tenant_apps.loans.services.loan_workflow.disburse_pawn_loan",
+            side_effect=ValueError("Payment record failed"),
+        ):
             self.assertContains(self.client.post(url, data), "Payment record failed")
         loan.refresh_from_db()
         self.assertEqual(loan.state, "DRAFT")
@@ -342,20 +507,33 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(loan.loan_events.filter(event_kind="DISBURSAL").count(), 1)
 
     @patch("django.utils.timezone.localdate", return_value=date(2026, 7, 18))
-    def test_disbursal_review_uses_frozen_amounts_and_empty_post_records_nothing(self, _today):
+    def test_disbursal_review_uses_frozen_amounts_and_empty_post_records_nothing(
+        self, _today
+    ):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         detail_url = reverse("loans:pawn_loan_detail", args=[loan.pk])
         draft = self.client.get(detail_url)
         self.assertContains(draft, "Check before continuing")
         self.assertContains(draft, "9,800")
-        self.assertNotContains(draft, 'target="_blank" rel="noopener" href="' + reverse("workspace_loans:pawn_loan_ticket_pdf", args=[self.tenant.slug, loan.pk]))
+        self.assertNotContains(
+            draft,
+            'target="_blank" rel="noopener" href="'
+            + reverse(
+                "workspace_loans:pawn_loan_ticket_pdf", args=[self.tenant.slug, loan.pk]
+            ),
+        )
         self.assertEqual(loan.approval_snapshots.count(), 0)
         self.assertEqual(loan.loan_events.count(), 0)
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
         url = reverse("loans:pawn_loan_disburse", args=[loan.pk])
-        with patch("apps.tenant_apps.loans.services.pawn_lifecycle.resolve_pawn_draft_economics", side_effect=AssertionError("Must read frozen approval")):
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_lifecycle.resolve_pawn_draft_economics",
+            side_effect=AssertionError("Must read frozen approval"),
+        ):
             response = self.client.get(url)
         self.assertContains(response, "9,800")
         self.assertContains(response, "saved approval")
@@ -378,7 +556,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
     def test_simple_review_empty_post_is_bound_and_hindi_fields_are_accessible(self):
         self.client.post(reverse("loans:loan_workflow_settings"), {"mode": "SIMPLE"})
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
         response = self.client.post(url, {})
@@ -396,15 +576,22 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_simple_review_rejects_stale_terms_and_workflow_switch(self):
         from apps.tenant_apps.loans.services.loan_workflow import make_review
+
         setup = reverse("loans:loan_workflow_settings")
         self.client.post(setup, {"mode": "SIMPLE"})
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         url = reverse("loans:pawn_loan_review_disburse", args=[loan.pk])
         _, token = make_review(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(tenure_months=4)
-        data = {"effective_date": "2026-07-18", "review_token": token, "confirmed": "on"}
+        data = {
+            "effective_date": "2026-07-18",
+            "review_token": token,
+            "confirmed": "on",
+        }
         self.assertContains(self.client.post(url, data), "changed")
         self.client.post(setup, {"mode": "EXTENDED"})
         self.assertContains(self.client.post(url, data), "separate approval")
@@ -414,48 +601,78 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_staff_cannot_choose_workflow_or_use_owner_shortcut(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         staff = get_user_model().objects.create_user(username="workflow-staff")
         role, _ = Role.objects.get_or_create(name="Member")
         Membership.objects.create(user=staff, company=self.tenant, role=role)
         self.client.force_login(staff)
-        for name in ("loan_workflow_settings", "pawn_loan_review_disburse", "pawn_loan_approve", "pawn_loan_disburse", "pawn_loan_renew"):
-            url = reverse("loans:" + name, args=[] if name == "loan_workflow_settings" else [loan.pk])
+        for name in (
+            "loan_workflow_settings",
+            "pawn_loan_review_disburse",
+            "pawn_loan_approve",
+            "pawn_loan_disburse",
+            "pawn_loan_renew",
+        ):
+            url = reverse(
+                "loans:" + name,
+                args=[] if name == "loan_workflow_settings" else [loan.pk],
+            )
             self.assertEqual(self.client.post(url, {"mode": "SIMPLE"}).status_code, 403)
 
     def test_extended_workflow_delegates_approval_and_disbursal_independently(self):
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
         from apps.orgs.models import Company
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         staff = get_user_model().objects.create_user(username="workflow-approver")
         role = Role.objects.create(name="LoanApproverOnly")
         content_type = ContentType.objects.get_for_model(Company)
         for code in ("data_view", "loan_approve"):
-            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            permission, _ = Permission.objects.get_or_create(
+                content_type=content_type, codename=code, defaults={"name": code}
+            )
             workspace_role_permissions(role, self.tenant).add(permission)
-        membership = Membership.objects.create(user=staff, company=self.tenant, role=role)
+        membership = Membership.objects.create(
+            user=staff, company=self.tenant, role=role
+        )
         self.client.force_login(staff)
         approve_url = reverse("loans:pawn_loan_approve", args=[loan.pk])
         disburse_url = reverse("loans:pawn_loan_disburse", args=[loan.pk])
         self.assertEqual(self.client.post(approve_url).status_code, 302)
-        self.assertEqual(self.client.post(disburse_url, {"effective_date": "2026-07-18"}).status_code, 403)
+        self.assertEqual(
+            self.client.post(
+                disburse_url, {"effective_date": "2026-07-18"}
+            ).status_code,
+            403,
+        )
         self.client.force_login(self.owner)
         self.client.post(reverse("loans:loan_workflow_settings"), {"mode": "SIMPLE"})
         loan.refresh_from_db()
         self.assertEqual(loan.state, "APPROVED")
         disburser = Role.objects.create(name="LoanDisburserOnly")
         for code in ("data_view", "loan_disburse"):
-            permission, _ = Permission.objects.get_or_create(content_type=content_type, codename=code, defaults={"name": code})
+            permission, _ = Permission.objects.get_or_create(
+                content_type=content_type, codename=code, defaults={"name": code}
+            )
             disburser.permissions.add(permission)
         membership.role = disburser
         membership.save(update_fields=["role"])
         self.client.force_login(staff)
         self.assertEqual(self.client.post(approve_url).status_code, 403)
-        self.assertEqual(self.client.post(disburse_url, {"effective_date": "2026-07-18"}).status_code, 302)
+        self.assertEqual(
+            self.client.post(
+                disburse_url, {"effective_date": "2026-07-18"}
+            ).status_code,
+            302,
+        )
         loan.refresh_from_db()
         self.assertEqual(loan.state, "ACTIVE")
 
@@ -548,7 +765,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_loan_directory_fragment_and_history_fallback_are_private(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         url = reverse("loans:pawn_loan_list")
         headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TARGET": "loan-results"}
@@ -559,7 +778,12 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(fragment["X-Rokkad-Fragment"], "loan-results")
         self.assertIn("no-store", fragment["Cache-Control"])
         self.assertIn("HX-History-Restore-Request", fragment["Vary"])
-        for extra in ({}, {"HTTP_HX_HISTORY_RESTORE_REQUEST": "true"}, {"HTTP_HX_BOOSTED": "true"}, {"HTTP_HX_TARGET": "unrecognized"}):
+        for extra in (
+            {},
+            {"HTTP_HX_HISTORY_RESTORE_REQUEST": "true"},
+            {"HTTP_HX_BOOSTED": "true"},
+            {"HTTP_HX_TARGET": "unrecognized"},
+        ):
             request_headers = {**headers, **extra} if extra else {}
             page = self.client.get(url, **request_headers)
             self.assertContains(page, 'id="loan-search-form"')
@@ -569,16 +793,28 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_loan_directory_phone_search_and_invalid_filters(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         Party.objects.filter(pk=self.party.pk).update(primary_phone="9876543210")
         url = reverse("loans:pawn_loan_list")
         found = self.client.get(url, {"q": " 9876543210 "})
         self.assertEqual(list(found.context["loans"]), [loan])
         self.assertContains(found, "Principal at entry")
-        for query, field in [({"state": "UNKNOWN"}, "state"), ({"license": "99999999"}, "license"), ({"loan_date_from": "invalid"}, "loan_date_from"), ({"loan_date_from": "2026-09-22", "loan_date_to": "2026-09-01"}, "loan_date_to")]:
+        for query, field in [
+            ({"state": "UNKNOWN"}, "state"),
+            ({"license": "99999999"}, "license"),
+            ({"loan_date_from": "invalid"}, "loan_date_from"),
+            (
+                {"loan_date_from": "2026-09-22", "loan_date_to": "2026-09-01"},
+                "loan_date_to",
+            ),
+        ]:
             with self.subTest(query=query):
-                response = self.client.get(url, query, HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
+                response = self.client.get(
+                    url, query, HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results"
+                )
                 self.assertEqual(list(response.context["loans"]), [])
                 self.assertContains(response, f'href="#id_{field}"')
                 self.assertContains(response, "Check the filters to see matching loans")
@@ -593,22 +829,37 @@ class PawnDraftUiTests(WorkspaceTestCase):
         member = get_user_model().objects.create_user(username="loan-directory-reader")
         role, _ = Role.objects.get_or_create(name="Loan directory reader")
         content_type = ContentType.objects.get_for_model(Company)
-        permission, _ = Permission.objects.get_or_create(content_type=content_type, codename="data_view", defaults={"name": "data_view"})
+        permission, _ = Permission.objects.get_or_create(
+            content_type=content_type,
+            codename="data_view",
+            defaults={"name": "data_view"},
+        )
         workspace_role_permissions(role, self.tenant).set([permission])
         Membership.objects.create(user=member, company=self.tenant, role=role)
         self.client.force_login(member)
         page = self.client.get(reverse("loans:pawn_loan_list"))
         self.assertEqual(page.status_code, 200)
         self.assertFalse(page.context["can_create_loans"])
-        self.assertNotContains(page, 'class="btn btn-primary" href="' + reverse("loans:pawn_loan_create"))
-        self.assertEqual(self.client.get(reverse("loans:pawn_loan_create")).status_code, 403)
+        self.assertNotContains(
+            page, 'class="btn btn-primary" href="' + reverse("loans:pawn_loan_create")
+        )
+        self.assertEqual(
+            self.client.get(reverse("loans:pawn_loan_create")).status_code, 403
+        )
         workspace_role_permissions(role, self.tenant).clear()
-        denied = self.client.get(reverse("loans:pawn_loan_list"), HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
+        denied = self.client.get(
+            reverse("loans:pawn_loan_list"),
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TARGET="loan-results",
+        )
         self.assertEqual(denied.status_code, 403)
 
     def test_loan_directory_hindi_full_page_and_fragment(self):
         self.client.cookies["django_language"] = "hi"
-        for headers in ({}, {"HTTP_HX_REQUEST": "true", "HTTP_HX_TARGET": "loan-results"}):
+        for headers in (
+            {},
+            {"HTTP_HX_REQUEST": "true", "HTTP_HX_TARGET": "loan-results"},
+        ):
             response = self.client.get(reverse("loans:pawn_loan_list"), **headers)
             self.assertContains(response, "कोई मेल खाता ऋण नहीं मिला")
             if not headers:
@@ -617,7 +868,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_detail_navigates_to_adjacent_loans_in_the_same_series(self):
         license, series = self._configured_setup()
-        other_series = LoanSeries.objects.create(license=license, name="Other", code="B")
+        other_series = LoanSeries.objects.create(
+            license=license, name="Other", code="B"
+        )
         common = {
             "workspace": self.tenant,
             "product_version": self.product_version,
@@ -629,24 +882,40 @@ class PawnDraftUiTests(WorkspaceTestCase):
             "created_by": self.owner,
         }
         previous = PawnLoan.objects.create(
-            **common, series=series, loan_number="PL-A-00001", loan_date=date(2026, 7, 17)
+            **common,
+            series=series,
+            loan_number="PL-A-00001",
+            loan_date=date(2026, 7, 17),
         )
         current = PawnLoan.objects.create(
-            **common, series=series, loan_number="PL-A-00002", loan_date=date(2026, 7, 18)
+            **common,
+            series=series,
+            loan_number="PL-A-00002",
+            loan_date=date(2026, 7, 18),
         )
         following = PawnLoan.objects.create(
-            **common, series=series, loan_number="PL-A-00003", loan_date=date(2026, 7, 18)
+            **common,
+            series=series,
+            loan_number="PL-A-00003",
+            loan_date=date(2026, 7, 18),
         )
         PawnLoan.objects.create(
-            **common, series=other_series, loan_number="PL-B-00001", loan_date=date(2026, 7, 18)
+            **common,
+            series=other_series,
+            loan_number="PL-B-00001",
+            loan_date=date(2026, 7, 18),
         )
 
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[current.pk]))
 
         self.assertEqual(detail.context["previous_loan"], previous)
         self.assertEqual(detail.context["next_loan"], following)
-        self.assertContains(detail, reverse("loans:pawn_loan_detail", args=[previous.pk]))
-        self.assertContains(detail, reverse("loans:pawn_loan_detail", args=[following.pk]))
+        self.assertContains(
+            detail, reverse("loans:pawn_loan_detail", args=[previous.pk])
+        )
+        self.assertContains(
+            detail, reverse("loans:pawn_loan_detail", args=[following.pk])
+        )
 
     def test_detail_disables_series_navigation_at_the_boundaries(self):
         license, series = self._configured_setup()
@@ -681,16 +950,34 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_checklist_detects_missing_product_without_consuming_numbers(self):
         self._configured_setup()
-        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="DRAFT")
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(
+            status="DRAFT"
+        )
         before = list(LoanNumberSequence.objects.order_by("pk").values())
         page = self.client.get(reverse("loans:license_list"))
         self.assertContains(page, "First-loan setup checklist")
-        checks = {step["key"]: step["complete"] for step in page.context["loan_setup"]["steps"]}
-        self.assertEqual(checks, {"license": True, "series": True, "economics": True, "product": False, "metal_rates": True})
+        checks = {
+            step["key"]: step["complete"]
+            for step in page.context["loan_setup"]["steps"]
+        }
+        self.assertEqual(
+            checks,
+            {
+                "license": True,
+                "series": True,
+                "economics": True,
+                "product": False,
+                "metal_rates": True,
+            },
+        )
         blocked = self.client.get(reverse("loans:pawn_loan_create"))
         self.assertContains(blocked, "Choose lending products")
-        self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
-        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
+        self.assertEqual(
+            before, list(LoanNumberSequence.objects.order_by("pk").values())
+        )
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(
+            status="ACTIVE"
+        )
         ready = self.client.get(reverse("loans:license_list"))
         self.assertTrue(ready.context["loan_setup"]["ready"])
         self.assertContains(ready, "Start first loan")
@@ -704,7 +991,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
             page = self.client.get(reverse(f"loans:{name}"))
             self.assertContains(page, "Ask your Workspace owner or administrator")
             self.assertNotContains(page, "#license-register")
-        self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse("loans:license_list")).status_code, 403
+        )
 
     def test_missing_photo_allows_saving_draft(self):
         license, series = self._configured_setup()
@@ -720,66 +1009,131 @@ class PawnDraftUiTests(WorkspaceTestCase):
         license, series = self._configured_setup()
         payload = self._mixed_metal_payload(license, series)
         del payload["collateral-0-photograph"]
-        payload["collateral-1-photograph"] = SimpleUploadedFile("second.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg")
+        payload["collateral-1-photograph"] = SimpleUploadedFile(
+            "second.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg"
+        )
         response = self.client.post(reverse("loans:pawn_loan_create"), payload)
         self.assertEqual(response.status_code, 302)
         items = list(PawnLoan.objects.get().collateral_items.order_by("pk"))
         self.assertFalse(items[0].photos.exists())
         self.assertEqual(items[1].photos.get().original_filename, "second.jpg")
 
-    @override_settings(STORAGES={
-        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    })
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+    )
     def test_upload_errors_preserve_form_and_rollback_draft_before_retry(self):
         from botocore.exceptions import SSLError, ClientError
-        from apps.tenant_apps.loans.models import PawnCollateralPhoto, PawnCollateralItem
+        from apps.tenant_apps.loans.models import (
+            PawnCollateralPhoto,
+            PawnCollateralItem,
+        )
+
         license, series = self._configured_setup()
         storage = PawnCollateralPhoto._meta.get_field("file").storage
         errors = (
-            SSLError(endpoint_url="https://private-storage.invalid/secret-key", error="unexpected EOF"),
-            ClientError({"Error": {"Code": "AccessDenied", "Message": "private provider detail"}}, "PutObject"),
+            SSLError(
+                endpoint_url="https://private-storage.invalid/secret-key",
+                error="unexpected EOF",
+            ),
+            ClientError(
+                {
+                    "Error": {
+                        "Code": "AccessDenied",
+                        "Message": "private provider detail",
+                    }
+                },
+                "PutObject",
+            ),
             OSError("private filesystem detail"),
         )
         for error in errors:
-            with self.subTest(error=type(error).__name__), patch.object(storage, "save", side_effect=error):
+            with (
+                self.subTest(error=type(error).__name__),
+                patch.object(storage, "save", side_effect=error),
+            ):
                 payload = self._payload(license, series)
                 response = self.client.post(reverse("loans:pawn_loan_create"), payload)
-                self.assertContains(response, "The collateral photo could not be uploaded.")
+                self.assertContains(
+                    response, "The collateral photo could not be uploaded."
+                )
                 self.assertContains(response, "The draft was not saved.")
                 self.assertNotContains(response, "secret-key")
                 self.assertNotContains(response, "private provider detail")
                 self.assertNotContains(response, "private filesystem detail")
-                for field in ("borrower", "series", "product_version", "loan_date", "tenure_months"):
-                    self.assertEqual(str(response.context["form"][field].value()), str(payload[field]))
-                self.assertEqual(response.context["formset"].forms[0]["description"].value(), "Gold chain")
+                for field in (
+                    "borrower",
+                    "series",
+                    "product_version",
+                    "loan_date",
+                    "tenure_months",
+                ):
+                    self.assertEqual(
+                        str(response.context["form"][field].value()),
+                        str(payload[field]),
+                    )
+                self.assertEqual(
+                    response.context["formset"].forms[0]["description"].value(),
+                    "Gold chain",
+                )
                 self.assertFalse(PawnLoan.objects.exists())
                 self.assertFalse(PawnCollateralItem.objects.exists())
                 self.assertFalse(PawnCollateralPhoto.objects.exists())
-                self.assertEqual(LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN").next_number, 1)
-        response = self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+                self.assertEqual(
+                    LoanNumberSequence.objects.get(
+                        series=series, document_kind="PAWN_LOAN"
+                    ).next_number,
+                    1,
+                )
+        response = self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(PawnLoan.objects.get().loan_number, "PL-A-00001")
         self.assertEqual(PawnCollateralPhoto.objects.count(), 1)
 
-    @override_settings(STORAGES={
-        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    })
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        }
+    )
     def test_edit_upload_failure_keeps_saved_draft_and_existing_photo(self):
         from botocore.exceptions import SSLError
         from apps.tenant_apps.loans.models import PawnCollateralPhoto
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         item = loan.collateral_items.get()
         photo = item.photos.get()
         payload = self._payload(license, series)
-        payload.update({"collateral-0-collateral_item_id": item.pk,
-                        "collateral-0-description": "Changed description", "tenure_months": "6"})
-        error = SSLError(endpoint_url="https://private-storage.invalid/key", error="unexpected EOF")
-        with patch.object(PawnCollateralPhoto._meta.get_field("file").storage, "save", side_effect=error):
-            response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        payload.update(
+            {
+                "collateral-0-collateral_item_id": item.pk,
+                "collateral-0-description": "Changed description",
+                "tenure_months": "6",
+            }
+        )
+        error = SSLError(
+            endpoint_url="https://private-storage.invalid/key", error="unexpected EOF"
+        )
+        with patch.object(
+            PawnCollateralPhoto._meta.get_field("file").storage,
+            "save",
+            side_effect=error,
+        ):
+            response = self.client.post(
+                reverse("loans:pawn_loan_update", args=[loan.pk]), payload
+            )
         self.assertContains(response, "The collateral photo could not be uploaded.")
         self.assertEqual(response.context["form"]["tenure_months"].value(), "6")
         loan.refresh_from_db()
@@ -792,27 +1146,45 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_second_upload_and_cleanup_failure_do_not_hide_recoverable_error(self):
         from botocore.exceptions import SSLError
-        from apps.tenant_apps.loans.models import PawnCollateralPhoto, PawnCollateralItem
+        from apps.tenant_apps.loans.models import (
+            PawnCollateralPhoto,
+            PawnCollateralItem,
+        )
+
         license, series = self._configured_setup()
         storage = PawnCollateralPhoto._meta.get_field("file").storage
-        error = SSLError(endpoint_url="https://private-storage.invalid/key", error="unexpected EOF")
+        error = SSLError(
+            endpoint_url="https://private-storage.invalid/key", error="unexpected EOF"
+        )
         payload = self._mixed_metal_payload(license, series)
         payload["collateral-1-photograph"] = SimpleUploadedFile(
-            "second.jpg", b"\xff\xd8\xfftest-evidence", content_type="image/jpeg")
-        with patch.object(storage, "save", side_effect=["test-only-first.jpg", error]), patch.object(
-            storage, "delete", side_effect=error
-        ), self.assertLogs("apps.tenant_apps.loans.services.pawn_drafts", level="ERROR") as logs:
+            "second.jpg", b"\xff\xd8\xfftest-evidence", content_type="image/jpeg"
+        )
+        with (
+            patch.object(storage, "save", side_effect=["test-only-first.jpg", error]),
+            patch.object(storage, "delete", side_effect=error),
+            self.assertLogs(
+                "apps.tenant_apps.loans.services.pawn_drafts", level="ERROR"
+            ) as logs,
+        ):
             response = self.client.post(reverse("loans:pawn_loan_create"), payload)
         self.assertContains(response, "The collateral photo could not be uploaded.")
         self.assertIn("test-only-first.jpg", logs.output[0])
         self.assertFalse(PawnLoan.objects.exists())
         self.assertFalse(PawnCollateralItem.objects.exists())
         self.assertFalse(PawnCollateralPhoto.objects.exists())
-        self.assertEqual(LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN").next_number, 1)
+        self.assertEqual(
+            LoanNumberSequence.objects.get(
+                series=series, document_kind="PAWN_LOAN"
+            ).next_number,
+            1,
+        )
 
     def test_edit_post_keeps_disabled_series_and_product_and_borrower(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         item = loan.collateral_items.get()
         payload = self._payload(license, series)
@@ -820,14 +1192,22 @@ class PawnDraftUiTests(WorkspaceTestCase):
             del payload[field]
         payload["collateral-0-collateral_item_id"] = item.pk
         payload["collateral-0-net_weight"] = "invalid"
-        response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        response = self.client.post(
+            reverse("loans:pawn_loan_update", args=[loan.pk]), payload
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["form"]["series"].value(), series.pk)
-        self.assertEqual(response.context["form"]["product_version"].value(), self.product_version.pk)
-        self.assertEqual(str(response.context["form"]["borrower"].value()), str(self.party.pk))
+        self.assertEqual(
+            response.context["form"]["product_version"].value(), self.product_version.pk
+        )
+        self.assertEqual(
+            str(response.context["form"]["borrower"].value()), str(self.party.pk)
+        )
         self.assertFalse(response.context["form"].errors)
         payload["collateral-0-net_weight"] = "9.0000"
-        corrected = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        corrected = self.client.post(
+            reverse("loans:pawn_loan_update", args=[loan.pk]), payload
+        )
         self.assertEqual(corrected.status_code, 302)
 
     def test_create_uses_active_party_autocomplete_and_supports_preselection(self):
@@ -851,14 +1231,20 @@ class PawnDraftUiTests(WorkspaceTestCase):
         field = response.context["form"].fields["borrower"]
         self.assertIsInstance(field.widget, PartyAutocompleteWidget)
         self.assertEqual(response.context["formset"].total_form_count(), 1)
-        self.assertEqual(field.widget.get_url(), reverse("workspace_party:party_autocomplete", args=[self.tenant.slug]))
+        self.assertEqual(
+            field.widget.get_url(),
+            reverse("workspace_party:party_autocomplete", args=[self.tenant.slug]),
+        )
         self.assertEqual(
             response.context["form"].initial["borrower"],
             str(self.party.pk),
         )
         self.assertEqual(list(field.queryset), [self.party])
         # The test connection is an owner role; runtime widget reads are RLS scoped.
-        self.assertEqual(list(field.widget.get_queryset().filter(workspace=self.tenant)), [self.party])
+        self.assertEqual(
+            list(field.widget.get_queryset().filter(workspace=self.tenant)),
+            [self.party],
+        )
         self.assertNotIn(inactive_party, field.widget.get_queryset())
         self.assertContains(response, "django-select2")
         self.assertContains(
@@ -910,13 +1296,13 @@ class PawnDraftUiTests(WorkspaceTestCase):
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, loan.loan_number)
         self.assertContains(detail, "Recommended next step")
-        self.assertContains(detail, 'data-loan-dates')
+        self.assertContains(detail, "data-loan-dates")
         self.assertContains(detail, "Draft created")
         self.assertContains(detail, loan.loan_date.strftime("%d/%m/%Y"))
         self.assertContains(detail, "Approve loan")
         self.assertContains(detail, "Capture collateral photograph")
         self.assertContains(detail, 'capture="environment"')
-        self.assertContains(detail, f'{photo_url}?inline=1')
+        self.assertContains(detail, f"{photo_url}?inline=1")
         self.assertContains(detail, 'alt="Gold chain photograph"')
         self.assertNotContains(detail, "Loan ticket PDF")
         ticket = self.client.get(reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]))
@@ -929,7 +1315,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(edit, "loans/collateral_camera.js")
         self.assertContains(edit, 'capture="environment"')
         self.assertContains(edit, "Existing photograph evidence")
-        self.assertContains(edit, f'{photo_url}?inline=1')
+        self.assertContains(edit, f"{photo_url}?inline=1")
         self.assertContains(edit, "Existing collateral: Gold chain")
         self.assertContains(edit, "+ Add collateral")
         self.assertContains(edit, "New collateral")
@@ -947,7 +1333,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         payload["collateral-0-allocated_principal"] = "12500.00"
         payload["collateral-0-description"] = "Corrected gold chain"
         payload["collateral-0-collateral_item_id"] = str(loan.collateral_items.get().pk)
-        response = self.client.post(reverse("loans:pawn_loan_update", args=[loan.pk]), payload)
+        response = self.client.post(
+            reverse("loans:pawn_loan_update", args=[loan.pk]), payload
+        )
         self.assertEqual(
             response.status_code,
             302,
@@ -959,14 +1347,18 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
         loan.refresh_from_db()
         self.assertEqual(str(loan.principal_amount), "12500.00")
-        self.assertEqual(loan.collateral_items.get().description, "Corrected gold chain")
+        self.assertEqual(
+            loan.collateral_items.get().description, "Corrected gold chain"
+        )
         self.assertEqual(loan.collateral_items.get().public_id, original_public_id)
         self.assertEqual(loan.collateral_items.get().photos.count(), 2)
         self.assertEqual(loan.change_log.count(), 2)
 
     def test_staff_can_add_another_collateral_item_to_a_draft(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         existing = loan.collateral_items.get()
         payload = self._payload(license, series)
@@ -1018,24 +1410,34 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_detail", args=[loan.pk]),
             fetch_redirect_response=False,
         )
-        self.assertFalse(PawnLoan.objects.get(pk=loan.pk).collateral_items.filter(pk=removed_item_id).exists())
-        self.assertFalse(type(removed_photo).objects.filter(pk=removed_photo.pk).exists())
+        self.assertFalse(
+            PawnLoan.objects.get(pk=loan.pk)
+            .collateral_items.filter(pk=removed_item_id)
+            .exists()
+        )
+        self.assertFalse(
+            type(removed_photo).objects.filter(pk=removed_photo.pk).exists()
+        )
 
     def test_draft_split_moves_selected_identity_and_keeps_source_number(self):
         license, series = self._configured_setup()
         payload = self._payload(license, series)
-        payload.update({
-            "collateral-TOTAL_FORMS": "2",
-            "collateral-0-allocated_principal": "10000.00",
-            "collateral-1-description": "Gold ring",
-            "collateral-1-metal": "GOLD",
-            "collateral-1-gross_weight": "5.0000",
-            "collateral-1-net_weight": "4.5000",
-            "collateral-1-purity_percentage": "91.6000",
-            "collateral-1-latest_appraised_value": "25000.00",
-            "collateral-1-allocated_principal": "5000.00",
-            "collateral-1-photograph": SimpleUploadedFile("ring.jpg", b"\xff\xd8\xff\xe0ring", content_type="image/jpeg"),
-        })
+        payload.update(
+            {
+                "collateral-TOTAL_FORMS": "2",
+                "collateral-0-allocated_principal": "10000.00",
+                "collateral-1-description": "Gold ring",
+                "collateral-1-metal": "GOLD",
+                "collateral-1-gross_weight": "5.0000",
+                "collateral-1-net_weight": "4.5000",
+                "collateral-1-purity_percentage": "91.6000",
+                "collateral-1-latest_appraised_value": "25000.00",
+                "collateral-1-allocated_principal": "5000.00",
+                "collateral-1-photograph": SimpleUploadedFile(
+                    "ring.jpg", b"\xff\xd8\xff\xe0ring", content_type="image/jpeg"
+                ),
+            }
+        )
         self.client.post(reverse("loans:pawn_loan_create"), payload)
         source = PawnLoan.objects.get()
         source_number = source.loan_number
@@ -1043,16 +1445,23 @@ class PawnDraftUiTests(WorkspaceTestCase):
         selected_public_id = selected.public_id
         selected_photo_id = selected.photos.get().pk
         preview = preview_pawn_draft_split(
-            source.pk, collateral_item_ids=(selected.pk,), series=series,
-            product_version=self.product_version, loan_date=source.loan_date,
+            source.pk,
+            collateral_item_ids=(selected.pk,),
+            series=series,
+            product_version=self.product_version,
+            loan_date=source.loan_date,
             tenure_months=source.tenure_months,
         )
 
         new_loan = split_pawn_draft(
-            source.pk, collateral_item_ids=(selected.pk,), series=series,
-            product_version=self.product_version, loan_date=source.loan_date,
+            source.pk,
+            collateral_item_ids=(selected.pk,),
+            series=series,
+            product_version=self.product_version,
+            loan_date=source.loan_date,
             tenure_months=source.tenure_months,
-            expected_fingerprint=preview.fingerprint, actor=self.owner,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
         )
 
         source.refresh_from_db()
@@ -1071,39 +1480,63 @@ class PawnDraftUiTests(WorkspaceTestCase):
         payload["collateral-TOTAL_FORMS"] = str(count)
         for index in range(count):
             for field, value in (
-                ("description", f"Gold item {index + 1}"), ("metal", "GOLD"),
-                ("gross_weight", "10"), ("net_weight", "9"),
-                ("purity_percentage", "91.6"), ("latest_appraised_value", "50000"),
-                ("allocated_principal", str(1000 * (index + 1))), ("quantity", "2"),
+                ("description", f"Gold item {index + 1}"),
+                ("metal", "GOLD"),
+                ("gross_weight", "10"),
+                ("net_weight", "9"),
+                ("purity_percentage", "91.6"),
+                ("latest_appraised_value", "50000"),
+                ("allocated_principal", str(1000 * (index + 1))),
+                ("quantity", "2"),
             ):
                 payload[f"collateral-{index}-{field}"] = value
             payload[f"collateral-{index}-photograph"] = SimpleUploadedFile(
-                f"item-{index}.jpg", b"\xff\xd8\xff\xe0item" + bytes([index]), content_type="image/jpeg")
+                f"item-{index}.jpg",
+                b"\xff\xd8\xff\xe0item" + bytes([index]),
+                content_type="image/jpeg",
+            )
         self.client.post(reverse("loans:pawn_loan_create"), payload)
         source = PawnLoan.objects.get()
         items = tuple(source.collateral_items.order_by("pk"))
-        arguments = dict(collateral_item_ids=tuple(item.pk for item in items[1:]),
-            series=series, product_version=self.product_version,
-            loan_date=source.loan_date, tenure_months=source.tenure_months, split_each=True)
+        arguments = dict(
+            collateral_item_ids=tuple(item.pk for item in items[1:]),
+            series=series,
+            product_version=self.product_version,
+            loan_date=source.loan_date,
+            tenure_months=source.tenure_months,
+            split_each=True,
+        )
         return source, items, arguments
 
-    def test_one_per_collateral_creates_nine_drafts_preserving_identity_and_photos(self):
+    def test_one_per_collateral_creates_nine_drafts_preserving_identity_and_photos(
+        self,
+    ):
         source, items, arguments = self._split_source(10)
         number = source.loan_number
         identities = [(item.pk, item.public_id, item.photos.get().pk) for item in items]
         preview = preview_pawn_draft_split(source.pk, **arguments)
-        sequence = LoanNumberSequence.objects.get(series=source.series, document_kind="PAWN_LOAN")
+        sequence = LoanNumberSequence.objects.get(
+            series=source.series, document_kind="PAWN_LOAN"
+        )
         self.assertEqual(sequence.next_number, 2)
         self.assertEqual(len(preview.new_drafts), 9)
-        loans = split_pawn_draft(source.pk, **arguments,
-            expected_fingerprint=preview.fingerprint, actor=self.owner)
-        self.assertEqual([loan.loan_number for loan in loans],
-            [f"PL-A-{index:05d}" for index in range(2, 11)])
+        loans = split_pawn_draft(
+            source.pk,
+            **arguments,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
+        )
+        self.assertEqual(
+            [loan.loan_number for loan in loans],
+            [f"PL-A-{index:05d}" for index in range(2, 11)],
+        )
         source.refresh_from_db()
         self.assertEqual(source.loan_number, number)
         self.assertEqual(source.principal_amount, Decimal("1000"))
         self.assertEqual(source.collateral_items.get().pk, items[0].pk)
-        for loan, item, identity in zip((source, *loans), items, identities, strict=True):
+        for loan, item, identity in zip(
+            (source, *loans), items, identities, strict=True
+        ):
             item.refresh_from_db()
             self.assertEqual((item.pk, item.public_id, item.photos.get().pk), identity)
             self.assertEqual(item.loan_id, loan.pk)
@@ -1114,11 +1547,17 @@ class PawnDraftUiTests(WorkspaceTestCase):
             self.assertEqual(loan.loan_date, source.loan_date)
             self.assertEqual(loan.tenure_months, source.tenure_months)
             self.assertEqual(loan.loan_events.count(), 0)
-        self.assertEqual(sum(loan.principal_amount for loan in (source, *loans)), Decimal("55000"))
+        self.assertEqual(
+            sum(loan.principal_amount for loan in (source, *loans)), Decimal("55000")
+        )
         sequence.refresh_from_db()
         self.assertEqual(sequence.next_number, 11)
-        replay = split_pawn_draft(source.pk, **arguments,
-            expected_fingerprint=preview.fingerprint, actor=self.owner)
+        replay = split_pawn_draft(
+            source.pk,
+            **arguments,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
+        )
         self.assertEqual([loan.pk for loan in replay], [loan.pk for loan in loans])
         self.assertEqual(PawnLoan.objects.count(), 10)
         sequence.refresh_from_db()
@@ -1126,46 +1565,75 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_split_preview_shows_per_loan_fixed_charges(self):
         from apps.tenant_apps.loans.models import PawnLoanFeePolicy
+
         source, items, arguments = self._split_source()
-        PawnLoanFeePolicy.objects.create(workspace=self.tenant, license=source.license,
-            code="DOC", name="Document charge", calculation_type="FIXED", value=10,
-            deducted_at_disbursal=True, effective_from=date(2026, 1, 1))
+        PawnLoanFeePolicy.objects.create(
+            workspace=self.tenant,
+            license=source.license,
+            code="DOC",
+            name="Document charge",
+            calculation_type="FIXED",
+            value=10,
+            deducted_at_disbursal=True,
+            effective_from=date(2026, 1, 1),
+        )
         preview = preview_pawn_draft_split(source.pk, **arguments)
-        self.assertEqual(preview.original_economics.economics.deducted_fees, Decimal("10"))
+        self.assertEqual(
+            preview.original_economics.economics.deducted_fees, Decimal("10")
+        )
         self.assertEqual(preview.totals["deducted_fees"], Decimal("30"))
         self.assertEqual(preview.totals["net_disbursed"], Decimal("5850"))
-        self.assertEqual(preview.original_economics.economics.net_disbursed, Decimal("5870"))
+        self.assertEqual(
+            preview.original_economics.economics.net_disbursed, Decimal("5870")
+        )
 
-    def test_batch_split_failure_rolls_back_created_drafts_items_audit_and_numbers(self):
+    def test_batch_split_failure_rolls_back_created_drafts_items_audit_and_numbers(
+        self,
+    ):
         from apps.tenant_apps.loans.models import LoanChangeLog
         from apps.tenant_apps.loans.services.pawn_drafts import create_pawn_draft
+
         source, items, arguments = self._split_source()
         preview = preview_pawn_draft_split(source.pk, **arguments)
         logs = LoanChangeLog.objects.count()
         count = 0
+
         def fail_second(*args, **kwargs):
             nonlocal count
             count += 1
             if count == 2:
                 raise ValueError("Second draft failed")
             return create_pawn_draft(*args, **kwargs)
-        with patch("apps.tenant_apps.loans.services.pawn_draft_split.create_pawn_draft", side_effect=fail_second):
+
+        with patch(
+            "apps.tenant_apps.loans.services.pawn_draft_split.create_pawn_draft",
+            side_effect=fail_second,
+        ):
             with self.assertRaisesMessage(ValueError, "Second draft failed"):
-                split_pawn_draft(source.pk, **arguments,
-                    expected_fingerprint=preview.fingerprint, actor=self.owner)
+                split_pawn_draft(
+                    source.pk,
+                    **arguments,
+                    expected_fingerprint=preview.fingerprint,
+                    actor=self.owner,
+                )
         source.refresh_from_db()
         self.assertEqual(source.principal_amount, Decimal("6000"))
         self.assertEqual(source.collateral_items.count(), 3)
         self.assertEqual(PawnLoan.objects.count(), 1)
         self.assertEqual(LoanChangeLog.objects.count(), logs)
-        self.assertEqual(source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 2)
+        self.assertEqual(
+            source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 2
+        )
         for item in items:
             item.refresh_from_db()
             self.assertEqual(item.loan_id, source.pk)
             self.assertEqual(item.photos.count(), 1)
 
     def test_batch_split_requires_enough_numbers_without_consuming_any(self):
-        from apps.tenant_apps.loans.services.number_allocation import SequenceExhaustedError
+        from apps.tenant_apps.loans.services.number_allocation import (
+            SequenceExhaustedError,
+        )
+
         source, items, arguments = self._split_source()
         sequence = source.series.number_sequences.get(document_kind="PAWN_LOAN")
         sequence.maximum_number = 2
@@ -1178,30 +1646,61 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_batch_split_rejects_changed_item_economics_and_number_preview(self):
         from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+
         source, items, arguments = self._split_source()
         preview = preview_pawn_draft_split(source.pk, **arguments)
         type(items[1]).objects.filter(pk=items[1].pk).update(description="Changed ring")
         with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
-            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+            split_pawn_draft(
+                source.pk,
+                **arguments,
+                expected_fingerprint=preview.fingerprint,
+                actor=self.owner,
+            )
         preview = preview_pawn_draft_split(source.pk, **arguments)
-        policy = PawnMetalInterestRatePolicy.objects.get(license=source.license, metal="GOLD")
+        policy = PawnMetalInterestRatePolicy.objects.get(
+            license=source.license, metal="GOLD"
+        )
         policy.monthly_interest_rate = Decimal("3")
         policy.save()
         with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
-            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+            split_pawn_draft(
+                source.pk,
+                **arguments,
+                expected_fingerprint=preview.fingerprint,
+                actor=self.owner,
+            )
         preview = preview_pawn_draft_split(source.pk, **arguments)
-        LoanNumberSequence.objects.filter(series=source.series, document_kind="PAWN_LOAN").update(next_number=3)
+        LoanNumberSequence.objects.filter(
+            series=source.series, document_kind="PAWN_LOAN"
+        ).update(next_number=3)
         with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
-            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+            split_pawn_draft(
+                source.pk,
+                **arguments,
+                expected_fingerprint=preview.fingerprint,
+                actor=self.owner,
+            )
         self.assertEqual(PawnLoan.objects.count(), 1)
         self.assertEqual(source.collateral_items.count(), 3)
 
     def test_batch_split_rejects_empty_all_foreign_or_multiple_retained_entries(self):
         from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+
         source, items, arguments = self._split_source()
-        for selected in ((), tuple(item.pk for item in items), (999999,), (items[1].pk,)):
-            with self.subTest(selected=selected), self.assertRaises(PawnDraftSplitError):
-                preview_pawn_draft_split(source.pk, **{**arguments, "collateral_item_ids": selected})
+        for selected in (
+            (),
+            tuple(item.pk for item in items),
+            (999999,),
+            (items[1].pk,),
+        ):
+            with (
+                self.subTest(selected=selected),
+                self.assertRaises(PawnDraftSplitError),
+            ):
+                preview_pawn_draft_split(
+                    source.pk, **{**arguments, "collateral_item_ids": selected}
+                )
         PawnLoan.objects.filter(pk=source.pk).update(state="APPROVED")
         with self.assertRaisesMessage(PawnDraftSplitError, "Only a draft"):
             preview_pawn_draft_split(source.pk, **arguments)
@@ -1209,14 +1708,29 @@ class PawnDraftUiTests(WorkspaceTestCase):
     def test_batch_split_replay_rejects_changed_request_and_revoked_access(self):
         from django.core.exceptions import PermissionDenied
         from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+
         source, items, arguments = self._split_source()
         preview = preview_pawn_draft_split(source.pk, **arguments)
-        split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        split_pawn_draft(
+            source.pk,
+            **arguments,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
+        )
         with self.assertRaisesMessage(PawnDraftSplitError, "does not match"):
-            split_pawn_draft(source.pk, **{**arguments, "tenure_months": 4},
-                expected_fingerprint=preview.fingerprint, actor=self.owner)
+            split_pawn_draft(
+                source.pk,
+                **{**arguments, "tenure_months": 4},
+                expected_fingerprint=preview.fingerprint,
+                actor=self.owner,
+            )
         with self.assertRaises(PermissionDenied):
-            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=None)
+            split_pawn_draft(
+                source.pk,
+                **arguments,
+                expected_fingerprint=preview.fingerprint,
+                actor=None,
+            )
         self.assertEqual(PawnLoan.objects.count(), 3)
 
     def test_split_screen_batch_preview_confirm_and_exact_http_retry(self):
@@ -1224,16 +1738,28 @@ class PawnDraftUiTests(WorkspaceTestCase):
         url = reverse("loans:pawn_loan_split", args=[source.pk])
         response = self.client.get(url)
         self.assertContains(response, "One loan per collateral")
-        self.assertContains(response, "Gold item 1 — Gold, 9.0000 g; principal ₹1,000.00")
-        self.assertEqual(response.context["form"]["retained_collateral"].value(), items[0].pk)
-        data = dict(split_mode="each", retained_collateral=items[2].pk,
-            series=source.series_id, product_version=source.product_version_id,
-            loan_date="2026-07-18", tenure_months=3, action="preview")
+        self.assertContains(
+            response, "Gold item 1 — Gold, 9.0000 g; principal ₹1,000.00"
+        )
+        self.assertEqual(
+            response.context["form"]["retained_collateral"].value(), items[0].pk
+        )
+        data = dict(
+            split_mode="each",
+            retained_collateral=items[2].pk,
+            series=source.series_id,
+            product_version=source.product_version_id,
+            loan_date="2026-07-18",
+            tenure_months=3,
+            action="preview",
+        )
         response = self.client.post(url, data)
         self.assertContains(response, "Review 2 new drafts")
         self.assertContains(response, "Before splitting")
         self.assertEqual(PawnLoan.objects.count(), 1)
-        data.update(action="confirm", fingerprint=response.context["preview"].fingerprint)
+        data.update(
+            action="confirm", fingerprint=response.context["preview"].fingerprint
+        )
         response = self.client.post(url, data, follow=True)
         self.assertContains(response, "2 new drafts created")
         self.assertEqual(len(response.context["completed_loans"]), 2)
@@ -1241,7 +1767,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         response = self.client.post(url, data, follow=True)
         self.assertContains(response, "Split completed")
         self.assertEqual(PawnLoan.objects.count(), 3)
-        self.assertEqual(source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 4)
+        self.assertEqual(
+            source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 4
+        )
         LoanSeries.objects.filter(pk=source.series_id).update(is_active=False)
         response = self.client.post(url, data, follow=True)
         self.assertContains(response, "Split completed")
@@ -1252,29 +1780,62 @@ class PawnDraftUiTests(WorkspaceTestCase):
         arguments["split_each"] = False
         preview = preview_pawn_draft_split(source.pk, **arguments)
         self.assertEqual(len(preview.new_drafts), 1)
-        loan = split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        loan = split_pawn_draft(
+            source.pk,
+            **arguments,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
+        )
         self.assertEqual(loan.collateral_items.count(), 2)
-        replay = split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        replay = split_pawn_draft(
+            source.pk,
+            **arguments,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
+        )
         self.assertEqual(replay.pk, loan.pk)
         self.assertEqual(PawnLoan.objects.count(), 2)
 
     def test_split_service_refuses_another_workspace_source(self):
         from apps.tenancy.context import without_workspace_context, workspace_context
         from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
+
         source, items, arguments = self._split_source()
         preview = preview_pawn_draft_split(source.pk, **arguments)
-        other = Company.objects.create(schema_name=f"split-other-{uuid.uuid4().hex[:8]}",
-            name="Other split workspace", owner=self.owner, creator=self.owner)
-        with without_workspace_context(), workspace_context(other.pk), self.assertRaisesMessage(PawnDraftSplitError, "not found"):
-            split_pawn_draft(source.pk, **arguments, expected_fingerprint=preview.fingerprint, actor=self.owner)
+        other = Company.objects.create(
+            schema_name=f"split-other-{uuid.uuid4().hex[:8]}",
+            name="Other split workspace",
+            owner=self.owner,
+            creator=self.owner,
+        )
+        with (
+            without_workspace_context(),
+            workspace_context(other.pk),
+            self.assertRaisesMessage(PawnDraftSplitError, "not found"),
+        ):
+            split_pawn_draft(
+                source.pk,
+                **arguments,
+                expected_fingerprint=preview.fingerprint,
+                actor=self.owner,
+            )
         self.assertEqual(PawnLoan.objects.count(), 1)
         self.assertEqual(source.collateral_items.count(), 3)
 
     def test_split_form_missing_retained_entry_is_an_actionable_error(self):
         source, items, arguments = self._split_source()
         url = reverse("loans:pawn_loan_split", args=[source.pk])
-        response = self.client.post(url, dict(split_mode="each", series=source.series_id,
-            product_version=source.product_version_id, loan_date="2026-07-18", tenure_months=3, action="preview"))
+        response = self.client.post(
+            url,
+            dict(
+                split_mode="each",
+                series=source.series_id,
+                product_version=source.product_version_id,
+                loan_date="2026-07-18",
+                tenure_months=3,
+                action="preview",
+            ),
+        )
         self.assertContains(response, "Choose the collateral to keep")
         self.assertEqual(PawnLoan.objects.count(), 1)
 
@@ -1354,7 +1915,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 200)
         item_errors = response.context["formset"].forms[0].errors
         self.assertIn("allocated_principal", item_errors)
-        self.assertIn("exceeds its maximum 40000.00", item_errors["allocated_principal"][0])
+        self.assertIn(
+            "exceeds its maximum 40000.00", item_errors["allocated_principal"][0]
+        )
         self.assertFalse(response.context["form"].non_field_errors())
         self.assertFalse(PawnLoan.objects.exists())
         sequence = LoanNumberSequence.objects.get(
@@ -1375,19 +1938,30 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_borrower_filters_keep_inactive_borrowers_and_compose_with_status(self):
         from apps.tenant_apps.loans.filters import PawnLoanFilter
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         first = PawnLoan.objects.get()
-        other = Party.objects.create(display_name="Another Borrower", primary_phone="9876543210")
+        other = Party.objects.create(
+            display_name="Another Borrower", primary_phone="9876543210"
+        )
         payload = self._payload(license, series)
         payload["borrower"] = other.pk
         self.client.post(reverse("loans:pawn_loan_create"), payload)
         Party.objects.filter(pk=self.party.pk).update(status="INACTIVE")
         url = reverse("loans:pawn_loan_list")
-        for params in ({"borrower": self.party.pk}, {"borrower_q": self.party.party_code}, {"borrower_q": "Draft Borrower"}):
+        for params in (
+            {"borrower": self.party.pk},
+            {"borrower_q": self.party.party_code},
+            {"borrower_q": "Draft Borrower"},
+        ):
             response = self.client.get(url, params)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual([loan.pk for loan in response.context["loans"]], [first.pk])
+            self.assertEqual(
+                [loan.pk for loan in response.context["loans"]], [first.pk]
+            )
         response = self.client.get(url, {"borrower": self.party.pk, "state": "ACTIVE"})
         self.assertEqual(response.context["page_obj"].paginator.count, 0)
         response = self.client.get(url, {"borrower_q": "9876543210"})
@@ -1395,7 +1969,11 @@ class PawnDraftUiTests(WorkspaceTestCase):
         response = self.client.get(url, {"borrower": "999999999"})
         self.assertContains(response, "Check the filters")
         self.assertEqual(response.context["page_obj"].paginator.count, 0)
-        filtered = PawnLoanFilter({"borrower": self.party.pk}, queryset=PawnLoan.objects.all(), workspace=self.tenant)
+        filtered = PawnLoanFilter(
+            {"borrower": self.party.pk},
+            queryset=PawnLoan.objects.all(),
+            workspace=self.tenant,
+        )
         self.assertTrue(filtered.is_valid())
         self.assertEqual(list(filtered.qs), [first])
 
@@ -1403,24 +1981,38 @@ class PawnDraftUiTests(WorkspaceTestCase):
         license, series = self._configured_setup()
         series.code = "LINODE-10"
         series.save(update_fields=["code"])
-        LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="C")
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        LoanNumberSequence.objects.filter(
+            series=series, document_kind="PAWN_LOAN"
+        ).update(prefix="C")
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
         self.assertContains(detail, "Series C")
         self.assertNotContains(detail, "LINODE-10")
-        response = self.client.get(reverse("loans:pawn_loan_list"), {"borrower": self.party.pk})
+        response = self.client.get(
+            reverse("loans:pawn_loan_list"), {"borrower": self.party.pk}
+        )
         self.assertContains(response, "django-select2-heavy")
         self.assertNotContains(response, "LINODE-10")
         field = response.context["loan_filter"].form.fields["borrower"]
-        self.assertEqual(field.widget.get_url(), self.workspace_reverse("loans:loan_borrower_autocomplete"))
+        self.assertEqual(
+            field.widget.get_url(),
+            self.workspace_reverse("loans:loan_borrower_autocomplete"),
+        )
         self.assertContains(response, self.party.display_name)
-        LoanNumberSequence.objects.filter(series=series, document_kind="PAWN_LOAN").update(prefix="")
+        LoanNumberSequence.objects.filter(
+            series=series, document_kind="PAWN_LOAN"
+        ).update(prefix="")
         self.assertEqual(series.pawn_display_name, "No prefix")
 
     def test_quantity_purity_defaults_and_frozen_interest_override(self):
         from apps.tenant_apps.loans.models import LoanChangeLog
-        from apps.tenant_apps.loans.services import create_pawn_metal_interest_rate_policy
+        from apps.tenant_apps.loans.services import (
+            create_pawn_metal_interest_rate_policy,
+        )
+
         license, series = self._configured_setup()
         page = self.client.get(reverse("loans:pawn_loan_create"))
         item_form = page.context["formset"].forms[0]
@@ -1428,27 +2020,73 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(item_form["quantity"].value(), 1)
         self.assertIsNone(item_form["interest_rate_override"].value())
         payload = self._payload(license, series)
-        payload.update({"collateral-0-quantity": "3", "collateral-0-interest_rate_override": "1.1",
-                        "collateral-0-interest_override_reason": "Agreed customer rate"})
-        preview = self.client.post(reverse("loans:pawn_loan_create"), {**payload, "action": "preview"})
-        self.assertEqual(preview.context["economics_preview"].economics.monthly_interest, Decimal("110"))
-        payload["collateral-0-photograph"] = self._payload(license, series)["collateral-0-photograph"]
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_create"), payload).status_code, 302)
-        loan = PawnLoan.objects.get(); item = loan.collateral_items.get()
+        payload.update(
+            {
+                "collateral-0-quantity": "3",
+                "collateral-0-interest_rate_override": "1.1",
+                "collateral-0-interest_override_reason": "Agreed customer rate",
+            }
+        )
+        preview = self.client.post(
+            reverse("loans:pawn_loan_create"), {**payload, "action": "preview"}
+        )
+        self.assertEqual(
+            preview.context["economics_preview"].economics.monthly_interest,
+            Decimal("110"),
+        )
+        payload["collateral-0-photograph"] = self._payload(license, series)[
+            "collateral-0-photograph"
+        ]
+        self.assertEqual(
+            self.client.post(reverse("loans:pawn_loan_create"), payload).status_code,
+            302,
+        )
+        loan = PawnLoan.objects.get()
+        item = loan.collateral_items.get()
         self.assertEqual(item.quantity, 3)
         self.assertEqual(item.monthly_interest_rate, Decimal("1.1"))
         self.assertEqual(item.interest_rate_policy.monthly_interest_rate, Decimal("2"))
-        self.assertEqual(loan.principal_amount, Decimal("10000"))  # quantity never multiplies row totals
-        audit = LoanChangeLog.objects.filter(loan=loan, event_kind="DRAFT_CREATED").get()
-        self.assertEqual(audit.metadata["draft"]["collateral"][0]["interest_override_reason"], "Agreed customer rate")
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk])).status_code, 302)
+        self.assertEqual(
+            loan.principal_amount, Decimal("10000")
+        )  # quantity never multiplies row totals
+        audit = LoanChangeLog.objects.filter(
+            loan=loan, event_kind="DRAFT_CREATED"
+        ).get()
+        self.assertEqual(
+            audit.metadata["draft"]["collateral"][0]["interest_override_reason"],
+            "Agreed customer rate",
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_approve", args=[loan.pk])
+            ).status_code,
+            302,
+        )
         frozen = loan.approval_snapshots.get().payload
         self.assertEqual(frozen["collateral"][0]["quantity"], 3)
-        self.assertEqual(Decimal(frozen["collateral_economics"]["tranches"][0]["policy_monthly_interest_rate"]), Decimal("2"))
-        create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=license, actor=self.owner,
-            metal="GOLD", monthly_interest_rate=Decimal("2.5"), effective_from=date(2026, 1, 1))
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]),
-            {"effective_date": "2026-07-18"}).status_code, 302)
+        self.assertEqual(
+            Decimal(
+                frozen["collateral_economics"]["tranches"][0][
+                    "policy_monthly_interest_rate"
+                ]
+            ),
+            Decimal("2"),
+        )
+        create_pawn_metal_interest_rate_policy(
+            workspace=self.tenant,
+            license=license,
+            actor=self.owner,
+            metal="GOLD",
+            monthly_interest_rate=Decimal("2.5"),
+            effective_from=date(2026, 1, 1),
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+                {"effective_date": "2026-07-18"},
+            ).status_code,
+            302,
+        )
         loan.refresh_from_db()
         self.assertEqual(loan.state, "ACTIVE")
         self.assertEqual(loan.disbursal_snapshot.monthly_interest, Decimal("110"))
@@ -1460,56 +2098,112 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_interest_override_permission_is_enforced_by_service_and_form(self):
         from django.core.exceptions import PermissionDenied
-        from apps.tenant_apps.loans.services import CollateralDraftInput, UpdatePawnDraftCommand, update_pawn_draft
+        from apps.tenant_apps.loans.services import (
+            CollateralDraftInput,
+            UpdatePawnDraftCommand,
+            update_pawn_draft,
+        )
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
-        loan = PawnLoan.objects.get(); item = loan.collateral_items.get()
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
+        loan = PawnLoan.objects.get()
+        item = loan.collateral_items.get()
         staff = get_user_model().objects.create_user(username="draft-only-override")
         role = Role.objects.get_or_create(name="Member")[0]
         Membership.objects.create(user=staff, company=self.tenant, role=role)
+
         def command(rate, reason):
-            return UpdatePawnDraftCommand(borrower_id=loan.borrower_id, principal_amount=loan.principal_amount,
-                monthly_interest_rate=loan.monthly_interest_rate, loan_date=loan.loan_date, tenure_months=loan.tenure_months,
-                collateral=(CollateralDraftInput(description=item.description, metal=item.metal, gross_weight=item.gross_weight,
-                    net_weight=item.net_weight, purity_percentage=item.purity_percentage, latest_appraised_value=item.latest_appraised_value,
-                    allocated_principal=item.allocated_principal, collateral_item_id=item.pk, quantity=2,
-                    interest_rate_override=rate, interest_override_reason=reason),))
+            return UpdatePawnDraftCommand(
+                borrower_id=loan.borrower_id,
+                principal_amount=loan.principal_amount,
+                monthly_interest_rate=loan.monthly_interest_rate,
+                loan_date=loan.loan_date,
+                tenure_months=loan.tenure_months,
+                collateral=(
+                    CollateralDraftInput(
+                        description=item.description,
+                        metal=item.metal,
+                        gross_weight=item.gross_weight,
+                        net_weight=item.net_weight,
+                        purity_percentage=item.purity_percentage,
+                        latest_appraised_value=item.latest_appraised_value,
+                        allocated_principal=item.allocated_principal,
+                        collateral_item_id=item.pk,
+                        quantity=2,
+                        interest_rate_override=rate,
+                        interest_override_reason=reason,
+                    ),
+                ),
+            )
+
         with self.assertRaises(PermissionDenied):
-            update_pawn_draft(loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=staff)
-        update_pawn_draft(loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=self.owner)
+            update_pawn_draft(
+                loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=staff
+            )
+        update_pawn_draft(
+            loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=self.owner
+        )
         with self.assertRaises(PermissionDenied):
             update_pawn_draft(loan.pk, command(None, ""), actor=staff)
         # Staff may retain the authorized override while editing other draft details.
-        update_pawn_draft(loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=staff)
-        item.refresh_from_db(); self.assertEqual(item.monthly_interest_rate, Decimal("0"))
+        update_pawn_draft(
+            loan.pk, command(Decimal("0"), "Zero interest agreed"), actor=staff
+        )
+        item.refresh_from_db()
+        self.assertEqual(item.monthly_interest_rate, Decimal("0"))
         self.client.force_login(staff)
         page = self.client.get(reverse("loans:pawn_loan_update", args=[loan.pk]))
         self.assertEqual(page.status_code, 200)
         field = page.context["formset"].forms[0].fields["interest_rate_override"]
         self.assertTrue(field.disabled)
-        self.assertEqual(page.context["formset"].forms[0]["interest_rate_override"].value(), Decimal("0"))
+        self.assertEqual(
+            page.context["formset"].forms[0]["interest_rate_override"].value(),
+            Decimal("0"),
+        )
 
     def test_override_and_quantity_errors_do_not_save_or_allocate(self):
         license, series = self._configured_setup()
-        for extra in ({"quantity": "0"}, {"quantity": "10001"},
-                      {"interest_rate_override": "1"},
-                      {"interest_rate_override": "101", "interest_override_reason": "Invalid"}):
+        for extra in (
+            {"quantity": "0"},
+            {"quantity": "10001"},
+            {"interest_rate_override": "1"},
+            {"interest_rate_override": "101", "interest_override_reason": "Invalid"},
+        ):
             payload = self._payload(license, series)
-            payload.update({"collateral-0-" + name: value for name, value in extra.items()})
+            payload.update(
+                {"collateral-0-" + name: value for name, value in extra.items()}
+            )
             response = self.client.post(reverse("loans:pawn_loan_create"), payload)
             self.assertEqual(response.status_code, 200)
             self.assertTrue(response.context["formset"].errors)
             self.assertFalse(PawnLoan.objects.exists())
-            self.assertEqual(LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN").next_number, 1)
+            self.assertEqual(
+                LoanNumberSequence.objects.get(
+                    series=series, document_kind="PAWN_LOAN"
+                ).next_number,
+                1,
+            )
 
     def test_same_day_ltv_revision_allows_retry_and_preserves_frozen_approval(self):
         from apps.tenant_apps.loans.services import create_pawn_economic_configuration
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         existing = PawnLoan.objects.get()
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[existing.pk])).status_code, 302)
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_approve", args=[existing.pk])
+            ).status_code,
+            302,
+        )
         frozen = existing.approval_snapshots.get().payload
-        sequence = LoanNumberSequence.objects.get(series=series, document_kind="PAWN_LOAN")
+        sequence = LoanNumberSequence.objects.get(
+            series=series, document_kind="PAWN_LOAN"
+        )
         next_number = sequence.next_number
         payload = self._payload(license, series)
         payload["collateral-0-allocated_principal"] = "45000"
@@ -1518,10 +2212,16 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(PawnLoan.objects.count(), 1)
         sequence.refresh_from_db()
         self.assertEqual(sequence.next_number, next_number)
-        revised = create_pawn_economic_configuration(workspace=self.tenant, license=license, actor=self.owner,
-            valuation_method="LATEST_APPRAISAL", maximum_ltv_ratio=Decimal("0.95"),
-            gold_monthly_interest_rate=Decimal("2"), silver_monthly_interest_rate=Decimal("4"),
-            effective_from=date(2026, 1, 1))
+        revised = create_pawn_economic_configuration(
+            workspace=self.tenant,
+            license=license,
+            actor=self.owner,
+            valuation_method="LATEST_APPRAISAL",
+            maximum_ltv_ratio=Decimal("0.95"),
+            gold_monthly_interest_rate=Decimal("2"),
+            silver_monthly_interest_rate=Decimal("4"),
+            effective_from=date(2026, 1, 1),
+        )
         self.assertEqual(revised.economic_policy.revision, 2)
         payload = self._payload(license, series)
         payload["collateral-0-allocated_principal"] = "45000"
@@ -1529,86 +2229,161 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(saved.status_code, 302)
         new = PawnLoan.objects.exclude(pk=existing.pk).get()
         self.assertEqual(new.principal_amount, Decimal("45000"))
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[new.pk])).status_code, 302)
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_approve", args=[new.pk])
+            ).status_code,
+            302,
+        )
         self.assertEqual(existing.approval_snapshots.get().payload, frozen)
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_disburse", args=[existing.pk]),
-            {"effective_date": "2026-07-18"}).status_code, 302)
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_disburse", args=[existing.pk]),
+                {"effective_date": "2026-07-18"},
+            ).status_code,
+            302,
+        )
         existing.refresh_from_db()
         self.assertEqual(existing.state, "ACTIVE")
         self.assertEqual(existing.approval_snapshots.get().payload, frozen)
 
     def test_series_interest_setup_preview_approval_and_frozen_terms(self):
-        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+        from apps.tenant_apps.loans.services.economic_policies import (
+            create_pawn_series_interest_rates,
+        )
         from apps.tenant_apps.loans.models import PawnMetalInterestRatePolicy
+
         license, series = self._configured_setup()
         # An already-approved loan keeps the original rate after an override is added.
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         existing = PawnLoan.objects.get()
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve", args=[existing.pk])).status_code,302)
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_approve", args=[existing.pk])
+            ).status_code,
+            302,
+        )
         frozen = existing.approval_snapshots.get().payload
-        response = self.client.post(self.workspace_reverse("loans:pawn_economics_setup"), {
-            "action":"series_rates", "series-rates-series":series.pk,
-            "series-rates-effective_from":"2026-07-18",
-            "series-rates-gold_monthly_interest_rate":"1.1", "series-rates-silver_monthly_interest_rate":"3"})
-        self.assertEqual(response.status_code,302)
-        self.assertEqual(PawnMetalInterestRatePolicy.objects.filter(series=series).count(),2)
-        payload = self._payload(license,series)
-        preview = self.client.post(reverse("loans:pawn_loan_create"), {**payload,"action":"preview"})
-        self.assertEqual(preview.status_code,200)
-        self.assertEqual(preview.context["economics_preview"].economics.effective_monthly_rate,Decimal("1.1"))
-        self.assertEqual(PawnLoan.objects.count(),1)
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license,series))
+        response = self.client.post(
+            self.workspace_reverse("loans:pawn_economics_setup"),
+            {
+                "action": "series_rates",
+                "series-rates-series": series.pk,
+                "series-rates-effective_from": "2026-07-18",
+                "series-rates-gold_monthly_interest_rate": "1.1",
+                "series-rates-silver_monthly_interest_rate": "3",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            PawnMetalInterestRatePolicy.objects.filter(series=series).count(), 2
+        )
+        payload = self._payload(license, series)
+        preview = self.client.post(
+            reverse("loans:pawn_loan_create"), {**payload, "action": "preview"}
+        )
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(
+            preview.context["economics_preview"].economics.effective_monthly_rate,
+            Decimal("1.1"),
+        )
+        self.assertEqual(PawnLoan.objects.count(), 1)
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         new = PawnLoan.objects.exclude(pk=existing.pk).get()
-        self.assertEqual(new.monthly_interest_rate,Decimal("1.1"))
-        self.assertEqual(new.collateral_items.get().monthly_interest_rate,Decimal("1.1"))
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_approve",args=[new.pk])).status_code,302)
+        self.assertEqual(new.monthly_interest_rate, Decimal("1.1"))
+        self.assertEqual(
+            new.collateral_items.get().monthly_interest_rate, Decimal("1.1")
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_approve", args=[new.pk])
+            ).status_code,
+            302,
+        )
         new.refresh_from_db()
-        self.assertEqual(new.state,"APPROVED")
-        self.assertEqual(existing.approval_snapshots.get().payload,frozen)
+        self.assertEqual(new.state, "APPROVED")
+        self.assertEqual(existing.approval_snapshots.get().payload, frozen)
         existing.refresh_from_db()
-        self.assertEqual(existing.monthly_interest_rate,Decimal("2"))
-        self.assertEqual(self.client.post(reverse("loans:pawn_loan_disburse",args=[existing.pk]),{"effective_date":"2026-07-18"}).status_code,302)
+        self.assertEqual(existing.monthly_interest_rate, Decimal("2"))
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_disburse", args=[existing.pk]),
+                {"effective_date": "2026-07-18"},
+            ).status_code,
+            302,
+        )
         existing.refresh_from_db()
-        self.assertEqual(existing.state,"ACTIVE")
-        self.assertEqual(existing.approval_snapshots.get().payload,frozen)
+        self.assertEqual(existing.state, "ACTIVE")
+        self.assertEqual(existing.approval_snapshots.get().payload, frozen)
 
     def test_setup_checklist_accepts_series_only_interest_rates(self):
         from unittest.mock import patch
         from apps.tenant_apps.loans.models import PawnMetalInterestRatePolicy
         from apps.tenant_apps.loans.selectors.setup import get_pawn_setup_checklist
-        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+        from apps.tenant_apps.loans.services.economic_policies import (
+            create_pawn_series_interest_rates,
+        )
 
         license, series = self._configured_setup()
         PawnMetalInterestRatePolicy.objects.all().delete()
         create_pawn_series_interest_rates(
-            workspace=self.tenant, series=series, actor=self.owner,
+            workspace=self.tenant,
+            series=series,
+            actor=self.owner,
             effective_from=date(2026, 7, 18),
             gold_monthly_interest_rate=Decimal("1.1"),
             silver_monthly_interest_rate=Decimal("3"),
         )
-        with patch("apps.tenant_apps.loans.selectors.setup.timezone.localdate", return_value=date(2026, 7, 18)):
+        with patch(
+            "apps.tenant_apps.loans.selectors.setup.timezone.localdate",
+            return_value=date(2026, 7, 18),
+        ):
             checklist = get_pawn_setup_checklist(self.tenant)
-        economics = next(step for step in checklist["steps"] if step["key"] == "economics")
+        economics = next(
+            step for step in checklist["steps"] if step["key"] == "economics"
+        )
         self.assertTrue(economics["complete"])
 
     def test_borrower_search_paginates_inactive_customers_with_constant_queries(self):
         from django.core import signing
         from apps.tenant_apps.loans.widgets import LoanBorrowerAutocompleteWidget
         from apps.tenant_apps.party.models import PartyAddress, PartyContactMethod
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         original = PawnLoan.objects.values().get()
         original.pop("id")
         original["creation_submission_id"] = None  # Independent non-browser fixtures.
         for index in range(23):
-            party = Party.objects.create(display_name=f"Lookup borrower {index:02}", status="INACTIVE")
-            PartyAddress.objects.create(party=party, address_type="HOME", line1=f"Home {index}", is_default=True)
-            PartyContactMethod.objects.create(party=party, contact_type="MOBILE", value="+919999999999", is_primary=True)
-            PawnLoan.objects.create(**{**original, "loan_number": f"LOOKUP{index}", "borrower_id": party.pk})
+            party = Party.objects.create(
+                display_name=f"Lookup borrower {index:02}", status="INACTIVE"
+            )
+            PartyAddress.objects.create(
+                party=party, address_type="HOME", line1=f"Home {index}", is_default=True
+            )
+            PartyContactMethod.objects.create(
+                party=party,
+                contact_type="MOBILE",
+                value="+919999999999",
+                is_primary=True,
+            )
+            PawnLoan.objects.create(
+                **{**original, "loan_number": f"LOOKUP{index}", "borrower_id": party.pk}
+            )
         Party.objects.create(display_name="Lookup without loans")
         widget = LoanBorrowerAutocompleteWidget()
         with self.assertNumQueries(3):
-            rows = list(widget.filter_queryset(None, "Lookup", widget.get_queryset().filter(workspace=self.tenant))[:21])
+            rows = list(
+                widget.filter_queryset(
+                    None, "Lookup", widget.get_queryset().filter(workspace=self.tenant)
+                )[:21]
+            )
             labels = [widget.label_from_instance(row) for row in rows]
         self.assertEqual(len(labels), 21)
         self.assertIn("Home 0", labels[0])
@@ -1624,12 +2399,24 @@ class PawnDraftUiTests(WorkspaceTestCase):
         second = self.client.get(url, {**params, "page": 2}).json()
         self.assertEqual(len(second["results"]), 3)
         self.assertFalse(second["more"])
-        self.assertEqual(self.client.get(url, {**params, "field_id": "invalid"}).status_code, 404)
-        other_token = signing.dumps(url.replace(self.tenant.slug, "other-workspace"), salt=widget.token_salt)
-        self.assertEqual(self.client.get(url, {**params, "field_id": other_token}).status_code, 404)
-        self.assertEqual(self.client.get(url, {**params, "term": "L"}).json()["results"], [])
+        self.assertEqual(
+            self.client.get(url, {**params, "field_id": "invalid"}).status_code, 404
+        )
+        other_token = signing.dumps(
+            url.replace(self.tenant.slug, "other-workspace"), salt=widget.token_salt
+        )
+        self.assertEqual(
+            self.client.get(url, {**params, "field_id": other_token}).status_code, 404
+        )
+        self.assertEqual(
+            self.client.get(url, {**params, "term": "L"}).json()["results"], []
+        )
         with self.assertNumQueries(2):
-            loans = list(PawnLoan.objects.select_related("series").prefetch_related("series__number_sequences")[:20])
+            loans = list(
+                PawnLoan.objects.select_related("series").prefetch_related(
+                    "series__number_sequences"
+                )[:20]
+            )
             self.assertTrue(all(loan.series.pawn_display_name for loan in loans))
         viewer = get_user_model().objects.create_user(username="borrower-search-viewer")
         role, _ = Role.objects.get_or_create(name="Viewer")
@@ -1644,60 +2431,111 @@ class PawnDraftUiTests(WorkspaceTestCase):
     def test_analytical_reports_use_active_balances_and_export_all_groups(self):
         import csv
         import io
-        from apps.tenant_apps.loans.selectors.portfolio_analysis import get_portfolio_analysis, ANALYSIS_SECTIONS
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import (
+            get_portfolio_analysis,
+            ANALYSIS_SECTIONS,
+        )
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
-        self.client.post(reverse("loans:pawn_loan_disburse", args=[loan.pk]), {"effective_date": "2026-07-18"})
+        self.client.post(
+            reverse("loans:pawn_loan_disburse", args=[loan.pk]),
+            {"effective_date": "2026-07-18"},
+        )
         loan.refresh_from_db()
         self.assertEqual(loan.state, "ACTIVE")
         for section, _ in ANALYSIS_SECTIONS:
-            analysis = get_portfolio_analysis(section=section, as_of_date=date(2026, 7, 18))
+            analysis = get_portfolio_analysis(
+                section=section, as_of_date=date(2026, 7, 18)
+            )
             self.assertEqual(analysis["totals"][1], 1)
             if section != "collateral_totals":
-                self.assertEqual(analysis["totals"][6 if section == "year_totals" else 2], Decimal("10000"))
+                self.assertEqual(
+                    analysis["totals"][6 if section == "year_totals" else 2],
+                    Decimal("10000"),
+                )
                 self.assertEqual(analysis["incomplete_count"], 0)
-            response = self.client.get(reverse("loans:pawn_loan_reports"), {"section": section, "as_of": "2026-07-18"})
+            response = self.client.get(
+                reverse("loans:pawn_loan_reports"),
+                {"section": section, "as_of": "2026-07-18"},
+            )
             self.assertContains(response, "portfolio-charts")
             self.assertContains(response, "Totals cover every group")
             for fmt in ("csv", "xlsx", "pdf"):
-                exported = self.client.get(reverse("loans:pawn_loan_report_export", args=[section, fmt]), {"as_of": "2026-07-18", "page": 99})
+                exported = self.client.get(
+                    reverse("loans:pawn_loan_report_export", args=[section, fmt]),
+                    {"as_of": "2026-07-18", "page": 99},
+                )
                 self.assertEqual(exported.status_code, 200)
                 if fmt == "csv":
-                    rows = list(csv.reader(io.StringIO(exported.content.decode("utf-8-sig"))))
+                    rows = list(
+                        csv.reader(io.StringIO(exported.content.decode("utf-8-sig")))
+                    )
                     self.assertEqual(len(rows), len(analysis["rows"]) + 2)
                     self.assertEqual(rows[-1][0], "Total")
 
-    def test_collateral_summary_uses_latest_dated_approved_appraisal_and_current_custody(self):
+    def test_collateral_summary_uses_latest_dated_approved_appraisal_and_current_custody(
+        self,
+    ):
         from django.utils import timezone
         from datetime import datetime
-        from apps.tenant_apps.loans.models import CollateralAppraisal, PawnCollateralItem
-        from apps.tenant_apps.loans.selectors.portfolio_analysis import get_portfolio_analysis
+        from apps.tenant_apps.loans.models import (
+            CollateralAppraisal,
+            PawnCollateralItem,
+        )
+        from apps.tenant_apps.loans.selectors.portfolio_analysis import (
+            get_portfolio_analysis,
+        )
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         item = loan.collateral_items.get()
-        for version, day, status, amount in ((1, 18, "APPROVED", "50000"), (2, 19, "DISPUTED", "90000"), (3, 21, "APPROVED", "60000")):
-            CollateralAppraisal.objects.create(workspace=self.tenant, collateral_item=item,
-                version=version, effective_at=timezone.make_aware(datetime(2026, 7, day, 12)),
-                status=status, appraised_value=amount, method="TEST")
+        for version, day, status, amount in (
+            (1, 18, "APPROVED", "50000"),
+            (2, 19, "DISPUTED", "90000"),
+            (3, 21, "APPROVED", "60000"),
+        ):
+            CollateralAppraisal.objects.create(
+                workspace=self.tenant,
+                collateral_item=item,
+                version=version,
+                effective_at=timezone.make_aware(datetime(2026, 7, day, 12)),
+                status=status,
+                appraised_value=amount,
+                method="TEST",
+            )
+
         def report(day):
-            return get_portfolio_analysis(section="collateral_totals", as_of_date=date(2026, 7, day))
+            return get_portfolio_analysis(
+                section="collateral_totals", as_of_date=date(2026, 7, day)
+            )
+
         self.assertEqual(report(20)["totals"][4], Decimal("50000"))
         self.assertEqual(report(22)["totals"][4], Decimal("60000"))
         self.assertEqual(report(17)["totals"][6], 1)
         PawnCollateralItem.objects.filter(pk=item.pk).update(gross_weight=None)
         self.assertEqual(report(20)["totals"][5], 1)
         self.assertEqual(report(20)["totals"][3], Decimal("9"))
-        PawnCollateralItem.objects.filter(pk=item.pk).update(custody_state="WITH_CUSTOMER")
+        PawnCollateralItem.objects.filter(pk=item.pk).update(
+            custody_state="WITH_CUSTOMER"
+        )
         self.assertEqual(report(20)["totals"][1], 0)
 
     def test_internal_reports_select_one_section_and_keep_full_exports(self):
         from apps.tenant_apps.loans.web.reports import REPORT_SECTIONS
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         url = reverse("loans:pawn_loan_reports")
         for key, label in REPORT_SECTIONS:
             response = self.client.get(url, {"section": key, "as_of": "2026-07-18"})
@@ -1707,10 +2545,25 @@ class PawnDraftUiTests(WorkspaceTestCase):
             self.assertNotContains(response, "Principal outstanding</div>")
         response = self.client.get(url)
         self.assertContains(response, "Download full reports")
-        for section in ("active", "daily", "interest_due", "overdue", "releases_renewals", "storage", "license_expiry"):
+        for section in (
+            "active",
+            "daily",
+            "interest_due",
+            "overdue",
+            "releases_renewals",
+            "storage",
+            "license_expiry",
+        ):
             for fmt in ("csv", "xlsx", "pdf"):
-                self.assertContains(response, reverse("loans:pawn_loan_report_export", args=[section, fmt]))
-        for params in ({"section": "unknown"}, {"as_of": "2026-02-31"}, {"as_of": "bad-date"}):
+                self.assertContains(
+                    response,
+                    reverse("loans:pawn_loan_report_export", args=[section, fmt]),
+                )
+        for params in (
+            {"section": "unknown"},
+            {"as_of": "2026-02-31"},
+            {"as_of": "bad-date"},
+        ):
             self.assertEqual(self.client.get(url, params).status_code, 404)
 
     def test_report_pagination_bounds_loan_reads_without_truncating_exports(self):
@@ -1720,8 +2573,11 @@ class PawnDraftUiTests(WorkspaceTestCase):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
         from apps.tenant_apps.loans.selectors.reports import build_pawn_loan_reports
+
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         original = PawnLoan.objects.get()
         copies = []
         for index in range(2, 53):
@@ -1733,56 +2589,109 @@ class PawnDraftUiTests(WorkspaceTestCase):
             copies.append(loan)
         PawnLoan.objects.bulk_create(copies)
         url = reverse("loans:pawn_loan_reports")
-        with patch("apps.tenant_apps.loans.selectors.reports.build_pawn_loan_reports", wraps=build_pawn_loan_reports) as build, CaptureQueriesContext(connection) as queries:
+        with (
+            patch(
+                "apps.tenant_apps.loans.selectors.reports.build_pawn_loan_reports",
+                wraps=build_pawn_loan_reports,
+            ) as build,
+            CaptureQueriesContext(connection) as queries,
+        ):
             first = self.client.get(url, {"as_of": "2026-07-18"})
             self.assertEqual(len(build.call_args.args[0]), 50)
-        self.assertTrue(any('LIMIT 50' in query['sql'] and 'loans_pawnloan' in query['sql'] for query in queries))
+        self.assertTrue(
+            any(
+                "LIMIT 50" in query["sql"] and "loans_pawnloan" in query["sql"]
+                for query in queries
+            )
+        )
         second = self.client.get(url, {"page": "2", "as_of": "2026-07-18"})
         first_ids = {row.loan.pk for row in first.context["report_rows"]}
         second_ids = {row.loan.pk for row in second.context["report_rows"]}
         self.assertEqual(len(first_ids), 50)
         self.assertEqual(len(second_ids), 2)
         self.assertFalse(first_ids & second_ids)
-        self.assertEqual(first.context['page_obj'].paginator.count, 52)
-        self.assertContains(first, 'as_of=2026-07-18')
+        self.assertEqual(first.context["page_obj"].paginator.count, 52)
+        self.assertContains(first, "as_of=2026-07-18")
         issues = self.client.get(url, {"section": "issues", "page": "2"})
-        self.assertContains(issues, 'Findings apply only to these loans')
-        self.assertNotContains(issues, 'No operational issues detected.')
+        self.assertContains(issues, "Findings apply only to these loans")
+        self.assertNotContains(issues, "No operational issues detected.")
         PawnLoan.objects.update(state="ACTIVE")
-        export = self.client.get(reverse("loans:pawn_loan_report_export", args=["active", "csv"]), {"page": "2", "as_of": "2026-07-18"})
+        export = self.client.get(
+            reverse("loans:pawn_loan_report_export", args=["active", "csv"]),
+            {"page": "2", "as_of": "2026-07-18"},
+        )
         self.assertEqual(export.status_code, 200)
-        self.assertEqual(len(list(csv.reader(io.StringIO(export.content.decode('utf-8-sig'))))), 53)
+        self.assertEqual(
+            len(list(csv.reader(io.StringIO(export.content.decode("utf-8-sig"))))), 53
+        )
 
     def test_daily_report_pages_keep_as_of_correction_semantics(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
+
         def event(kind, day, payload, original=None):
-            return PawnLoanEvent.objects.create(loan=loan, event_kind=kind, effective_date=day,
-                payload=payload, payload_fingerprint=uuid.uuid4().hex * 2,
-                idempotency_key=uuid.uuid4().hex, reversal_of=original)
+            return PawnLoanEvent.objects.create(
+                loan=loan,
+                event_kind=kind,
+                effective_date=day,
+                payload=payload,
+                payload_fingerprint=uuid.uuid4().hex * 2,
+                idempotency_key=uuid.uuid4().hex,
+                reversal_of=original,
+            )
+
         day = date(2026, 7, 18)
-        paid = event("REPAYMENT", day, {"values": {"principal": "25"}, "repayment": {"amount_received": "25"}})
-        correction = event("REVERSAL", date(2026, 7, 19), {"values": {"principal": "25"}, "reversal": {"original_event_kind": "REPAYMENT"}}, paid)
+        paid = event(
+            "REPAYMENT",
+            day,
+            {"values": {"principal": "25"}, "repayment": {"amount_received": "25"}},
+        )
+        correction = event(
+            "REVERSAL",
+            date(2026, 7, 19),
+            {
+                "values": {"principal": "25"},
+                "reversal": {"original_event_kind": "REPAYMENT"},
+            },
+            paid,
+        )
         event("MIGRATION_OPENING", day, {"values": {}})
         report_url = reverse("loans:pawn_loan_reports")
-        original_page = self.client.get(report_url, {"section": "daily", "as_of": day.isoformat()})
+        original_page = self.client.get(
+            report_url, {"section": "daily", "as_of": day.isoformat()}
+        )
         rows = original_page.context["report_rows"]
         self.assertEqual([row.event.pk for row in rows], [paid.pk])
         self.assertEqual(rows[0].correction_status, "CURRENT")
         self.assertEqual(rows[0].amount, Decimal("25"))
-        corrected_page = self.client.get(report_url, {"section": "daily", "as_of": "2026-07-19"})
+        corrected_page = self.client.get(
+            report_url, {"section": "daily", "as_of": "2026-07-19"}
+        )
         rows = corrected_page.context["report_rows"]
         self.assertEqual([row.event.pk for row in rows], [correction.pk])
         self.assertEqual(rows[0].correction_event_id, paid.pk)
         self.assertEqual(rows[0].amount, Decimal("-25"))
-        statements = self.client.get(report_url, {"section": "statements", "q": self.party.party_code, "as_of": day.isoformat()})
-        self.assertEqual([party.pk for party in statements.context["report_rows"]], [self.party.pk])
-        self.assertContains(statements, '?as_of=2026-07-18')
+        statements = self.client.get(
+            report_url,
+            {
+                "section": "statements",
+                "q": self.party.party_code,
+                "as_of": day.isoformat(),
+            },
+        )
+        self.assertEqual(
+            [party.pk for party in statements.context["report_rows"]], [self.party.pk]
+        )
+        self.assertContains(statements, "?as_of=2026-07-18")
 
     def test_current_overdue_report_links_directly_to_overdue_notice(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(
             state="ACTIVE",
@@ -1793,9 +2702,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             loan=loan,
             event_kind="DISBURSAL",
             effective_date=date(2026, 1, 1),
-            payload={
-                "values": {"principal": "10000.00", "interest": "0", "fees": "0"}
-            },
+            payload={"values": {"principal": "10000.00", "interest": "0", "fees": "0"}},
             payload_fingerprint="9" * 64,
             idempotency_key="overdue-report-disbursal",
             created_by=self.owner,
@@ -1809,7 +2716,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_party_statement_transaction_history_honors_as_of_date(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         future = PawnLoanEvent.objects.create(
@@ -1835,7 +2744,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_essential_pdf_routes_use_workspace_scoped_immutable_sources(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
         repayment = PawnLoanEvent.objects.create(
@@ -1899,7 +2810,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_workspace_member_can_use_internal_draft_ui_but_not_setup(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         User = get_user_model()
         member = User.objects.create_user(
@@ -1914,17 +2827,31 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("loans:pawn_loan_list"))
         self.assertNotContains(response, reverse("loans:license_list"))
-        self.assertEqual(self.client.get(reverse("loans:license_list")).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse("loans:license_list")).status_code, 403
+        )
 
     def test_unknown_and_cross_workspace_loan_sources_are_not_exposed(self):
         license, series = self._configured_setup()
         # This fixture deliberately moves between workspaces. Browser-created
         # loans now have an immutable workspace/submission identity.
-        from apps.tenant_apps.loans.services.pawn_drafts import create_pawn_draft_with_photos
+        from apps.tenant_apps.loans.services.pawn_drafts import (
+            create_pawn_draft_with_photos,
+        )
+
         def internal_submission(command, *, actor, token, photos):
-            return create_pawn_draft_with_photos(command, actor=actor, photos=photos), True
-        with patch("apps.tenant_apps.loans.web.pawn_draft_actions.submit_new_draft", side_effect=internal_submission):
-            self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+            return (
+                create_pawn_draft_with_photos(command, actor=actor, photos=photos),
+                True,
+            )
+
+        with patch(
+            "apps.tenant_apps.loans.web.pawn_draft_actions.submit_new_draft",
+            side_effect=internal_submission,
+        ):
+            self.client.post(
+                reverse("loans:pawn_loan_create"), self._payload(license, series)
+            )
         loan = PawnLoan.objects.get()
         item = loan.collateral_items.get()
         event = PawnLoanEvent.objects.create(
@@ -1951,19 +2878,32 @@ class PawnDraftUiTests(WorkspaceTestCase):
         PawnLoan.objects.filter(pk=loan.pk).update(workspace=other_workspace)
         LoanLicense.objects.filter(pk=license.pk).update(workspace=other_workspace)
 
-        for query in ({"q": loan.loan_number}, {"license": license.pk}, {"series": series.pk}):
-            page = self.client.get(reverse("loans:pawn_loan_list"), query, HTTP_HX_REQUEST="true", HTTP_HX_TARGET="loan-results")
+        for query in (
+            {"q": loan.loan_number},
+            {"license": license.pk},
+            {"series": series.pk},
+        ):
+            page = self.client.get(
+                reverse("loans:pawn_loan_list"),
+                query,
+                HTTP_HX_REQUEST="true",
+                HTTP_HX_TARGET="loan-results",
+            )
             self.assertEqual(list(page.context["loans"]), [])
             # The export link preserves user-entered search text in its query
             # string. That is not a returned loan identity or financial row.
             from django.utils.html import strip_tags
+
             self.assertNotIn(loan.loan_number, strip_tags(page.content.decode()))
             self.assertNotContains(page, 'class="directory-name"')
             self.assertEqual(page["X-Rokkad-Fragment"], "loan-results")
-            exported = self.client.get(reverse("loans:pawn_loan_list"), {**query, "export": "xlsx"})
+            exported = self.client.get(
+                reverse("loans:pawn_loan_list"), {**query, "export": "xlsx"}
+            )
             if "q" in query:
                 from io import BytesIO
                 from openpyxl import load_workbook
+
                 self.assertEqual(exported.status_code, 200)
                 workbook = load_workbook(BytesIO(exported.content), read_only=True)
                 self.assertEqual(len(list(workbook["Loans"].values)), 1)
@@ -1975,7 +2915,10 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_update", args=[loan.pk]),
             reverse("loans:pawn_loan_ticket_pdf", args=[loan.pk]),
             reverse("loans:pawn_repayment_receipt_pdf", args=[loan.pk, event.pk]),
-            reverse("loans:pawn_collateral_photo_document", args=[loan.pk, item.pk, item.photos.get().pk]),
+            reverse(
+                "loans:pawn_collateral_photo_document",
+                args=[loan.pk, item.pk, item.photos.get().pk],
+            ),
             reverse("loans:pawn_collateral_label_pdf", args=[loan.pk, item.pk]),
             reverse("loans:pawn_collateral_scan", args=[item.public_id]),
             reverse("loans:pawn_party_statement", args=[loan.borrower_id]),
@@ -1997,7 +2940,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_staff_can_approve_reopen_reapprove_and_cancel_through_ui(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
 
         response = self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
@@ -2026,17 +2971,23 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_reason_form_does_not_transition_when_reason_is_missing(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
 
-        response = self.client.post(reverse("loans:pawn_loan_cancel", args=[loan.pk]), {"reason": ""})
+        response = self.client.post(
+            reverse("loans:pawn_loan_cancel", args=[loan.pk]), {"reason": ""}
+        )
         self.assertEqual(response.status_code, 200)
         loan.refresh_from_db()
         self.assertEqual(loan.state, "DRAFT")
 
     def test_approved_detail_guides_staff_to_disbursal_and_dispatches_command(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         self.client.post(reverse("loans:pawn_loan_approve", args=[loan.pk]))
 
@@ -2044,7 +2995,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(detail, "Disburse loan")
         self.assertContains(detail, reverse("loans:pawn_loan_disburse", args=[loan.pk]))
 
-        with patch("apps.tenant_apps.loans.web.pawn_financial_actions.disburse_pawn_loan") as command:
+        with patch(
+            "apps.tenant_apps.loans.web.pawn_financial_actions.disburse_pawn_loan"
+        ) as command:
             response = self.client.post(
                 reverse("loans:pawn_loan_disburse", args=[loan.pk]),
                 {"effective_date": "2026-08-03"},
@@ -2063,9 +3016,15 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_active_detail_exposes_complete_staff_lifecycle_and_repayment_command(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
-        from apps.tenant_apps.loans.services import approve_pawn_loan, disburse_pawn_loan
+        from apps.tenant_apps.loans.services import (
+            approve_pawn_loan,
+            disburse_pawn_loan,
+        )
+
         # Servicing eligibility requires an actual financial origin, not a
         # manually changed state with no approval, contract or payout evidence.
         approve_pawn_loan(loan.pk, actor=self.owner)
@@ -2079,8 +3038,14 @@ class PawnDraftUiTests(WorkspaceTestCase):
             total_due=Decimal("10200.00"),
         )
         with (
-            patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance", return_value=balance),
-            patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
+            patch(
+                "apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance",
+                return_value=balance,
+            ),
+            patch(
+                "apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals",
+                return_value=(),
+            ),
         ):
             detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
 
@@ -2089,9 +3054,13 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertNotContains(detail, "Partial release")
         self.assertContains(detail, "Release and renew")
         self.assertContains(detail, "Close / release loan")
-        self.assertContains(detail, reverse(
-            "workspace_loans:pawn_loan_close", args=[self.tenant.slug, loan.pk],
-        ))
+        self.assertContains(
+            detail,
+            reverse(
+                "workspace_loans:pawn_loan_close",
+                args=[self.tenant.slug, loan.pk],
+            ),
+        )
         self.assertContains(detail, "More loan actions")
         self.assertContains(detail, 'href="#loan-overview"')
         self.assertContains(detail, 'id="loan-overview"')
@@ -2157,14 +3126,22 @@ class PawnDraftUiTests(WorkspaceTestCase):
             recognized_interest=Decimal("200.00"),
         )
         with (
-            patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance", return_value=balance),
-            patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
+            patch(
+                "apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance",
+                return_value=balance,
+            ),
+            patch(
+                "apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals",
+                return_value=(),
+            ),
         ):
             finalized_detail = self.client.get(
                 reverse("loans:pawn_loan_detail", args=[loan.pk])
             )
         self.assertContains(finalized_detail, "Finalized interest accruals")
-        self.assertContains(finalized_detail, "Immutable collateral-tranche calculation")
+        self.assertContains(
+            finalized_detail, "Immutable collateral-tranche calculation"
+        )
 
         allocation = SimpleNamespace(
             amount_received=Decimal("500.00"),
@@ -2189,7 +3166,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 "apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_repayment",
                 return_value=preview,
             ) as preview_command,
-            patch("apps.tenant_apps.loans.web.pawn_financial_actions.record_pawn_loan_repayment") as record_command,
+            patch(
+                "apps.tenant_apps.loans.web.pawn_financial_actions.record_pawn_loan_repayment"
+            ) as record_command,
         ):
             response = self.client.post(
                 reverse("loans:pawn_loan_repay", args=[loan.pk]),
@@ -2230,7 +3209,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_correction_ui_exposes_only_newest_event_and_requires_confirmation(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         loan.refresh_from_db()
@@ -2261,14 +3242,18 @@ class PawnDraftUiTests(WorkspaceTestCase):
             total_due=Decimal("9000.00"),
         )
         with (
-            patch("apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance", return_value=balance),
-            patch("apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals", return_value=()),
+            patch(
+                "apps.tenant_apps.loans.web.pawn_reads.get_pawn_loan_balance",
+                return_value=balance,
+            ),
+            patch(
+                "apps.tenant_apps.loans.web.pawn_financial_actions.preview_pawn_loan_accruals",
+                return_value=(),
+            ),
         ):
             detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
             action = self.client.get(
-                reverse(
-                    "loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]
-                )
+                reverse("loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk])
             )
 
         self.assertContains(detail, "Business events")
@@ -2279,7 +3264,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_reverse_event", args=[loan.pk, disbursal.pk]),
         )
         self.assertContains(action, "Correction preflight")
-        self.assertContains(action, "This event is currently the next safe correction target")
+        self.assertContains(
+            action, "This event is currently the next safe correction target"
+        )
 
         missing_confirmation = self.client.post(
             reverse("loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]),
@@ -2291,9 +3278,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             return_value=SimpleNamespace(total_due=Decimal("10000.00")),
         ):
             recorded = self.client.post(
-                reverse(
-                    "loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]
-                ),
+                reverse("loans:pawn_loan_reverse_event", args=[loan.pk, repayment.pk]),
                 {"reason": "Duplicate receipt", "confirm_reversal": "on"},
             )
         self.assertRedirects(
@@ -2307,7 +3292,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_active_loan_notice_form_dispatches_service_owned_command(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         notice = SimpleNamespace(
@@ -2330,7 +3317,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
             "scheduled_for": "",
             "request_key": "ui-notice-1",
         }
-        with patch("apps.tenant_apps.loans.web.pawn_notice_actions.create_pawn_loan_notice") as command:
+        with patch(
+            "apps.tenant_apps.loans.web.pawn_notice_actions.create_pawn_loan_notice"
+        ) as command:
             rejected = self.client.post(
                 reverse("loans:pawn_loan_notice_create", args=[loan.pk]),
                 unconfirmed_payload,
@@ -2350,7 +3339,10 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertRedirects(
             response,
-            reverse("workspace_slug_loan_detail", kwargs={"workspace_slug": self.tenant.slug, "pk": loan.pk}),
+            reverse(
+                "workspace_slug_loan_detail",
+                kwargs={"workspace_slug": self.tenant.slug, "pk": loan.pk},
+            ),
             fetch_redirect_response=False,
         )
         command.assert_called_once_with(
@@ -2364,7 +3356,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_partial_release_route_is_gone_without_dispatch(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         response = self.client.post(
@@ -2374,9 +3368,13 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(response.status_code, 410)
         self.assertContains(response, "release and renew", status_code=410)
 
-    def test_full_release_shows_exact_catch_up_quote_and_requires_handoff_confirmation(self):
+    def test_full_release_shows_exact_catch_up_quote_and_requires_handoff_confirmation(
+        self,
+    ):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         collateral = loan.collateral_items.get()
@@ -2418,7 +3416,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 "apps.tenant_apps.loans.web.pawn_release_actions.preview_pawn_loan_full_release",
                 return_value=quote,
             ),
-            patch("apps.tenant_apps.loans.web.pawn_release_actions.release_pawn_loan_in_full") as command,
+            patch(
+                "apps.tenant_apps.loans.web.pawn_release_actions.release_pawn_loan_in_full"
+            ) as command,
         ):
             rejected = self.client.post(url, payload)
         self.assertEqual(rejected.status_code, 200)
@@ -2459,7 +3459,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
     def test_release_and_renew_form_submits_explicit_retained_plan(self):
         license, series = self._configured_setup()
-        self.client.post(reverse("loans:pawn_loan_create"), self._payload(license, series))
+        self.client.post(
+            reverse("loans:pawn_loan_create"), self._payload(license, series)
+        )
         loan = PawnLoan.objects.get()
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         collateral = loan.collateral_items.get()
@@ -2525,7 +3527,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_source",
                 return_value=quote,
             ),
-            patch("apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan") as command,
+            patch(
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan"
+            ) as command,
         ):
             rejected = self.client.post(
                 reverse("loans:pawn_loan_renew", args=[loan.pk]),
@@ -2558,7 +3562,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
 
         self.assertEqual(response.status_code, 302)
         call = command.call_args.kwargs
-        self.assertEqual(call["retained_collateral"][0].collateral_item_id, collateral.pk)
+        self.assertEqual(
+            call["retained_collateral"][0].collateral_item_id, collateral.pk
+        )
         self.assertEqual(
             call["retained_collateral"][0].allocated_principal,
             Decimal("9000.00"),
@@ -2582,16 +3588,16 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_plan",
                 return_value=exact_plan,
             ),
-            patch("apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan") as command,
+            patch(
+                "apps.tenant_apps.loans.web.pawn_renewal_actions.renew_pawn_loan"
+            ) as command,
         ):
             preview_response = self.client.post(
                 reverse("loans:pawn_loan_renew", args=[loan.pk]),
                 preview_payload,
             )
         self.assertEqual(preview_response.status_code, 200)
-        self.assertEqual(
-            preview_response.json()["fingerprint"], exact_plan.fingerprint
-        )
+        self.assertEqual(preview_response.json()["fingerprint"], exact_plan.fingerprint)
         self.assertEqual(
             preview_response.json()["successor_advance_interest"], "180.00"
         )
@@ -2601,9 +3607,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             "apps.tenant_apps.loans.web.pawn_renewal_actions.preview_pawn_loan_renewal_source",
             return_value=quote,
         ):
-            page = self.client.get(
-                reverse("loans:pawn_loan_renew", args=[loan.pk])
-            )
+            page = self.client.get(reverse("loans:pawn_loan_renew", args=[loan.pk]))
         self.assertContains(page, "Exact source settlement")
         self.assertContains(page, "Renewal-day interest")
         self.assertContains(page, "Successor and cash preview")
@@ -2653,9 +3657,14 @@ class PawnDraftUiTests(WorkspaceTestCase):
         return license, series
 
     def _payload(self, license, series):
-        from apps.tenant_apps.loans.services.draft_submissions import new_draft_submission
+        from apps.tenant_apps.loans.services.draft_submissions import (
+            new_draft_submission,
+        )
+
         return {
-            "submission_token": new_draft_submission(workspace=self.tenant, actor=self.owner),
+            "submission_token": new_draft_submission(
+                workspace=self.tenant, actor=self.owner
+            ),
             "borrower": self.party.pk,
             "series": series.pk,
             "product_version": self.product_version.pk,
@@ -2702,34 +3711,50 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
         return payload
 
-
     def test_single_series_and_product_are_prefilled_without_allocating(self):
         from apps.tenant_apps.loans.forms import PawnDraftForm
+
         license, series = self._configured_setup()
         before = list(LoanNumberSequence.objects.order_by("pk").values())
-        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        form = PawnDraftForm(
+            workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)}
+        )
         self.assertEqual(form["series"].value(), series.pk)
         self.assertEqual(form["product_version"].value(), self.product_version.pk)
         self.assertFalse(form.fields["series"].disabled)
-        self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
-        bound = PawnDraftForm({"loan_date": "bad-date", "series": "", "product_version": ""}, workspace=self.tenant)
+        self.assertEqual(
+            before, list(LoanNumberSequence.objects.order_by("pk").values())
+        )
+        bound = PawnDraftForm(
+            {"loan_date": "bad-date", "series": "", "product_version": ""},
+            workspace=self.tenant,
+        )
         self.assertEqual(bound["series"].value(), "")
         self.assertFalse(bound.is_valid())
 
     def test_multiple_series_and_expired_or_unavailable_options_are_not_defaults(self):
         from apps.tenant_apps.loans.forms import PawnDraftForm
+
         license, series = self._configured_setup()
         self._configured_setup()
-        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        form = PawnDraftForm(
+            workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)}
+        )
         self.assertNotIn("series", form.initial)
         LoanLicense.objects.all().update(expires_on=date(2026, 6, 1))
-        type(self.product_version).objects.filter(pk=self.product_version.pk).update(available_from=date(2027, 1, 1))
-        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(
+            available_from=date(2027, 1, 1)
+        )
+        form = PawnDraftForm(
+            workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)}
+        )
         self.assertNotIn("series", form.initial)
         self.assertNotIn("product_version", form.initial)
 
     def test_business_setup_resumes_saved_steps_without_writes(self):
-        url = reverse("workspace_slug_settings_setup", kwargs={"workspace_slug": self.tenant.slug})
+        url = reverse(
+            "workspace_slug_settings_setup", kwargs={"workspace_slug": self.tenant.slug}
+        )
         page = self.client.get(url)
         self.assertContains(page, "Set up your business")
         self.assertEqual(page.context["business_setup"]["next_step"]["key"], "license")
@@ -2742,8 +3767,12 @@ class PawnDraftUiTests(WorkspaceTestCase):
             self.assertContains(page, "Create your first loan")
             self.assertContains(page, "Optional finishing touches")
             self.assertEqual(page.context["journey"]["step"], "review")
-        self.assertEqual(counts, (LoanLicense.objects.count(), LoanSeries.objects.count()))
-        self.assertEqual(before, list(LoanNumberSequence.objects.order_by("pk").values()))
+        self.assertEqual(
+            counts, (LoanLicense.objects.count(), LoanSeries.objects.count())
+        )
+        self.assertEqual(
+            before, list(LoanNumberSequence.objects.order_by("pk").values())
+        )
         self.assertEqual(Membership.objects.filter(company=self.tenant).count(), 1)
 
     def test_business_setup_denies_staff_without_setup_permission(self):
@@ -2751,20 +3780,43 @@ class PawnDraftUiTests(WorkspaceTestCase):
         role, _ = Role.objects.get_or_create(name="Member")
         Membership.objects.create(user=staff, company=self.tenant, role=role)
         self.client.force_login(staff)
-        self.assertEqual(self.client.get(reverse("workspace_slug_settings_setup", kwargs={"workspace_slug": self.tenant.slug})).status_code, 403)
-
+        self.assertEqual(
+            self.client.get(
+                reverse(
+                    "workspace_slug_settings_setup",
+                    kwargs={"workspace_slug": self.tenant.slug},
+                )
+            ).status_code,
+            403,
+        )
 
     def test_defaults_skip_exhausted_series_and_preserve_explicit_choices(self):
         from apps.tenant_apps.loans.forms import PawnDraftForm
+
         license, series = self._configured_setup()
         _, exhausted = self._configured_setup()
         LoanNumberSequence.objects.filter(series=exhausted).update(next_number=10001)
-        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        form = PawnDraftForm(
+            workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)}
+        )
         self.assertEqual(form["series"].value(), series.pk)
-        explicit = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18), "series": "", "product_version": ""})
+        explicit = PawnDraftForm(
+            workspace=self.tenant,
+            initial={
+                "loan_date": date(2026, 7, 18),
+                "series": "",
+                "product_version": "",
+            },
+        )
         self.assertEqual(explicit["series"].value(), "")
         self.assertEqual(explicit["product_version"].value(), "")
-        other = type(self.product_version).objects.exclude(pk=self.product_version.pk).first()
+        other = (
+            type(self.product_version)
+            .objects.exclude(pk=self.product_version.pk)
+            .first()
+        )
         type(self.product_version).objects.filter(pk=other.pk).update(status="ACTIVE")
-        form = PawnDraftForm(workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)})
+        form = PawnDraftForm(
+            workspace=self.tenant, initial={"loan_date": date(2026, 7, 18)}
+        )
         self.assertNotIn("product_version", form.initial)

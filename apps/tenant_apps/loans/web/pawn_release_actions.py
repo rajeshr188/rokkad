@@ -1,4 +1,5 @@
 from .counter_navigation import preserve_counter_return
+
 """Ordinary Django adapters for PawnLoan collateral release."""
 
 import uuid
@@ -22,9 +23,9 @@ from apps.tenant_apps.loans.services import (
 
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
-        PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
-            "collateral_items", "loan_events"
-        ),
+        PawnLoan.objects.select_related(
+            "borrower", "license", "series"
+        ).prefetch_related("collateral_items", "loan_events"),
         pk=pk,
         workspace=request.loans_workspace,
     )
@@ -52,13 +53,19 @@ def pawn_loan_release_full(request, pk):
     if minimum_settlement is not None:
         # Event arithmetic can retain trailing scale beyond the form's cents.
         initial["settlement_amount"] = format(minimum_settlement, ".2f")
-    form = PawnFullReleaseForm(request.POST if request.method == "POST" else None, initial=initial)
+    form = PawnFullReleaseForm(
+        request.POST if request.method == "POST" else None, initial=initial
+    )
     if request.method == "POST" and form.is_valid():
         try:
             concession = {}
-            if form.cleaned_data.get("interest_concession") or form.cleaned_data.get("concession_reason"):
-                concession = {"interest_concession": form.cleaned_data["interest_concession"],
-                              "concession_reason": form.cleaned_data["concession_reason"]}
+            if form.cleaned_data.get("interest_concession") or form.cleaned_data.get(
+                "concession_reason"
+            ):
+                concession = {
+                    "interest_concession": form.cleaned_data["interest_concession"],
+                    "concession_reason": form.cleaned_data["concession_reason"],
+                }
             result = release_pawn_loan_in_full(
                 loan.pk,
                 settlement_amount=form.cleaned_data["settlement_amount"],
@@ -76,7 +83,11 @@ def pawn_loan_release_full(request, pk):
                 f"{result.release.items.count()} collateral item(s) returned, "
                 "loan closed.",
             )
-            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+            return redirect(
+                "workspace_loans:pawn_loan_detail",
+                pk=loan.pk,
+                workspace_slug=request.workspace.slug,
+            )
     return render(
         request,
         "loans/pawn/full_release.html",
@@ -87,8 +98,12 @@ def pawn_loan_release_full(request, pk):
             "action_label": _("Full release"),
             "quote": quote,
             "quote_date": timezone.localdate(),
-            "can_concede_interest": request.loans_workspace_access.can(LOANS_ADMIN_ACTION),
-            "release_available": minimum_settlement is not None and not isinstance(quote, dict) and not quote.blockers,
+            "can_concede_interest": request.loans_workspace_access.can(
+                LOANS_ADMIN_ACTION
+            ),
+            "release_available": minimum_settlement is not None
+            and not isinstance(quote, dict)
+            and not quote.blockers,
         },
     )
 

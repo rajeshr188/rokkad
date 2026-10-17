@@ -29,69 +29,150 @@ from apps.tenant_apps.loans.services import (
 
 class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
     def configuration(self, **changes):
-        values = dict(workspace=self.tenant, actor=self.user,
+        values = dict(
+            workspace=self.tenant,
+            actor=self.user,
             valuation_method=ValuationMethod.LATEST_APPRAISAL,
-            maximum_ltv_ratio=Decimal("0.80"), gold_monthly_interest_rate=Decimal("2"),
-            silver_monthly_interest_rate=Decimal("4"), effective_from=date(2026, 9, 25))
+            maximum_ltv_ratio=Decimal("0.80"),
+            gold_monthly_interest_rate=Decimal("2"),
+            silver_monthly_interest_rate=Decimal("4"),
+            effective_from=date(2026, 9, 25),
+        )
         return create_pawn_economic_configuration(**(values | changes))
 
     def test_same_day_revision_preserves_evidence_scope_and_atomicity(self):
         from apps.orgs.audit import AuditLog
-        from apps.tenant_apps.loans.models import LoanSeries, PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy
-        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+        from apps.tenant_apps.loans.models import (
+            LoanSeries,
+            PawnLoanEconomicPolicy,
+            PawnMetalInterestRatePolicy,
+        )
+        from apps.tenant_apps.loans.services.economic_policies import (
+            create_pawn_series_interest_rates,
+        )
+
         first = self.configuration()
-        original = PawnLoanEconomicPolicy.objects.values().get(pk=first.economic_policy.pk)
+        original = PawnLoanEconomicPolicy.objects.values().get(
+            pk=first.economic_policy.pk
+        )
         series = LoanSeries.objects.create(license=self.license, name="WH", code="WH")
-        create_pawn_series_interest_rates(workspace=self.tenant, actor=self.user, series=series,
-            effective_from=date(2026, 9, 25), gold_monthly_interest_rate=Decimal("1.1"),
-            silver_monthly_interest_rate=Decimal("3"))
+        create_pawn_series_interest_rates(
+            workspace=self.tenant,
+            actor=self.user,
+            series=series,
+            effective_from=date(2026, 9, 25),
+            gold_monthly_interest_rate=Decimal("1.1"),
+            silver_monthly_interest_rate=Decimal("3"),
+        )
         second = self.configuration(maximum_ltv_ratio=Decimal("0.95"))
-        self.assertEqual([second.economic_policy.revision, second.gold_rate_policy.revision,
-                          second.silver_rate_policy.revision], [2, 2, 2])
-        self.assertEqual(PawnLoanEconomicPolicy.objects.values().get(pk=first.economic_policy.pk), original)
-        self.assertEqual(resolve_pawn_loan_economic_policy(workspace_id=self.tenant.pk,
-            license_id=self.license.pk, as_of_date=date(2026, 9, 25)), second.economic_policy)
+        self.assertEqual(
+            [
+                second.economic_policy.revision,
+                second.gold_rate_policy.revision,
+                second.silver_rate_policy.revision,
+            ],
+            [2, 2, 2],
+        )
+        self.assertEqual(
+            PawnLoanEconomicPolicy.objects.values().get(pk=first.economic_policy.pk),
+            original,
+        )
+        self.assertEqual(
+            resolve_pawn_loan_economic_policy(
+                workspace_id=self.tenant.pk,
+                license_id=self.license.pk,
+                as_of_date=date(2026, 9, 25),
+            ),
+            second.economic_policy,
+        )
         for metal, rate in (("GOLD", "1.1"), ("SILVER", "3")):
-            self.assertEqual(resolve_pawn_metal_interest_rate_policy(workspace_id=self.tenant.pk,
-                license_id=self.license.pk, series_id=series.pk, metal=metal,
-                as_of_date=date(2026, 9, 25)).monthly_interest_rate, Decimal(rate))
-        counts = (PawnLoanEconomicPolicy.objects.count(), PawnMetalInterestRatePolicy.objects.count(),
-                  AuditLog.objects.filter(company=self.tenant).count())
+            self.assertEqual(
+                resolve_pawn_metal_interest_rate_policy(
+                    workspace_id=self.tenant.pk,
+                    license_id=self.license.pk,
+                    series_id=series.pk,
+                    metal=metal,
+                    as_of_date=date(2026, 9, 25),
+                ).monthly_interest_rate,
+                Decimal(rate),
+            )
+        counts = (
+            PawnLoanEconomicPolicy.objects.count(),
+            PawnMetalInterestRatePolicy.objects.count(),
+            AuditLog.objects.filter(company=self.tenant).count(),
+        )
         with self.assertRaises(ValidationError):
             self.configuration(silver_monthly_interest_rate=Decimal("101"))
-        self.assertEqual(counts, (PawnLoanEconomicPolicy.objects.count(), PawnMetalInterestRatePolicy.objects.count(),
-                                 AuditLog.objects.filter(company=self.tenant).count()))
-        scoped = self.configuration(license=self.license, maximum_ltv_ratio=Decimal("0.70"))
+        self.assertEqual(
+            counts,
+            (
+                PawnLoanEconomicPolicy.objects.count(),
+                PawnMetalInterestRatePolicy.objects.count(),
+                AuditLog.objects.filter(company=self.tenant).count(),
+            ),
+        )
+        scoped = self.configuration(
+            license=self.license, maximum_ltv_ratio=Decimal("0.70")
+        )
         self.assertEqual(scoped.economic_policy.revision, 1)
-        self.assertEqual(resolve_pawn_loan_economic_policy(workspace_id=self.tenant.pk,
-            license_id=self.license.pk, as_of_date=date(2026, 9, 25)), scoped.economic_policy)
+        self.assertEqual(
+            resolve_pawn_loan_economic_policy(
+                workspace_id=self.tenant.pk,
+                license_id=self.license.pk,
+                as_of_date=date(2026, 9, 25),
+            ),
+            scoped.economic_policy,
+        )
         earlier = self.configuration(effective_from=date(2026, 9, 24))
-        self.assertEqual(resolve_pawn_loan_economic_policy(workspace_id=self.tenant.pk,
-            license_id=None, as_of_date=date(2026, 9, 24)), earlier.economic_policy)
+        self.assertEqual(
+            resolve_pawn_loan_economic_policy(
+                workspace_id=self.tenant.pk,
+                license_id=None,
+                as_of_date=date(2026, 9, 24),
+            ),
+            earlier.economic_policy,
+        )
 
     def test_restricted_runtime_revisions_and_rls_boundary(self):
         from django.core.exceptions import PermissionDenied
         from django.db import connection, transaction, DatabaseError
         from apps.orgs.models import Company
         from apps.tenant_apps.loans.models import PawnLoanEconomicPolicy
-        other = Company.objects.create(name="Other policy workspace", schema_name=uuid.uuid4().hex,
-            owner=self.user, creator=self.user)
+
+        other = Company.objects.create(
+            name="Other policy workspace",
+            schema_name=uuid.uuid4().hex,
+            owner=self.user,
+            creator=self.user,
+        )
         role = connection.ops.quote_name("policy_revision_" + uuid.uuid4().hex)
         with connection.cursor() as cursor:
             cursor.execute(f"CREATE ROLE {role} NOLOGIN NOSUPERUSER NOBYPASSRLS")
             cursor.execute(f"GRANT USAGE ON SCHEMA public TO {role}")
-            cursor.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role}")
-            cursor.execute(f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role}")
+            cursor.execute(
+                f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role}"
+            )
+            cursor.execute(
+                f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role}"
+            )
             cursor.execute(f"SET LOCAL ROLE {role}")
         try:
             self.configuration()
             revised = self.configuration(maximum_ltv_ratio=Decimal("0.95"))
             self.assertEqual(revised.economic_policy.revision, 2)
-            with self.assertRaises(DatabaseError), transaction.atomic(), connection.cursor() as cursor:
-                cursor.execute("UPDATE loans_pawnloaneconomicpolicy SET workspace_id=%s WHERE id=%s",
-                               [other.pk, revised.economic_policy.pk])
+            with (
+                self.assertRaises(DatabaseError),
+                transaction.atomic(),
+                connection.cursor() as cursor,
+            ):
+                cursor.execute(
+                    "UPDATE loans_pawnloaneconomicpolicy SET workspace_id=%s WHERE id=%s",
+                    [other.pk, revised.economic_policy.pk],
+                )
             with self.assertRaises(DatabaseError), transaction.atomic():
-                PawnLoanEconomicPolicy.objects.filter(pk=revised.economic_policy.pk).update(revision=1)
+                PawnLoanEconomicPolicy.objects.filter(
+                    pk=revised.economic_policy.pk
+                ).update(revision=1)
             with self.assertRaises(PermissionDenied):
                 self.configuration(workspace=other)
         finally:
@@ -101,35 +182,92 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
                 cursor.execute(f"DROP ROLE {role}")
 
     def test_series_rate_precedence_dates_and_atomic_pair(self):
-        from apps.tenant_apps.loans.models import LoanSeries, PawnMetalInterestRatePolicy
-        from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+        from apps.tenant_apps.loans.models import (
+            LoanSeries,
+            PawnMetalInterestRatePolicy,
+        )
+        from apps.tenant_apps.loans.services.economic_policies import (
+            create_pawn_series_interest_rates,
+        )
+
         series = LoanSeries.objects.create(license=self.license, name="WH", code="WH")
-        other = LoanSeries.objects.create(license=self.license, name="Other", code="OTHER")
+        other = LoanSeries.objects.create(
+            license=self.license, name="Other", code="OTHER"
+        )
         for metal, rate in (("GOLD", "2"), ("SILVER", "4")):
-            create_pawn_metal_interest_rate_policy(workspace=self.tenant, license=self.license,
-                metal=metal, monthly_interest_rate=Decimal(rate), effective_from=date(2026,1,1), actor=self.user)
-        policies = create_pawn_series_interest_rates(workspace=self.tenant, series=series,
-            gold_monthly_interest_rate=Decimal("1.1"), silver_monthly_interest_rate=Decimal("3"),
-            effective_from=date(2026,9,25), actor=self.user)
+            create_pawn_metal_interest_rate_policy(
+                workspace=self.tenant,
+                license=self.license,
+                metal=metal,
+                monthly_interest_rate=Decimal(rate),
+                effective_from=date(2026, 1, 1),
+                actor=self.user,
+            )
+        policies = create_pawn_series_interest_rates(
+            workspace=self.tenant,
+            series=series,
+            gold_monthly_interest_rate=Decimal("1.1"),
+            silver_monthly_interest_rate=Decimal("3"),
+            effective_from=date(2026, 9, 25),
+            actor=self.user,
+        )
         for metal, expected, default in (("GOLD", "1.1", "2"), ("SILVER", "3", "4")):
+
             def resolve(series_id, day):
-                return resolve_pawn_metal_interest_rate_policy(workspace_id=self.tenant.pk,
-                    license_id=self.license.pk, series_id=series_id, metal=metal, as_of_date=day)
-            self.assertEqual(resolve(series.pk,date(2026,9,25)).monthly_interest_rate,Decimal(expected))
-            self.assertEqual(resolve(series.pk,date(2026,9,24)).monthly_interest_rate,Decimal(default))
-            self.assertEqual(resolve(other.pk,date(2026,9,25)).monthly_interest_rate,Decimal(default))
-            self.assertEqual(resolve(None,date(2026,9,25)).monthly_interest_rate,Decimal(default))
+                return resolve_pawn_metal_interest_rate_policy(
+                    workspace_id=self.tenant.pk,
+                    license_id=self.license.pk,
+                    series_id=series_id,
+                    metal=metal,
+                    as_of_date=day,
+                )
+
+            self.assertEqual(
+                resolve(series.pk, date(2026, 9, 25)).monthly_interest_rate,
+                Decimal(expected),
+            )
+            self.assertEqual(
+                resolve(series.pk, date(2026, 9, 24)).monthly_interest_rate,
+                Decimal(default),
+            )
+            self.assertEqual(
+                resolve(other.pk, date(2026, 9, 25)).monthly_interest_rate,
+                Decimal(default),
+            )
+            self.assertEqual(
+                resolve(None, date(2026, 9, 25)).monthly_interest_rate, Decimal(default)
+            )
         with self.assertRaises(ValidationError):
-            create_pawn_series_interest_rates(workspace=self.tenant, series=series,
-                gold_monthly_interest_rate=Decimal("1.2"), silver_monthly_interest_rate=Decimal("101"),
-                effective_from=date(2026,9,26), actor=self.user)
-        self.assertFalse(PawnMetalInterestRatePolicy.objects.filter(series=series,effective_from=date(2026,9,26)).exists())
+            create_pawn_series_interest_rates(
+                workspace=self.tenant,
+                series=series,
+                gold_monthly_interest_rate=Decimal("1.2"),
+                silver_monthly_interest_rate=Decimal("101"),
+                effective_from=date(2026, 9, 26),
+                actor=self.user,
+            )
+        self.assertFalse(
+            PawnMetalInterestRatePolicy.objects.filter(
+                series=series, effective_from=date(2026, 9, 26)
+            ).exists()
+        )
         with self.assertRaises(PawnEconomicPolicyError):
-            resolve_pawn_metal_interest_rate_policy(workspace_id=self.tenant.pk, license_id=None,
-                series_id=series.pk, metal="GOLD", as_of_date=date(2026,9,25))
+            resolve_pawn_metal_interest_rate_policy(
+                workspace_id=self.tenant.pk,
+                license_id=None,
+                series_id=series.pk,
+                metal="GOLD",
+                as_of_date=date(2026, 9, 25),
+            )
         with self.assertRaises(ValidationError):
-            create_pawn_metal_interest_rate_policy(workspace=self.tenant, series=series,
-                metal="GOLD", monthly_interest_rate=1, effective_from=date(2026,9,27), actor=self.user)
+            create_pawn_metal_interest_rate_policy(
+                workspace=self.tenant,
+                series=series,
+                metal="GOLD",
+                monthly_interest_rate=1,
+                effective_from=date(2026, 9, 27),
+                actor=self.user,
+            )
 
     test_schema_name = f"loans_economics_{uuid.uuid4().hex[:8]}"
     test_domain = f"{test_schema_name}.test.com"
@@ -160,7 +298,9 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             email=f"economics-user-{uuid.uuid4().hex[:8]}@example.com",
         )
         role, _ = Role.objects.get_or_create(name="Admin")
-        Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
+        Membership.objects.get_or_create(
+            user=self.user, company=self.tenant, defaults={"role": role}
+        )
         self.license = create_license(
             workspace=self.tenant,
             name="Pawn Broker License",
@@ -223,9 +363,15 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
         )
 
         self.assertEqual(configuration.economic_policy.license, self.license)
-        self.assertEqual(configuration.gold_rate_policy.metal, CollateralMetal.GOLD.value)
-        self.assertEqual(configuration.silver_rate_policy.metal, CollateralMetal.SILVER.value)
-        self.assertEqual(configuration.gold_rate_policy.effective_from, date(2026, 8, 1))
+        self.assertEqual(
+            configuration.gold_rate_policy.metal, CollateralMetal.GOLD.value
+        )
+        self.assertEqual(
+            configuration.silver_rate_policy.metal, CollateralMetal.SILVER.value
+        )
+        self.assertEqual(
+            configuration.gold_rate_policy.effective_from, date(2026, 8, 1)
+        )
         self.assertEqual(configuration.silver_rate_policy.created_by, self.user)
 
     def test_complete_configuration_rolls_back_when_second_rate_is_invalid(self):
@@ -335,7 +481,9 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             as_of_date=date(2026, 8, 1),
         )
 
-        self.assertEqual([policy.code for policy in policies], ["DOCUMENT", "PROCESSING"])
+        self.assertEqual(
+            [policy.code for policy in policies], ["DOCUMENT", "PROCESSING"]
+        )
         self.assertEqual(policies[1], override)
 
     def test_missing_rate_fails_explicitly(self):

@@ -11,46 +11,84 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
-from apps.tenant_apps.loans.access import loans_action_required, loans_workspace_required
+from apps.tenant_apps.loans.access import (
+    loans_action_required,
+    loans_workspace_required,
+)
 from apps.tenant_apps.loans.models import PawnCollateralItem, PawnLoan, PawnReleaseBatch
 from apps.tenant_apps.loans.services.release_batches import (
-    MAX_BATCH_LOANS, complete_release_batch, decode_quote, preview_release_batch,
+    MAX_BATCH_LOANS,
+    complete_release_batch,
+    decode_quote,
+    preview_release_batch,
 )
 
 
 class SelectionForm(forms.Form):
-    loans = forms.MultipleChoiceField(choices=(), label="Search loan numbers, borrowers or phone numbers")
+    loans = forms.MultipleChoiceField(
+        choices=(), label="Search loan numbers, borrowers or phone numbers"
+    )
 
 
 class ConfirmationForm(forms.Form):
     request_key = forms.UUIDField(widget=forms.HiddenInput)
     quote_token = forms.CharField(widget=forms.HiddenInput)
     paid_by = forms.CharField(max_length=255, label="Paid by")
-    payment_reference = forms.CharField(max_length=100, required=False, label="Payment reference (optional)")
-    payment_confirmed = forms.BooleanField(label="I confirm the exact combined settlement has been collected.")
+    payment_reference = forms.CharField(
+        max_length=100, required=False, label="Payment reference (optional)"
+    )
+    payment_confirmed = forms.BooleanField(
+        label="I confirm the exact combined settlement has been collected."
+    )
 
 
 class CollectorForm(forms.Form):
     loan_id = forms.IntegerField(widget=forms.HiddenInput)
-    collector_type = forms.ChoiceField(choices=(("borrower", "The borrower"), ("other", "Another person")), label="Who collects these items?")
-    collector_name = forms.CharField(max_length=255, required=False, label="Other collector's name")
-    relationship = forms.CharField(max_length=100, required=False, label="Relationship to borrower")
-    authorization_note = forms.CharField(max_length=500, required=False, label="How was their authority to collect confirmed?")
-    handover_confirmed = forms.BooleanField(label="Collector verified and all items ready for handover.")
+    collector_type = forms.ChoiceField(
+        choices=(("borrower", "The borrower"), ("other", "Another person")),
+        label="Who collects these items?",
+    )
+    collector_name = forms.CharField(
+        max_length=255, required=False, label="Other collector's name"
+    )
+    relationship = forms.CharField(
+        max_length=100, required=False, label="Relationship to borrower"
+    )
+    authorization_note = forms.CharField(
+        max_length=500,
+        required=False,
+        label="How was their authority to collect confirmed?",
+    )
+    handover_confirmed = forms.BooleanField(
+        label="Collector verified and all items ready for handover."
+    )
 
     def clean(self):
         data = super().clean()
         if data.get("collector_type") == "other":
             for name in ("collector_name", "relationship", "authorization_note"):
                 if not data.get(name):
-                    self.add_error(name, "Required when someone other than the borrower collects.")
+                    self.add_error(
+                        name, "Required when someone other than the borrower collects."
+                    )
         data["collector_is_borrower"] = data.get("collector_type") == "borrower"
         return data
 
 
 def _style(form):
     for field in form.fields.values():
-        field.widget.attrs.setdefault("class", "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else "form-select" if isinstance(field.widget, forms.Select) else "form-control")
+        field.widget.attrs.setdefault(
+            "class",
+            (
+                "form-check-input"
+                if isinstance(field.widget, forms.CheckboxInput)
+                else (
+                    "form-select"
+                    if isinstance(field.widget, forms.Select)
+                    else "form-control"
+                )
+            ),
+        )
     return form
 
 
@@ -59,14 +97,37 @@ def _style(form):
 @never_cache
 def search(request):
     query = request.GET.get("q", "").strip()[:100]
-    outstanding = PawnCollateralItem.objects.filter(loan_id=OuterRef("pk"), workspace=request.loans_workspace).exclude(custody_state="WITH_CUSTOMER")
-    loans = PawnLoan.objects.filter(workspace=request.loans_workspace, state="ACTIVE").filter(
-        Exists(outstanding),
-    ).select_related("borrower", "license", "series").prefetch_related("series__number_sequences").order_by("loan_number", "pk")
+    outstanding = PawnCollateralItem.objects.filter(
+        loan_id=OuterRef("pk"), workspace=request.loans_workspace
+    ).exclude(custody_state="WITH_CUSTOMER")
+    loans = (
+        PawnLoan.objects.filter(workspace=request.loans_workspace, state="ACTIVE")
+        .filter(
+            Exists(outstanding),
+        )
+        .select_related("borrower", "license", "series")
+        .prefetch_related("series__number_sequences")
+        .order_by("loan_number", "pk")
+    )
     if query:
-        loans = loans.filter(Q(loan_number__icontains=query) | Q(borrower__display_name__icontains=query) | Q(borrower__primary_phone__icontains=query))
+        loans = loans.filter(
+            Q(loan_number__icontains=query)
+            | Q(borrower__display_name__icontains=query)
+            | Q(borrower__primary_phone__icontains=query)
+        )
     page = Paginator(loans, 20).get_page(request.GET.get("page", 1))
-    return JsonResponse({"results": [{"id": loan.pk, "text": f"{loan.loan_number} — {loan.borrower.display_name} — {loan.license.license_number} / {loan.series.pawn_display_name}"} for loan in page], "pagination": {"more": page.has_next()}})
+    return JsonResponse(
+        {
+            "results": [
+                {
+                    "id": loan.pk,
+                    "text": f"{loan.loan_number} — {loan.borrower.display_name} — {loan.license.license_number} / {loan.series.pawn_display_name}",
+                }
+                for loan in page
+            ],
+            "pagination": {"more": page.has_next()},
+        }
+    )
 
 
 @loans_action_required("loan.release")
@@ -78,34 +139,52 @@ def create(request):
     data = request.POST.copy() if request.method == "POST" else None
     confirming = data is not None and data.get("action") == "complete"
     ids = data.getlist("loans") if data is not None else []
-    header = _style(ConfirmationForm(data if confirming else None, initial={"request_key": uuid.uuid4()}))
+    header = _style(
+        ConfirmationForm(
+            data if confirming else None, initial={"request_key": uuid.uuid4()}
+        )
+    )
     collector_forms = []
     try:
         if confirming:
             evidence = decode_quote(data.get("quote_token", ""), workspace=workspace)
             ids = [row["loan_id"] for row in evidence["rows"]]
-            collector_forms = [_style(CollectorForm(data, prefix=f"collector_{pk}")) for pk in ids]
+            collector_forms = [
+                _style(CollectorForm(data, prefix=f"collector_{pk}")) for pk in ids
+            ]
             valid = header.is_valid()
             for pk, form in zip(ids, collector_forms):
                 valid = form.is_valid() and valid
                 if form.cleaned_data.get("loan_id") != pk:
-                    form.add_error(None, "Collector confirmation does not match the selected loan.")
+                    form.add_error(
+                        None, "Collector confirmation does not match the selected loan."
+                    )
                     valid = False
             if valid:
                 batch = complete_release_batch(
-                    workspace=workspace, actor=request.user, collectors=[form.cleaned_data for form in collector_forms],
+                    workspace=workspace,
+                    actor=request.user,
+                    collectors=[form.cleaned_data for form in collector_forms],
                     **header.cleaned_data,
                 )
                 messages.success(request, f"Release batch {batch.pk} completed.")
-                return redirect("workspace_loans:release_batch_detail", workspace_slug=workspace.slug, batch_pk=batch.pk)
+                return redirect(
+                    "workspace_loans:release_batch_detail",
+                    workspace_slug=workspace.slug,
+                    batch_pk=batch.pk,
+                )
         if ids:
-            context["preview"] = preview_release_batch(workspace=workspace, actor=request.user, loan_ids=ids)
+            context["preview"] = preview_release_batch(
+                workspace=workspace, actor=request.user, loan_ids=ids
+            )
     except (ValueError, ValidationError) as exc:
         context["error"] = str(exc)
         if confirming:
             try:
-                context["preview"] = preview_release_batch(workspace=workspace, actor=request.user, loan_ids=ids)
-            except (ValueError, ValidationError):
+                context["preview"] = preview_release_batch(
+                    workspace=workspace, actor=request.user, loan_ids=ids
+                )
+            except ValueError, ValidationError:
                 pass
     preview = context.get("preview")
     if confirming:
@@ -113,23 +192,58 @@ def create(request):
     if preview:
         # Every changed selection / failed completion requires fresh payment confirmation.
         header_data = data.copy() if data is not None else {}
-        header_data.update({"request_key": data.get("request_key") or str(uuid.uuid4()) if data is not None else str(uuid.uuid4()), "quote_token": preview["quote_token"]})
+        header_data.update(
+            {
+                "request_key": (
+                    data.get("request_key") or str(uuid.uuid4())
+                    if data is not None
+                    else str(uuid.uuid4())
+                ),
+                "quote_token": preview["quote_token"],
+            }
+        )
         header_data.pop("payment_confirmed", None)
         header = _style(ConfirmationForm(initial=header_data))
         if confirming:
-            context["confirmation_errors"] = "Review the loan details and confirm payment again."
+            context["confirmation_errors"] = (
+                "Review the loan details and confirm payment again."
+            )
         for row in preview["rows"]:
             pk = row["loan"].pk
             prefix = f"collector_{pk}"
             bound = data if data is not None and data.get(f"{prefix}-loan_id") else None
-            row["collector_form"] = _style(CollectorForm(bound, prefix=prefix, initial={"loan_id": pk, "collector_type": "borrower"}))
+            row["collector_form"] = _style(
+                CollectorForm(
+                    bound,
+                    prefix=prefix,
+                    initial={"loan_id": pk, "collector_type": "borrower"},
+                )
+            )
         context["confirmation_form"] = header
     selected = preview["rows"] if preview else []
     selection = SelectionForm(initial={"loans": [row["loan"].pk for row in selected]})
-    selection.fields["loans"].choices = [(row["loan"].pk, f'{row["loan"].loan_number} — {row["loan"].borrower.display_name}') for row in selected]
-    selection.fields["loans"].widget.attrs.update({"id": "batch-loans", "class": "form-select", "data-search-url": reverse("workspace_loans:release_batch_search", kwargs={"workspace_slug": workspace.slug})})
+    selection.fields["loans"].choices = [
+        (
+            row["loan"].pk,
+            f'{row["loan"].loan_number} — {row["loan"].borrower.display_name}',
+        )
+        for row in selected
+    ]
+    selection.fields["loans"].widget.attrs.update(
+        {
+            "id": "batch-loans",
+            "class": "form-select",
+            "data-search-url": reverse(
+                "workspace_loans:release_batch_search",
+                kwargs={"workspace_slug": workspace.slug},
+            ),
+        }
+    )
     context["selection_form"] = selection
-    fragment = request.headers.get("HX-Request") == "true" and request.headers.get("HX-History-Restore-Request") != "true"
+    fragment = (
+        request.headers.get("HX-Request") == "true"
+        and request.headers.get("HX-History-Restore-Request") != "true"
+    )
     template = "loans/batches/_review.html" if fragment else "loans/batches/create.html"
     return render(request, template, context)
 
@@ -138,21 +252,42 @@ def create(request):
 @require_GET
 @never_cache
 def detail(request, batch_pk):
-    batch = get_object_or_404(PawnReleaseBatch.objects.select_related("created_by").prefetch_related("lines__release__loan", "lines__release__reversal"), workspace=request.loans_workspace, pk=batch_pk)
+    batch = get_object_or_404(
+        PawnReleaseBatch.objects.select_related("created_by").prefetch_related(
+            "lines__release__loan", "lines__release__reversal"
+        ),
+        workspace=request.loans_workspace,
+        pk=batch_pk,
+    )
     from apps.tenant_apps.loans.selectors.recorded_batches import batch_financial_review
-    return render(request, "loans/batches/detail.html", {"batch": batch, "financial": batch_financial_review(batch),
-        "can_correct": request.loans_workspace_access.can("workspace.settings.manage")})
+
+    return render(
+        request,
+        "loans/batches/detail.html",
+        {
+            "batch": batch,
+            "financial": batch_financial_review(batch),
+            "can_correct": request.loans_workspace_access.can(
+                "workspace.settings.manage"
+            ),
+        },
+    )
 
 
 @loans_workspace_required
 @require_GET
 @never_cache
 def history(request):
-    rows = PawnReleaseBatch.objects.filter(workspace=request.loans_workspace).order_by("-pk")
+    rows = PawnReleaseBatch.objects.filter(workspace=request.loans_workspace).order_by(
+        "-pk"
+    )
     from apps.tenant_apps.loans.selectors.recorded_batches import batch_correction_event
+
     page = Paginator(rows, 25).get_page(request.GET.get("page"))
     for batch in page:
         event = batch_correction_event(batch)
         if event:
-            batch.reviewed_total = event.payload["history_correction"]["batch_correction"]["total_received"]
+            batch.reviewed_total = event.payload["history_correction"][
+                "batch_correction"
+            ]["total_received"]
     return render(request, "loans/batches/history.html", {"page": page})

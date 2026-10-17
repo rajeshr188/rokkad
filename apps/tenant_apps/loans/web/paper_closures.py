@@ -1,4 +1,5 @@
 """Fast paper-book entry; business validation stays in the release service."""
+
 import csv
 import uuid
 
@@ -11,48 +12,101 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
-from apps.tenant_apps.loans.access import loans_action_required, loans_owner_required, loans_workspace_required
+from apps.tenant_apps.loans.access import (
+    loans_action_required,
+    loans_owner_required,
+    loans_workspace_required,
+)
 from apps.tenant_apps.loans.models import PawnLoan, PawnReleaseBatch
 from apps.tenant_apps.loans.services.paper_closures import (
-    MAX_PAPER_LOANS, complete_paper_closures, preview_paper_closures, set_paper_transition, transition_for, _decode,
+    MAX_PAPER_LOANS,
+    complete_paper_closures,
+    preview_paper_closures,
+    set_paper_transition,
+    transition_for,
+    _decode,
 )
 
 
 class HeaderForm(forms.Form):
-    closure_date = forms.DateField(label="Actual closure date", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
-    paper_reference = forms.CharField(label="Book / page reference", max_length=100, required=False)
-    exception_reason = forms.CharField(max_length=255, required=False, label="Administrator exception reason")
+    closure_date = forms.DateField(
+        label="Actual closure date",
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+    paper_reference = forms.CharField(
+        label="Book / page reference", max_length=100, required=False
+    )
+    exception_reason = forms.CharField(
+        max_length=255, required=False, label="Administrator exception reason"
+    )
     request_key = forms.UUIDField(widget=forms.HiddenInput)
     quote_token = forms.CharField(required=False, widget=forms.HiddenInput)
-    confirmed = forms.BooleanField(required=False, label="Each selected settlement and handover basis matches the completed source record. No new collection occurs now.")
+    confirmed = forms.BooleanField(
+        required=False,
+        label="Each selected settlement and handover basis matches the completed source record. No new collection occurs now.",
+    )
 
 
 class RowForm(forms.Form):
     include = forms.BooleanField(required=False, label="Record this loan")
-    amount = forms.DecimalField(label="Recorded settlement amount", min_value=0, max_digits=16, decimal_places=2)
-    basis = forms.ChoiceField(required=False, label="What the record confirms", choices=(
-        ("PAPER_SETTLEMENT", "Settled; cash and handover unspecified"), ("RETURNED", "Cash received and all collateral returned")))
-    number = forms.CharField(required=False, max_length=64, label="Original closing number (if recorded)")
+    amount = forms.DecimalField(
+        label="Recorded settlement amount", min_value=0, max_digits=16, decimal_places=2
+    )
+    basis = forms.ChoiceField(
+        required=False,
+        label="What the record confirms",
+        choices=(
+            ("PAPER_SETTLEMENT", "Settled; cash and handover unspecified"),
+            ("RETURNED", "Cash received and all collateral returned"),
+        ),
+    )
+    number = forms.CharField(
+        required=False, max_length=64, label="Original closing number (if recorded)"
+    )
     paid_by = forms.CharField(label="Paid by", max_length=255, required=False)
-    collector_is_borrower = forms.TypedChoiceField(label="Received by", required=False, empty_value=True,
-        choices=(("yes", "Borrower"), ("no", "Another person")), coerce=lambda value: value == "yes")
-    collector_name = forms.CharField(label="Recipient name", max_length=255, required=False)
+    collector_is_borrower = forms.TypedChoiceField(
+        label="Received by",
+        required=False,
+        empty_value=True,
+        choices=(("yes", "Borrower"), ("no", "Another person")),
+        coerce=lambda value: value == "yes",
+    )
+    collector_name = forms.CharField(
+        label="Recipient name", max_length=255, required=False
+    )
     relationship = forms.CharField(max_length=100, required=False)
-    authorization_note = forms.CharField(label="Authority to collect", max_length=500, required=False)
-    paper_reference = forms.CharField(label="Different book / page reference", max_length=100, required=False)
-    concession = forms.DecimalField(label="Interest concession", initial=0, min_value=0, max_digits=16, decimal_places=2, required=False)
-    concession_reason = forms.CharField(label="Concession reason", max_length=255, required=False)
+    authorization_note = forms.CharField(
+        label="Authority to collect", max_length=500, required=False
+    )
+    paper_reference = forms.CharField(
+        label="Different book / page reference", max_length=100, required=False
+    )
+    concession = forms.DecimalField(
+        label="Interest concession",
+        initial=0,
+        min_value=0,
+        max_digits=16,
+        decimal_places=2,
+        required=False,
+    )
+    concession_reason = forms.CharField(
+        label="Concession reason", max_length=255, required=False
+    )
 
     def clean(self):
         data = super().clean()
         data["basis"] = data.get("basis") or "RETURNED"  # legacy form submissions
         data["concession"] = data.get("concession") or 0
         if data.get("concession") and not data.get("concession_reason"):
-            self.add_error("concession_reason", "Explain the agreed interest concession.")
+            self.add_error(
+                "concession_reason", "Explain the agreed interest concession."
+            )
         if data["basis"] == "RETURNED":
             for name in ("paid_by", "collector_name"):
                 if not data.get(name):
-                    self.add_error(name, "Required for confirmed collection and return.")
+                    self.add_error(
+                        name, "Required for confirmed collection and return."
+                    )
         if data["basis"] == "RETURNED" and data.get("collector_is_borrower") is False:
             for name in ("relationship", "authorization_note"):
                 if not data.get(name):
@@ -62,7 +116,18 @@ class RowForm(forms.Form):
 
 def style(form):
     for field in form.fields.values():
-        field.widget.attrs.setdefault("class", "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else "form-select" if isinstance(field.widget, forms.Select) else "form-control")
+        field.widget.attrs.setdefault(
+            "class",
+            (
+                "form-check-input"
+                if isinstance(field.widget, forms.CheckboxInput)
+                else (
+                    "form-select"
+                    if isinstance(field.widget, forms.Select)
+                    else "form-control"
+                )
+            ),
+        )
     return form
 
 
@@ -72,10 +137,20 @@ def style(form):
 def create(request):
     workspace = request.loans_workspace
     data = request.POST if request.method == "POST" else None
-    header = style(HeaderForm(data, initial={"closure_date": timezone.localdate(), "request_key": uuid.uuid4()}))
-    context = {"header": header, "transition": transition_for(workspace), "max_loans": MAX_PAPER_LOANS,
+    header = style(
+        HeaderForm(
+            data,
+            initial={"closure_date": timezone.localdate(), "request_key": uuid.uuid4()},
+        )
+    )
+    context = {
+        "header": header,
+        "transition": transition_for(workspace),
+        "max_loans": MAX_PAPER_LOANS,
         "can_admin": request.loans_workspace_access.can("workspace.settings.manage"),
-        "can_owner": request.loans_workspace_access.can("workspace.transfer"), "rows": []}
+        "can_owner": request.loans_workspace_access.can("workspace.transfer"),
+        "rows": [],
+    }
     ids = data.getlist("loans") if data else []
     forms_by_id = {}
     if data and header.is_valid() and ids:
@@ -84,7 +159,10 @@ def create(request):
         date_changed = False
         if values["quote_token"]:
             try:
-                date_changed = _decode(values["quote_token"], workspace)["date"] != values["closure_date"].isoformat()
+                date_changed = (
+                    _decode(values["quote_token"], workspace)["date"]
+                    != values["closure_date"].isoformat()
+                )
             except ValueError:
                 date_changed = True
         try:
@@ -95,7 +173,17 @@ def create(request):
             invalid = False
             for pk in ids:
                 pk = int(pk)
-                form = style(RowForm(data if data.get(f"row_{pk}-amount") is not None and not date_changed else None, prefix=f"row_{pk}"))
+                form = style(
+                    RowForm(
+                        (
+                            data
+                            if data.get(f"row_{pk}-amount") is not None
+                            and not date_changed
+                            else None
+                        ),
+                        prefix=f"row_{pk}",
+                    )
+                )
                 forms_by_id[pk] = form
                 if completing and data.get(f"row_{pk}-include"):
                     if form.is_valid():
@@ -109,24 +197,41 @@ def create(request):
                         invalid = True
             if completing:
                 if date_changed:
-                    raise ValueError("The closure date changed. Review the recalculated amounts and confirm again.")
+                    raise ValueError(
+                        "The closure date changed. Review the recalculated amounts and confirm again."
+                    )
                 if invalid:
-                    raise ValueError("Correct the highlighted selected rows, or deselect them for later.")
-                batch = complete_paper_closures(workspace=workspace, actor=request.user,
-                    request_key=values["request_key"], quote_token=values["quote_token"], rows=selected,
-                    paper_reference=values["paper_reference"], confirmed=values["confirmed"])
+                    raise ValueError(
+                        "Correct the highlighted selected rows, or deselect them for later."
+                    )
+                batch = complete_paper_closures(
+                    workspace=workspace,
+                    actor=request.user,
+                    request_key=values["request_key"],
+                    quote_token=values["quote_token"],
+                    rows=selected,
+                    paper_reference=values["paper_reference"],
+                    confirmed=values["confirmed"],
+                )
                 context["completed"] = batch
                 recorded = {str(row["loan_id"]) for row in selected}
                 ids = [pk for pk in ids if str(pk) not in recorded]
                 values["request_key"] = uuid.uuid4()
             if date_changed and not completing:
-                context["notice"] = "Closure date changed. Amounts were recalculated; check them against the paper book."
+                context["notice"] = (
+                    "Closure date changed. Amounts were recalculated; check them against the paper book."
+                )
         except (ValueError, ValidationError) as exc:
             context["error"] = str(exc)
         if ids:
             try:
-                preview = preview_paper_closures(workspace=workspace, actor=request.user, loan_ids=ids,
-                    closure_date=values["closure_date"], exception_reason=values["exception_reason"])
+                preview = preview_paper_closures(
+                    workspace=workspace,
+                    actor=request.user,
+                    loan_ids=ids,
+                    closure_date=values["closure_date"],
+                    exception_reason=values["exception_reason"],
+                )
                 context["preview"] = preview
                 for row in preview["rows"]:
                     loan = row["loan"]
@@ -134,10 +239,24 @@ def create(request):
                     if old and old.is_bound:
                         form = old
                     else:
-                        form = style(RowForm(prefix=f"row_{loan.pk}", initial={"include": not row.get("error"),
-                            "amount": format(row["amount"], ".2f") if "amount" in row else "", "paid_by": loan.borrower.display_name,
-                            "collector_is_borrower": "yes", "collector_name": loan.borrower.display_name,
-                            "basis": "PAPER_SETTLEMENT", "concession": 0}))
+                        form = style(
+                            RowForm(
+                                prefix=f"row_{loan.pk}",
+                                initial={
+                                    "include": not row.get("error"),
+                                    "amount": (
+                                        format(row["amount"], ".2f")
+                                        if "amount" in row
+                                        else ""
+                                    ),
+                                    "paid_by": loan.borrower.display_name,
+                                    "collector_is_borrower": "yes",
+                                    "collector_name": loan.borrower.display_name,
+                                    "basis": "PAPER_SETTLEMENT",
+                                    "concession": 0,
+                                },
+                            )
+                        )
                     if row.get("error"):
                         form.fields["include"].disabled = True
                     row["form"] = form
@@ -151,13 +270,22 @@ def create(request):
         context["error"] = "Select at least one loan."
     # Keep selections on validation failures as well as partial submissions.
     safe_ids = [int(pk) for pk in ids[:MAX_PAPER_LOANS] if str(pk).isdigit()]
-    context["selected_loans"] = PawnLoan.objects.filter(workspace=workspace, pk__in=safe_ids).select_related("borrower")
+    context["selected_loans"] = PawnLoan.objects.filter(
+        workspace=workspace, pk__in=safe_ids
+    ).select_related("borrower")
     return render(request, "loans/paper/create.html", context)
 
 
 class TransitionForm(forms.Form):
-    system_first_date = forms.DateField(required=False, label="Require recording exceptions for transactions from this date", widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}))
-    retired = forms.BooleanField(required=False, label="Require an administrator exception for every completed closure")
+    system_first_date = forms.DateField(
+        required=False,
+        label="Require recording exceptions for transactions from this date",
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+    retired = forms.BooleanField(
+        required=False,
+        label="Require an administrator exception for every completed closure",
+    )
     reason = forms.CharField(max_length=255, label="Reason / reconciliation reference")
 
 
@@ -166,16 +294,34 @@ class TransitionForm(forms.Form):
 @never_cache
 def settings(request):
     row = transition_for(request.loans_workspace)
-    form = style(TransitionForm(request.POST if request.method == "POST" else None,
-        initial={"system_first_date": row.system_first_date, "retired": row.retired} if row else {}))
+    form = style(
+        TransitionForm(
+            request.POST if request.method == "POST" else None,
+            initial=(
+                {"system_first_date": row.system_first_date, "retired": row.retired}
+                if row
+                else {}
+            ),
+        )
+    )
     if request.method == "POST" and form.is_valid():
         try:
-            set_paper_transition(workspace=request.loans_workspace, actor=request.user, **form.cleaned_data)
+            set_paper_transition(
+                workspace=request.loans_workspace,
+                actor=request.user,
+                **form.cleaned_data,
+            )
         except (ValueError, ValidationError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, "Completed-closure recording controls updated for this Workspace.")
-            return redirect("workspace_loans:paper_closure_settings", workspace_slug=request.workspace.slug)
+            messages.success(
+                request,
+                "Completed-closure recording controls updated for this Workspace.",
+            )
+            return redirect(
+                "workspace_loans:paper_closure_settings",
+                workspace_slug=request.workspace.slug,
+            )
     return render(request, "loans/paper/settings.html", {"form": form})
 
 
@@ -190,23 +336,74 @@ def guide(request):
 @require_GET
 @never_cache
 def batch_csv(request, batch_pk):
-    batch = get_object_or_404(PawnReleaseBatch, workspace=request.loans_workspace, pk=batch_pk, mode="PAPER")
+    batch = get_object_or_404(
+        PawnReleaseBatch, workspace=request.loans_workspace, pk=batch_pk, mode="PAPER"
+    )
     response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="paper-closures-{batch.pk}.csv"'
+    response["Content-Disposition"] = (
+        f'attachment; filename="paper-closures-{batch.pk}.csv"'
+    )
     writer = csv.writer(response)
-    writer.writerow(["Batch", "Closure date", "Recorded at", "Loan", "Borrower", "Release", "Settlement amount", "Interest concession", "Concession reason", "Paid by", "Received by", "Book/page", "Reversed", "Settlement correction", "Physical cash", "Customer handover"])
+    writer.writerow(
+        [
+            "Batch",
+            "Closure date",
+            "Recorded at",
+            "Loan",
+            "Borrower",
+            "Release",
+            "Settlement amount",
+            "Interest concession",
+            "Concession reason",
+            "Paid by",
+            "Received by",
+            "Book/page",
+            "Reversed",
+            "Settlement correction",
+            "Physical cash",
+            "Customer handover",
+        ]
+    )
+
     def cell(value):
         text = str(value)
-        return "'" + text if text.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")) else text
+        return (
+            "'" + text
+            if text.lstrip().startswith(("=", "+", "-", "@", "\t", "\r"))
+            else text
+        )
+
     from apps.tenant_apps.loans.selectors.recorded_batches import batch_financial_review
+
     for line in batch_financial_review(batch)["lines"]:
         release = line.release
         paper = release.loan_event.payload.get("release", {}).get("paper_closure", {})
         unspecified = paper.get("closure_basis") == "PAPER_SETTLEMENT"
-        writer.writerow([cell(value) for value in [batch.pk, batch.effective_date.strftime("%d/%m/%Y"), batch.created_at.isoformat(),
-            release.loan.loan_number, line.borrower_name, release.release_number, release.settlement_amount,
-            release.interest_concession_amount, release.interest_concession_reason, line.paid_by,
-            line.collector_name, line.paper_reference, "Yes" if hasattr(release, "reversal") else "No", getattr(release, "correction_status", ""),
-            "Not established" if unspecified else "Confirmed cash received",
-            "Unspecified in closing record" if unspecified else "Confirmed return; exact time unknown"]])
+        writer.writerow(
+            [
+                cell(value)
+                for value in [
+                    batch.pk,
+                    batch.effective_date.strftime("%d/%m/%Y"),
+                    batch.created_at.isoformat(),
+                    release.loan.loan_number,
+                    line.borrower_name,
+                    release.release_number,
+                    release.settlement_amount,
+                    release.interest_concession_amount,
+                    release.interest_concession_reason,
+                    line.paid_by,
+                    line.collector_name,
+                    line.paper_reference,
+                    "Yes" if hasattr(release, "reversal") else "No",
+                    getattr(release, "correction_status", ""),
+                    "Not established" if unspecified else "Confirmed cash received",
+                    (
+                        "Unspecified in closing record"
+                        if unspecified
+                        else "Confirmed return; exact time unknown"
+                    ),
+                ]
+            ]
+        )
     return response

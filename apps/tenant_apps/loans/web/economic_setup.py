@@ -21,10 +21,18 @@ from apps.tenant_apps.loans.web.economic_forms import (
     PawnFeePolicyForm,
     PawnSeriesInterestForm,
 )
-from apps.tenant_apps.loans.services.economic_policies import create_pawn_series_interest_rates
+from apps.tenant_apps.loans.services.economic_policies import (
+    create_pawn_series_interest_rates,
+)
 from apps.tenant_apps.loans.services.monitoring_policies import cancellation_values
-from apps.tenant_apps.loans.services.monitoring_policy_reviews import preview_monitoring_policy, confirm_monitoring_policy
-from apps.tenant_apps.loans.services.economic_policies import PawnEconomicPolicyError, resolve_pawn_metal_interest_rate_policy
+from apps.tenant_apps.loans.services.monitoring_policy_reviews import (
+    preview_monitoring_policy,
+    confirm_monitoring_policy,
+)
+from apps.tenant_apps.loans.services.economic_policies import (
+    PawnEconomicPolicyError,
+    resolve_pawn_metal_interest_rate_policy,
+)
 from apps.tenant_apps.loans.models import (
     LoanMonitoringPolicy,
     PawnLoanEconomicPolicy,
@@ -46,36 +54,69 @@ def pawn_economics_setup(request):
     source_policy = None
     if request.method == "GET":
         copy_id = request.GET.get("copy_economics")
-        policies = PawnLoanEconomicPolicy.objects.filter(workspace=request.loans_workspace)
+        policies = PawnLoanEconomicPolicy.objects.filter(
+            workspace=request.loans_workspace
+        )
         if copy_id:
             try:
                 source_policy = get_object_or_404(policies, pk=int(copy_id))
             except (ValueError, TypeError) as exc:
                 raise Http404("Calculation policy not found.") from exc
         else:
-            source_policy = policies.filter(license__isnull=True, series__isnull=True, is_active=True,
-                effective_from__lte=timezone.localdate()).filter(
-                    Q(effective_until__isnull=True) | Q(effective_until__gte=timezone.localdate())
-                ).order_by("-effective_from", "-revision", "-pk").first()
+            source_policy = (
+                policies.filter(
+                    license__isnull=True,
+                    series__isnull=True,
+                    is_active=True,
+                    effective_from__lte=timezone.localdate(),
+                )
+                .filter(
+                    Q(effective_until__isnull=True)
+                    | Q(effective_until__gte=timezone.localdate())
+                )
+                .order_by("-effective_from", "-revision", "-pk")
+                .first()
+            )
         if source_policy:
-            configuration_initial.update(model_to_dict(source_policy, fields=tuple(PawnEconomicConfigurationForm.base_fields)))
-            configuration_initial["effective_from"] = max(timezone.localdate(), source_policy.effective_from)
+            configuration_initial.update(
+                model_to_dict(
+                    source_policy,
+                    fields=tuple(PawnEconomicConfigurationForm.base_fields),
+                )
+            )
+            configuration_initial["effective_from"] = max(
+                timezone.localdate(), source_policy.effective_from
+            )
             configured_metals = []
             for metal in ("GOLD", "SILVER", "BRONZE"):
                 try:
-                    rate = resolve_pawn_metal_interest_rate_policy(workspace_id=request.loans_workspace.pk,
-                        license_id=source_policy.license_id, metal=metal,
+                    rate = resolve_pawn_metal_interest_rate_policy(
+                        workspace_id=request.loans_workspace.pk,
+                        license_id=source_policy.license_id,
+                        metal=metal,
                         series_id=source_policy.series_id,
-                        as_of_date=configuration_initial["effective_from"])
+                        as_of_date=configuration_initial["effective_from"],
+                    )
                 except PawnEconomicPolicyError:
                     continue
-                configuration_initial[f"{metal.lower()}_monthly_interest_rate"] = rate.monthly_interest_rate
+                configuration_initial[f"{metal.lower()}_monthly_interest_rate"] = (
+                    rate.monthly_interest_rate
+                )
                 configured_metals.append(metal)
             if configured_metals:
                 precious = [metal for metal in configured_metals if metal != "BRONZE"]
-                configuration_initial["metals_to_configure"] = "BOTH" if len(precious) == 2 else precious[0] if precious else "BRONZE"
+                configuration_initial["metals_to_configure"] = (
+                    "BOTH"
+                    if len(precious) == 2
+                    else precious[0] if precious else "BRONZE"
+                )
     configuration_form = PawnEconomicConfigurationForm(
-        request.POST if request.method == "POST" and action not in {"fee", "monitoring", "series_rates"} else None,
+        (
+            request.POST
+            if request.method == "POST"
+            and action not in {"fee", "monitoring", "series_rates"}
+            else None
+        ),
         workspace=request.loans_workspace,
         initial=configuration_initial,
         prefix="configuration",
@@ -86,17 +127,30 @@ def pawn_economics_setup(request):
         initial={"effective_from": timezone.localdate()},
         prefix="fee",
     )
-    series_rate_form = PawnSeriesInterestForm(request.POST if action == "series_rates" else None,
-        workspace=request.loans_workspace, initial={"effective_from": timezone.localdate()}, prefix="series-rates")
+    series_rate_form = PawnSeriesInterestForm(
+        request.POST if action == "series_rates" else None,
+        workspace=request.loans_workspace,
+        initial={"effective_from": timezone.localdate()},
+        prefix="series-rates",
+    )
     if action == "series_rates" and series_rate_form.is_valid():
         try:
-            create_pawn_series_interest_rates(workspace=request.loans_workspace, actor=request.user,
-                                             **series_rate_form.cleaned_data)
+            create_pawn_series_interest_rates(
+                workspace=request.loans_workspace,
+                actor=request.user,
+                **series_rate_form.cleaned_data,
+            )
         except (ValidationError, ValueError) as exc:
             series_rate_form.add_error(None, str(exc))
         else:
-            messages.success(request, "Series monthly interest rates added. Approved loans retain their agreed rates.")
-            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+            messages.success(
+                request,
+                "Series monthly interest rates added. Approved loans retain their agreed rates.",
+            )
+            return setup_saved_redirect(request, step="terms") or redirect(
+                "workspace_loans:pawn_economics_setup",
+                workspace_slug=request.workspace.slug,
+            )
     monitoring_initial = {
         "effective_from": timezone.localdate(),
         "compliance_profile": "Workspace monitoring v1",
@@ -105,27 +159,45 @@ def pawn_economics_setup(request):
         "ltv_critical_ratio": Decimal("0.90"),
     }
     amendment = None
-    amendment_id = request.GET.get("amend_monitoring") or request.GET.get("cancel_monitoring")
+    amendment_id = request.GET.get("amend_monitoring") or request.GET.get(
+        "cancel_monitoring"
+    )
     if request.method == "GET":
         if amendment_id:
             try:
                 amendment_id = int(amendment_id)
             except (ValueError, TypeError) as exc:
                 raise Http404("Monitoring policy not found.") from exc
-            amendment = get_object_or_404(LoanMonitoringPolicy, pk=amendment_id,
-                                         workspace=request.loans_workspace, successor__isnull=True)
+            amendment = get_object_or_404(
+                LoanMonitoringPolicy,
+                pk=amendment_id,
+                workspace=request.loans_workspace,
+                successor__isnull=True,
+            )
         elif request.GET.get("new_monitoring") != "1":
-            amendment = LoanMonitoringPolicy.objects.filter(workspace=request.loans_workspace,
-                license__isnull=True, successor__isnull=True, effective_until__isnull=True).first()
+            amendment = LoanMonitoringPolicy.objects.filter(
+                workspace=request.loans_workspace,
+                license__isnull=True,
+                successor__isnull=True,
+                effective_until__isnull=True,
+            ).first()
         if amendment is not None:
-            monitoring_initial.update(model_to_dict(amendment, fields=LoanMonitoringPolicyForm.Meta.fields))
-            monitoring_initial.update(supersedes=amendment.pk, amendment_reason="",
-                                      effective_from=max(timezone.localdate(), amendment.effective_from))
-            if request.GET.get('cancel_monitoring'):
+            monitoring_initial.update(
+                model_to_dict(amendment, fields=LoanMonitoringPolicyForm.Meta.fields)
+            )
+            monitoring_initial.update(
+                supersedes=amendment.pk,
+                amendment_reason="",
+                effective_from=max(timezone.localdate(), amendment.effective_from),
+            )
+            if request.GET.get("cancel_monitoring"):
                 try:
                     monitoring_initial.update(cancellation_values(amendment))
-                    monitoring_initial.update(license=amendment.license_id, supersedes=amendment.pk,
-                        cancel_scheduled=True)
+                    monitoring_initial.update(
+                        license=amendment.license_id,
+                        supersedes=amendment.pk,
+                        cancel_scheduled=True,
+                    )
                 except ValidationError as exc:
                     raise Http404(str(exc)) from exc
     monitoring_form = LoanMonitoringPolicyForm(
@@ -135,8 +207,15 @@ def pawn_economics_setup(request):
         actor=request.user,
         prefix="monitoring",
     )
-    if request.method == "POST" and action not in {"configuration", "fee", "monitoring", "series_rates"}:
-        configuration_form.add_error(None, _("Choose which policy to save and try again."))
+    if request.method == "POST" and action not in {
+        "configuration",
+        "fee",
+        "monitoring",
+        "series_rates",
+    }:
+        configuration_form.add_error(
+            None, _("Choose which policy to save and try again.")
+        )
     if action == "configuration" and configuration_form.is_valid():
         data = configuration_form.cleaned_data
         try:
@@ -146,11 +225,19 @@ def pawn_economics_setup(request):
                 **data,
             )
         except (ValidationError, ValueError) as exc:
-            for message in (exc.messages if isinstance(exc, ValidationError) else [str(exc)]):
+            for message in (
+                exc.messages if isinstance(exc, ValidationError) else [str(exc)]
+            ):
                 configuration_form.add_error(None, message)
         else:
-            messages.success(request, "New calculation policy version saved. Earlier approved loans retain their agreed terms.")
-            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+            messages.success(
+                request,
+                "New calculation policy version saved. Earlier approved loans retain their agreed terms.",
+            )
+            return setup_saved_redirect(request, step="terms") or redirect(
+                "workspace_loans:pawn_economics_setup",
+                workspace_slug=request.workspace.slug,
+            )
     if action == "fee" and fee_form.is_valid():
         try:
             create_pawn_loan_fee_policy(
@@ -162,26 +249,43 @@ def pawn_economics_setup(request):
             fee_form.add_error(None, str(exc))
         else:
             messages.success(request, "PawnLoan fee policy added.")
-            return setup_saved_redirect(request, step="terms") or redirect('workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
-    monitoring_review, monitoring_review_token = None, ''
+            return setup_saved_redirect(request, step="terms") or redirect(
+                "workspace_loans:pawn_economics_setup",
+                workspace_slug=request.workspace.slug,
+            )
+    monitoring_review, monitoring_review_token = None, ""
     if action == "monitoring" and monitoring_form.is_valid():
         try:
             values = dict(monitoring_form.cleaned_data)
-            cancelling = values.pop('cancel_scheduled', False)
+            cancelling = values.pop("cancel_scheduled", False)
             if cancelling:
-                if not values.get('supersedes'):
-                    raise ValidationError('Choose the latest scheduled policy before cancelling.')
-                values = dict(cancellation_values(values['supersedes']),
-                    amendment_reason=values['amendment_reason'])
-            if request.POST.get('monitoring_confirm') == '1':
-                confirm_monitoring_policy(workspace=request.loans_workspace, actor=request.user,
-                    review_token=request.POST.get('monitoring_review_token'),
-                    acknowledged=request.POST.get('monitoring_acknowledged') == 'on', **values)
-                messages.success(request, 'Monitoring policy version saved. Earlier evidence is retained.')
-                return setup_saved_redirect(request, step='terms') or redirect(
-                    'workspace_loans:pawn_economics_setup', workspace_slug=request.workspace.slug)
+                if not values.get("supersedes"):
+                    raise ValidationError(
+                        "Choose the latest scheduled policy before cancelling."
+                    )
+                values = dict(
+                    cancellation_values(values["supersedes"]),
+                    amendment_reason=values["amendment_reason"],
+                )
+            if request.POST.get("monitoring_confirm") == "1":
+                confirm_monitoring_policy(
+                    workspace=request.loans_workspace,
+                    actor=request.user,
+                    review_token=request.POST.get("monitoring_review_token"),
+                    acknowledged=request.POST.get("monitoring_acknowledged") == "on",
+                    **values,
+                )
+                messages.success(
+                    request,
+                    "Monitoring policy version saved. Earlier evidence is retained.",
+                )
+                return setup_saved_redirect(request, step="terms") or redirect(
+                    "workspace_loans:pawn_economics_setup",
+                    workspace_slug=request.workspace.slug,
+                )
             monitoring_review, monitoring_review_token = preview_monitoring_policy(
-                workspace=request.loans_workspace, actor=request.user, **values)
+                workspace=request.loans_workspace, actor=request.user, **values
+            )
         except (ValidationError, ValueError) as exc:
             monitoring_form.add_error(None, str(exc))
     context = {
@@ -193,15 +297,22 @@ def pawn_economics_setup(request):
         "monitoring_amendment": amendment,
         "monitoring_review": monitoring_review,
         "monitoring_review_token": monitoring_review_token,
-        "monitoring_cancelling": (getattr(monitoring_form,'cleaned_data',{}).get('cancel_scheduled',False)
-            if monitoring_form.is_bound else bool(monitoring_initial.get('cancel_scheduled',False))),
+        "monitoring_cancelling": (
+            getattr(monitoring_form, "cleaned_data", {}).get("cancel_scheduled", False)
+            if monitoring_form.is_bound
+            else bool(monitoring_initial.get("cancel_scheduled", False))
+        ),
         "monitoring_today": timezone.localdate(),
         "economic_policies": PawnLoanEconomicPolicy.objects.filter(
             workspace=request.loans_workspace
-        ).select_related("license", "series").prefetch_related("series__number_sequences"),
+        )
+        .select_related("license", "series")
+        .prefetch_related("series__number_sequences"),
         "rate_policies": PawnMetalInterestRatePolicy.objects.filter(
             workspace=request.loans_workspace
-        ).select_related("license", "series").prefetch_related("series__number_sequences"),
+        )
+        .select_related("license", "series")
+        .prefetch_related("series__number_sequences"),
         "fee_policies": PawnLoanFeePolicy.objects.filter(
             workspace=request.loans_workspace
         ).select_related("license"),

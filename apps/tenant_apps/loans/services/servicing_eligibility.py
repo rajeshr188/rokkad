@@ -1,18 +1,28 @@
 """Shared factual prerequisites; commands retain authority, locks and posting."""
+
 from dataclasses import dataclass
 from datetime import date
 
 from django.utils import timezone
 
-from apps.tenant_apps.loans.selectors.servicing_contract import resolve_servicing_contract
-from apps.tenant_apps.loans.selectors.transaction_coverage import recorded_position_coverage
+from apps.tenant_apps.loans.selectors.servicing_contract import (
+    resolve_servicing_contract,
+)
+from apps.tenant_apps.loans.selectors.transaction_coverage import (
+    recorded_position_coverage,
+)
 
 
 def shared_monthly_bullet(loan):
     policy = loan.policy_snapshot
-    return bool(policy and policy.policy_version == 2 and policy.interest_method == "SIMPLE"
+    return bool(
+        policy
+        and policy.policy_version == 2
+        and policy.interest_method == "SIMPLE"
         and policy.partial_month_method == "FULL_MONTH"
-        and loan.product_version.repayment_structure in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"))
+        and loan.product_version.repayment_structure
+        in ("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT")
+    )
 
 
 @dataclass(frozen=True)
@@ -40,18 +50,27 @@ class ServicingEligibility:
         return self
 
 
-def servicing_eligibility(loan, *, operation, purpose, effective_date, occurred_at=None):
+def servicing_eligibility(
+    loan, *, operation, purpose, effective_date, occurred_at=None
+):
     """Read only: supported debt is distinct from a complete-book attestation.
 
     Current wrappers supply today's date. Reviewed completed-action adapters supply
     the actual date. Internal restoration/correction writers retain their separate
     validation. No result authorizes a caller or permits generic opening posting.
     """
-    if operation not in {"REPAYMENT", "FULL_RELEASE", "RENEWAL", "AUCTION"} or purpose not in {"CURRENT", "PAPER"}:
+    if operation not in {
+        "REPAYMENT",
+        "FULL_RELEASE",
+        "RENEWAL",
+        "AUCTION",
+    } or purpose not in {"CURRENT", "PAPER"}:
         raise ValueError("Unsupported servicing operation or purpose.")
     blockers = []
+
     def block(code, message):
         blockers.append(ServicingBlocker(code, message))
+
     contract = coverage = None
     if type(effective_date) is not date or effective_date > timezone.localdate():
         block("INVALID_DATE", "Enter the actual transaction date, no later than today.")
@@ -61,23 +80,56 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date, occurred_
         except ValueError as exc:
             block("UNSUPPORTED_CONTRACT", str(exc))
     if contract is None:
-        return ServicingEligibility(operation, purpose, effective_date, None, None, tuple(blockers))
+        return ServicingEligibility(
+            operation, purpose, effective_date, None, None, tuple(blockers)
+        )
     if loan.state != "ACTIVE":
-        block("LOAN_NOT_ACTIVE", "Only an active loan can receive this servicing action.")
-    from apps.tenant_apps.loans.selectors.servicing_dependencies import servicing_dependencies
+        block(
+            "LOAN_NOT_ACTIVE", "Only an active loan can receive this servicing action."
+        )
+    from apps.tenant_apps.loans.selectors.servicing_dependencies import (
+        servicing_dependencies,
+    )
+
     dependencies = servicing_dependencies(loan, effective_date=effective_date)
     if any(row["date"] > effective_date.isoformat() for row in dependencies.events):
-        block("LATER_ACTIVITY", "Later activity is already recorded. Reconcile that activity before entering this earlier transaction.")
+        block(
+            "LATER_ACTIVITY",
+            "Later activity is already recorded. Reconcile that activity before entering this earlier transaction.",
+        )
     if dependencies.accruals:
-        block("LATER_ACCRUAL", "Interest has been finalized beyond this transaction date. Review the later periods first.")
+        block(
+            "LATER_ACCRUAL",
+            "Interest has been finalized beyond this transaction date. Review the later periods first.",
+        )
     if any(row["date"] > effective_date.isoformat() for row in dependencies.custody):
-        block("LATER_CUSTODY", "Later collateral movements exist. Review them before recording this earlier transaction.")
-    if contract.origin_kind == "MIGRATION_OPENING" and effective_date <= contract.financial_history_from:
-        if (operation == "REPAYMENT" or purpose == "CURRENT") and effective_date == contract.financial_history_from:
+        block(
+            "LATER_CUSTODY",
+            "Later collateral movements exist. Review them before recording this earlier transaction.",
+        )
+    if (
+        contract.origin_kind == "MIGRATION_OPENING"
+        and effective_date <= contract.financial_history_from
+    ):
+        if (
+            operation == "REPAYMENT" or purpose == "CURRENT"
+        ) and effective_date == contract.financial_history_from:
             from .opening_precision import require_receipt_order
+
             try:
-                kind = {"REPAYMENT": "REPAYMENT", "FULL_RELEASE": "RELEASE_RECEIPT", "RENEWAL": "RENEWAL_SETTLEMENT", "AUCTION": "AUCTION_RECOVERY"}[operation]
-                require_receipt_order(loan, on=effective_date, received_at=occurred_at, paper=purpose == "PAPER", event_kind=kind)
+                kind = {
+                    "REPAYMENT": "REPAYMENT",
+                    "FULL_RELEASE": "RELEASE_RECEIPT",
+                    "RENEWAL": "RENEWAL_SETTLEMENT",
+                    "AUCTION": "AUCTION_RECOVERY",
+                }[operation]
+                require_receipt_order(
+                    loan,
+                    on=effective_date,
+                    received_at=occurred_at,
+                    paper=purpose == "PAPER",
+                    event_kind=kind,
+                )
             except ValueError as exc:
                 block("CUTOVER_DATE", str(exc))
         else:
@@ -85,28 +137,61 @@ def servicing_eligibility(loan, *, operation, purpose, effective_date, occurred_
     if purpose == "PAPER" and not contract.supports_completed_monthly_servicing:
         # Old opening checkpoints retain their published admission/continuation
         # meanings; compatible readers are the only place that selects them.
-        reviewed_checkpoint = contract.checkpoint_period_number is not None or contract.recognized_interest_at_cutover is not None
-        legacy_release = operation == "FULL_RELEASE" and contract.profile == "native-event-fold/1" and contract.policy_snapshot_id
+        reviewed_checkpoint = (
+            contract.checkpoint_period_number is not None
+            or contract.recognized_interest_at_cutover is not None
+        )
+        legacy_release = (
+            operation == "FULL_RELEASE"
+            and contract.profile == "native-event-fold/1"
+            and contract.policy_snapshot_id
+        )
         if not (reviewed_checkpoint or legacy_release):
-            block("PAPER_CONTRACT", "Completed paper entry needs a supported saved monthly contract. Review the frozen contract before recording this transaction.")
+            block(
+                "PAPER_CONTRACT",
+                "Completed paper entry needs a supported saved monthly contract. Review the frozen contract before recording this transaction.",
+            )
     if operation == "FULL_RELEASE":
         items = tuple(loan.collateral_items.all())
         if not items:
             block("NO_COLLATERAL", "A loan without collateral cannot be released.")
         elif not any(item.custody_state != "WITH_CUSTOMER" for item in items):
-            block("ALREADY_RETURNED", "Every collateral item has already been returned.")
+            block(
+                "ALREADY_RETURNED", "Every collateral item has already been returned."
+            )
     coverage = recorded_position_coverage(loan, effective_date)
     if operation == "AUCTION" and not coverage.complete:
-        block("TRANSACTION_COVERAGE", "Auction recovery needs a supported recorded position without known missing activity. " + coverage.message)
-    return ServicingEligibility(operation, purpose, effective_date, contract, coverage, tuple(blockers))
+        block(
+            "TRANSACTION_COVERAGE",
+            "Auction recovery needs a supported recorded position without known missing activity. "
+            + coverage.message,
+        )
+    return ServicingEligibility(
+        operation, purpose, effective_date, contract, coverage, tuple(blockers)
+    )
 
 
 def paper_repayment_allocation_allowed(loan, balance, allocation, *, evidence=None):
     """Require actual paper fee/item evidence before posting its allocation."""
     evidence = evidence or {}
     if balance.fees_outstanding and evidence.get("fees_paid") is None:
-        raise ValueError("Enter the paper receipt's actual fee component, including zero, when fees are outstanding.")
-    if allocation.principal and loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists():
+        raise ValueError(
+            "Enter the paper receipt's actual fee component, including zero, when fees are outstanding."
+        )
+    if (
+        allocation.principal
+        and loan.loan_events.filter(event_kind="MIGRATION_OPENING").exists()
+    ):
         from .pawn_tranches import get_pawn_principal_tranche_balances
-        if sum(row.principal_outstanding > 0 for row in get_pawn_principal_tranche_balances(loan)) > 1 and evidence.get("item_principal_split") is None:
-            raise ValueError("Enter the staff item principal split for a paper payment across multiple outstanding opening items; no split will be inferred.")
+
+        if (
+            sum(
+                row.principal_outstanding > 0
+                for row in get_pawn_principal_tranche_balances(loan)
+            )
+            > 1
+            and evidence.get("item_principal_split") is None
+        ):
+            raise ValueError(
+                "Enter the staff item principal split for a paper payment across multiple outstanding opening items; no split will be inferred."
+            )
