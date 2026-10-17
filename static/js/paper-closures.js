@@ -4,7 +4,7 @@
     if (!form || form.dataset.initialized) return;
     form.dataset.initialized = 'yes';
     const picker = document.getElementById('paper-loans');
-    if (window.jQuery && jQuery.fn.select2) {
+    if (picker && window.jQuery && jQuery.fn.select2) {
       jQuery(picker).select2({width: '100%', minimumInputLength: 1, maximumSelectionLength: Number(picker.dataset.max),
         ajax: {url: picker.dataset.searchUrl, dataType: 'json', delay: 300,
           data: params => ({q: params.term, page: params.page || 1}), processResults: data => data}});

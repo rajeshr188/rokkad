@@ -294,8 +294,9 @@ class ReleaseBatchTests(WorkspaceTestCase):
             {},
             {"HTTP_HX_REQUEST": "true", "HTTP_HX_HISTORY_RESTORE_REQUEST": "true"},
         ):
-            page = self.client.get(url, **headers)
-            self.assertContains(page, '<form method="post" action="' + url + '"')
+            page = self.client.get(url, follow=True, **headers)
+            self.assertContains(page, 'id="closing-selection"')
+            self.assertEqual(page.context["closing_purpose"], "CURRENT")
             self.assertContains(page, 'data-search-url="' + search_url + '"')
             self.assertContains(page, "<html")
             self.assertNotContains(page, 'href="/loans/')

@@ -1,0 +1,17 @@
+{% if economic_review %}
+<section class="border rounded p-3 my-3" data-economic-policy-review aria-label="Review configuration change">
+ <h3 class="h5">Review configuration change</h3>
+ <p><strong>{{ economic_review.scope }}</strong> &middot; from {{ economic_review.effective_from|date:"d/m/Y" }}{% if economic_review.effective_until %} through {{ economic_review.effective_until|date:"d/m/Y" }}{% endif %}.</p>
+ {% if economic_review.full_override %}<p class="alert alert-info">This creates a complete calculation policy for the selected scope. Its calculation fields override broader defaults. Use the separate series interest action for a rate-only amendment.</p>{% endif %}
+ {% if economic_review.current_source %}<p class="small">Currently applicable calculation policy: {{ economic_review.current_source }}.</p>{% endif %}
+ <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Term</th><th>Currently applicable</th><th>Proposed</th></tr></thead><tbody>{% for change in economic_review.changes %}<tr><th>{{ change.field }}</th><td>{{ change.before }}</td><td>{{ change.after }}</td></tr>{% empty %}<tr><td colspan="3">Values are unchanged. Confirm only if a new scope or dated revision is intended.</td></tr>{% endfor %}</tbody></table></div>
+ <p>{{ economic_review.drafts }} draft(s) fall within this scope and loan-date range. They need the applicable terms checked before approval. {{ economic_review.saved }} saved agreement(s) in that range retain their frozen terms.</p>
+ {% if economic_review.proposed_terms %}<details class="mb-3"><summary>Full proposed calculation rules</summary><dl class="row mt-2">{% for label, value in economic_review.proposed_terms %}<dt class="col-sm-5">{{ label }}</dt><dd class="col-sm-7">{{ value }}</dd>{% endfor %}</dl></details>{% endif %}
+ {% if economic_review.shadowing %}<p><strong>Narrower overrides may continue to take priority:</strong></p><ul>{% for row in economic_review.shadowing %}<li>{{ row.label }}: {{ row.source }}</li>{% endfor %}</ul><p class="small">Up to 21 versions per policy type are shown. Check Saved policy history for all periods and overrides; a listed version may itself be superseded.</p>{% endif %}
+ {% for warning in economic_review.warnings %}<p class="alert alert-warning">{{ warning }}</p>{% endfor %}
+ <p class="small">This changes standing setup, not any recorded agreement, payment or monitoring policy. Correct a mistaken saved agreement through its reviewed correction action. Unselected metals retain their existing rates. A changed form or setup requires another preview. New reviews expire after 30 minutes.</p>
+ <input type="hidden" name="economic_review_token" value="{{ economic_token }}">
+ <div class="form-check"><input class="form-check-input" type="checkbox" name="economic_acknowledged" id="{{ economic_id }}-acknowledged"><label class="form-check-label" for="{{ economic_id }}-acknowledged">I checked the scope, effective date, changes and narrower overrides.</label></div>
+ <button class="btn btn-primary mt-3" name="economic_confirm" value="1" type="submit">Confirm configuration version</button>
+</section>
+{% endif %}

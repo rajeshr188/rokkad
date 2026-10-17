@@ -11,6 +11,7 @@ from apps.tenant_apps.loans.web import (
 from apps.tenant_apps.loans.web import paper_backlog
 from apps.tenant_apps.loans.web.series_reservations import reserve_register
 from apps.tenant_apps.loans.web.loan_corrections import correction_review
+from apps.tenant_apps.loans.web.draft_replacement import replacement
 from apps.tenant_apps.loans.web.collateral_corrections import collateral_correction
 from apps.tenant_apps.loans.web.recorded_borrower_corrections import borrower_correction
 from apps.tenant_apps.loans.web.pawn_draft_actions import pawn_collateral_photo_delete
@@ -202,6 +203,7 @@ urlpatterns = [
         name="pawn_loan_review_transactions",
     ),
     path("guide/", journey.guide, name="loan_journey_guide"),
+    path("releases/close/", closing.create, name="loan_closing_create"),
     path("releases/paper/new/", paper_closures.create, name="paper_closure_create"),
     path("paper-backlog/", paper_backlog.backlog, name="paper_backlog"),
     path(
@@ -447,6 +449,9 @@ urlpatterns = [
         "internal/<int:pk>/record-paper-closure/",
         recorded_servicing.closure,
         name="pawn_loan_record_paper_closure",
+    ),
+    path(
+        "internal/<int:pk>/replace-draft/", replacement, name="pawn_loan_replace_draft"
     ),
     path("internal/<int:pk>/close/", closing.close, name="pawn_loan_close"),
     path(

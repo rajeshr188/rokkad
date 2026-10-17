@@ -14,7 +14,8 @@
   <form method="post" novalidate>{% csrf_token %}{% include "components/setup/journey_fields.html" %}<input type="hidden" name="action" value="series_rates">
     {% include "components/forms/accessible.html#errors" with form=series_rate_form %}
     {% include "loans/setup/_policy_form.html#fields" with form=series_rate_form %}
-    <button class="btn btn-primary" type="submit">{% translate "Save series interest rates" %}</button>
+    {% include "loans/setup/_economic_policy_review.html" with economic_review=series_review economic_token=series_review_token economic_id="series-rates" %}
+    <button class="btn btn-outline-primary" type="submit">{% translate "Preview series interest rates" %}</button>
   </form>
 </details>
 <p>{% translate "Save each policy separately. Choose the business default, a license, or one series that needs different rules. Earlier approved loan evidence stays unchanged." %}</p>
@@ -31,7 +32,8 @@
   <form method="post" novalidate data-interest-policy-form>{% csrf_token %}{% include "components/setup/journey_fields.html" %}<input type="hidden" name="action" value="configuration">
     {% include "loans/setup/_policy_form.html#fields" with form=configuration_form %}
     <p class="small border rounded p-3 bg-body-tertiary" data-interest-policy-summary aria-live="polite">{% translate "Review the scope, effective date and part-month rule before creating this policy version. Earlier approved loans retain their terms." %}</p>
-    <button class="btn btn-primary" type="submit">{% translate "Save calculation policy" %}</button>
+    {% include "loans/setup/_economic_policy_review.html" with economic_review=configuration_review economic_token=configuration_review_token economic_id="configuration" %}
+    <button class="btn btn-outline-primary" type="submit">{% translate "Preview calculation policy" %}</button>
   </form>
 </details>
 <details data-policy-section id="fee-policy" class="card card-body mb-3" {% if fee_form.is_bound %}open{% endif %}>

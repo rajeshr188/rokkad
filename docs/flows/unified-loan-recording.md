@@ -25,6 +25,16 @@ Active loan detail offers **Correct loan**, including signed mistaken-customer
 correction on eligible direct, paper, accepted-history and opening agreements.
 Financial/custody corrections keep their existing reviewed dependency rules.
 
+The local [17 October simplification](../implementation/origination-simplification-20261017.md)
+adds calculation/provenance explanations to final review, reviewed standing setup
+changes and **Replace mistaken draft** on an eligible unposted draft. Replacement
+reserves the correct new number, moves existing unposted collateral/photo identities
+and atomically cancels/links the original. It records no payout. Correct ordinary
+borrower/date/amount/item mistakes in the draft editor; connected or posted history
+continues through its supported correction review. Existing correction holds now
+link to concrete dependency/source checks. This local work awaits integration and
+release; all current paper agreements retain their confirmed full-month rules.
+
 ## An unpaid draft whose payout already happened (LS-02)
 
 Open the existing draft and select **Record completed payout**. The completed-payout

@@ -7,6 +7,11 @@ tags: [loans, closure, custody, paper]
 
 # Unified close action and consistent completed recording
 
+The [17 October refinement](2026-10-17-explicit-closing-mode-and-shared-contract-checks.md)
+replaces the convenience default below with an explicit closing-mode choice and
+extends ordinary saved-contract full-release checks to completed recording. Other
+evidence, restriction, posting and compatibility decisions below remain in force.
+
 The owner approved consolidating routine closing after the unified loan adaptation.
 Origination source does not determine how a subsequent settlement happens. Use one
 Close / release loan screen with current collection/return or completed-recording

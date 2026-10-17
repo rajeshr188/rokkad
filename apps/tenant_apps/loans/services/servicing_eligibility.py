@@ -134,19 +134,21 @@ def servicing_eligibility(
                 block("CUTOVER_DATE", str(exc))
         else:
             block("CUTOVER_DATE", "Opening servicing must be strictly after cutover.")
-    if purpose == "PAPER" and not contract.supports_completed_monthly_servicing:
+    if (
+        purpose == "PAPER"
+        and operation != "FULL_RELEASE"
+        and not contract.supports_completed_monthly_servicing
+    ):
+        # Full settlement uses the ordinary date-aware release calculator for
+        # every supported saved contract. Monthly-only receipt/renewal rules do
+        # not narrow closing eligibility merely because it is recorded later.
         # Old opening checkpoints retain their published admission/continuation
         # meanings; compatible readers are the only place that selects them.
         reviewed_checkpoint = (
             contract.checkpoint_period_number is not None
             or contract.recognized_interest_at_cutover is not None
         )
-        legacy_release = (
-            operation == "FULL_RELEASE"
-            and contract.profile == "native-event-fold/1"
-            and contract.policy_snapshot_id
-        )
-        if not (reviewed_checkpoint or legacy_release):
+        if not reviewed_checkpoint:
             block(
                 "PAPER_CONTRACT",
                 "Completed paper entry needs a supported saved monthly contract. Review the frozen contract before recording this transaction.",

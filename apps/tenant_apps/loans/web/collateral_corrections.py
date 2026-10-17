@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
+from apps.tenant_apps.loans.selectors.correction_guidance import correction_next_steps
 
 from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.loans.access import LOANS_ADMIN_ACTION, loans_action_required
@@ -154,5 +155,6 @@ def collateral_correction(request, pk, item_pk):
             blockers=blockers,
             review=review,
             changes=changes,
+            correction_next_steps=correction_next_steps(loan, blockers),
         ),
     )

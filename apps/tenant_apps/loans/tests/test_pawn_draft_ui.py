@@ -2276,6 +2276,16 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 "series-rates-silver_monthly_interest_rate": "3",
             },
         )
+        self.assertContains(response, "Review configuration change")
+        confirmation = response.wsgi_request.POST.copy()
+        confirmation.update(
+            economic_confirm="1",
+            economic_acknowledged="on",
+            economic_review_token=response.context["series_review_token"],
+        )
+        response = self.client.post(
+            self.workspace_reverse("loans:pawn_economics_setup"), confirmation
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
             PawnMetalInterestRatePolicy.objects.filter(series=series).count(), 2

@@ -1,0 +1,1 @@
+{% if is_unified_closing %}<input type="hidden" name="purpose" value="{{ closing_purpose }}">{% if closing_return_to %}<input type="hidden" name="return_to" value="{{ closing_return_to }}">{% endif %}{% for selected in closing_selected_loans %}<input type="hidden" name="loans" value="{{ selected.pk }}">{% endfor %}{% endif %}

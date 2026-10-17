@@ -602,10 +602,20 @@ def contract_correction(request, pk):
             form.data["review_token"] = token
         except (ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
+    from apps.tenant_apps.loans.selectors.correction_guidance import (
+        correction_next_steps,
+    )
+
     return render(
         request,
         "loans/pawn/contract_correction.html",
-        dict(loan=loan, form=form, review=review, blockers=blockers),
+        dict(
+            loan=loan,
+            form=form,
+            review=review,
+            blockers=blockers,
+            correction_next_steps=correction_next_steps(loan, blockers),
+        ),
     )
 
 

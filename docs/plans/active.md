@@ -12,15 +12,19 @@ tags: [plans, active]
 FW-024 is [completed](completed.md#fw-024-repository-hygiene-and-reviewed-retention-2026-10-17).
 Exact revision `693031a7` passes all six CI groups, including 2,695 Loans tests.
 Original documents and reviewed Git/source recovery are retained. Routine artifact
-retention and a separately planned canonical-main transition remain maintenance.
+retention remains maintenance; the canonical-main transition is now completed as
+recorded in [Status](../STATUS.md).
 
 ## Current sequence
 
-The owner selected dependency/tooling review and integration next, then JSK WH
-original-rate correction preparation. Review the finished dependency snapshot
-without treating its proposed development workflow as adopted GitHub policy.
-For JSK, use paper/payment records and hold uncertain opening balances; preserve
-the saved upfront-interest evidence and do not infer receipts or refunds.
+The selected dependency/tooling integration and separately authorized JSK WH
+original-rate release are complete; [Status](../STATUS.md) records exact deployed
+identities. Their proposed development workflow is not adopted GitHub policy.
+The current [origination simplification](origination-simplification-20261017.md)
+is locally implemented and verified in its isolated worktree. The owner confirms
+all paper agreements use full monthly interest. Integrate the separately prepared
+closing work before release; keep WhatsApp acceptance separate. Current local work
+does not authorize further production corrections, messages or deployment.
 
 ## Work that remains separate
 
@@ -29,11 +33,11 @@ releases are [completed](completed.md) and [deployed](../implementation/counter-
 Their prior detailed sequencing and acceptance limits remain in the
 [archived active plan](../archive/context/2026-10-17/plans/active.md).
 
-- JSK WH intended-rate correction needs a supported contract and reviewed proposal;
-  [verification](../implementation/jsk-wh-interest-verification-20261016.md) records
-  source and cash/history limits. No live mutation is authorized by repository work.
-  The [cohort and evidence-review plan](jsk-wh-original-rate-correction-20261017.md)
-  records the owner's hold-uncertain-balances decision and exact read-only snapshot.
+- JSK WH correction is [released](../implementation/jsk-wh-original-rate-release-20261017.md).
+  Its [verification](../implementation/jsk-wh-interest-verification-20261016.md)
+  and [cohort/evidence plan](jsk-wh-original-rate-correction-20261017.md) retain
+  source/cash-history limits and the owner's hold-uncertain-balances decision.
+  Repository work is not authority for a new correction or inferred receipt/refund.
 - [FW-004 worker capacity](future-work.md#fw-004-launch-scale-loan-monitoring-capacity)
   retains measurement gates and the owner pause on large local runs.
 - Platform-owner WhatsApp requires [PW-05 live acceptance](../implementation/platform-whatsapp-pilot-pw05.md).

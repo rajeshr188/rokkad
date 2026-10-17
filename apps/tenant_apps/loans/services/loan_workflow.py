@@ -110,6 +110,8 @@ def make_review(loan, *, actor=None, effective_date=None):
     economics, digest, _, contract = _review_values(loan)
     values = {"workspace": loan.workspace_id, "loan": loan.pk, "digest": digest}
     if actor is not None:
+        from .origination_summary import native_origination_summary, review_summary
+
         effective_date = effective_date or timezone.localdate()
         values.update(
             version=2,
@@ -117,8 +119,33 @@ def make_review(loan, *, actor=None, effective_date=None):
             date=effective_date.isoformat(),
             contract=_contract_digest(contract),
             photos_required=collateral_photos_required(loan.workspace_id),
+            reviewed_terms=review_summary(native_origination_summary(loan, economics)),
         )
     return economics, signing.dumps(values, salt=SALT)
+
+
+def reviewed_term_changes(loan, *, actor, token, agreement):
+    """Read only, same-workspace/user/loan signed review; old tokens stay valid."""
+    from .origination_summary import review_summary
+
+    try:
+        previous = signing.loads(token, salt=SALT, max_age=3600)
+        if (
+            not isinstance(previous, dict)
+            or previous.get("workspace") != loan.workspace_id
+            or previous.get("loan") != loan.pk
+            or previous.get("actor") != actor.pk
+            or not isinstance(previous.get("reviewed_terms"), dict)
+        ):
+            return []
+        current = review_summary(agreement)
+        return [
+            dict(field=key, before=value, after=current.get(key, "Unavailable"))
+            for key, value in previous["reviewed_terms"].items()
+            if current.get(key) != value
+        ]
+    except signing.BadSignature, TypeError, ValueError:
+        return []
 
 
 @transaction.atomic

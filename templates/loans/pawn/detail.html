@@ -14,6 +14,9 @@
 </div>
 
 {% include "loans/pawn/_detail_header.html" %}
+{% if draft_replacement %}<p data-loan-block="overview">{% if draft_replacement.outgoing %}This preparation draft was replaced by{% else %}This preparation draft replaces{% endif %} <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug draft_replacement.other.pk %}">{{ draft_replacement.other.loan_number }}</a>. The original number/history and existing collateral/photo identities are retained.</p>{% endif %}
+{% if loan.state == 'DRAFT' and can_split_draft %}<p data-loan-block="overview"><a href="{% url 'workspace_loans:pawn_loan_replace_draft' request.workspace.slug loan.pk %}">Wrong register or product? Review a replacement draft</a></p>{% endif %}
+{% if loan.state == "ACTIVE" and can_release %}<p data-loan-block="action" data-close-release-action><a class="btn btn-primary" href="{% counter_url 'workspace_loans:pawn_loan_close' request.workspace.slug loan.pk %}"><i class="bi bi-unlock me-2" aria-hidden="true"></i>{% translate "Close / release loan" %}</a></p>{% endif %}
 <p class="small" data-loan-block="overview"><a href="{% url 'workspace_loans:loan_journey_guide' request.workspace.slug %}">Loan journey &amp; staff guide</a></p>
 {% include "loans/pawn/_draft_split_discovery.html" %}
 {% include "loans/pawn/_recorded_by.html" %}
@@ -67,7 +70,6 @@
 {% if loan.releases.exists %}<p><a href="#loan-releases">{% translate "Open release history and memo" %}</a></p>{% endif %}
 </div>
 {% if primary_action and loan.state != 'CLOSED' %}<div class="alert alert-primary d-flex flex-wrap justify-content-between align-items-center gap-3" data-loan-block="action"><div><strong>{% translate "Recommended next step" %}</strong><div>{{ primary_action.message }}</div></div>{% if primary_action.method == 'post' %}<form method="post" action="{% counter_link primary_action.url %}">{% csrf_token %}<button class="btn btn-primary" type="submit">{% translate primary_action.label %}</button></form>{% else %}<a class="btn btn-primary" href="{% counter_link primary_action.url %}">{% translate primary_action.label %}</a>{% endif %}</div>{% endif %}
-{% if loan.state == "ACTIVE" and can_release %}<p data-loan-block="action"><a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_close' request.workspace.slug loan.pk %}">{% translate "Close / release loan" %}</a></p>{% endif %}
 {% if recorded_history and loan.state == "ACTIVE" and can_renew %}<p data-loan-block="action"><a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_renew' request.workspace.slug loan.pk %}">Renew this loan</a></p>{% endif %}
 {% if can_confirm_paper_handover %}<p data-loan-block="action"><a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_confirm_paper_handover' request.workspace.slug loan.pk %}">Confirm customer handover</a></p>{% endif %}
 {% if loan.state == "ACTIVE" and is_opening and can_repay %}<p data-loan-block="action"><a class="btn btn-outline-primary" href="{% counter_url 'workspace_loans:pawn_loan_repay' request.workspace.slug loan.pk %}">{% translate "Record payment" %}</a></p>{% endif %}

@@ -8,6 +8,7 @@
 <p>{% translate "Confirm only after paying the customer. This records payment and activates the loan; it does not send a bank transfer." %}</p></div>
 <div class="loan-workflow-grid"><div class="loan-workflow-main">
 {% include "components/forms/accessible.html#errors" %}
+{% if review_changes %}<section class="alert alert-warning" aria-labelledby="review-changes-title"><h2 class="h5" id="review-changes-title">Changed since your review</h2><p>No payout was recorded. Review the current terms again before confirming.</p><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Term</th><th>Previously reviewed</th><th>Current</th></tr></thead><tbody>{% for change in review_changes %}<tr><th>{{ change.field }}</th><td class="text-break">{{ change.before }}</td><td class="text-break">{{ change.after }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
 {% include "loans/pawn/_origination_review.html#review" %}
 <div class="card card-body mb-3">
 <h2 class="h5">{% translate "Record payment" %}</h2>

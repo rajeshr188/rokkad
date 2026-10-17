@@ -133,12 +133,24 @@ def search(request):
 @loans_action_required("loan.release")
 @require_http_methods(["GET", "POST"])
 @never_cache
-def create(request):
+def create(request, *, closing_context=None):
+    if request.method == "GET" and closing_context is None:
+        from .closing import legacy_entry
+
+        return legacy_entry(request, purpose="CURRENT")
     workspace = request.loans_workspace
-    context = {"max_loans": MAX_BATCH_LOANS}
+    context = {"max_loans": MAX_BATCH_LOANS, **(closing_context or {})}
     data = request.POST.copy() if request.method == "POST" else None
     confirming = data is not None and data.get("action") == "complete"
-    ids = data.getlist("loans") if data is not None else []
+    ids = (
+        data.getlist("loans")
+        if data is not None
+        else (
+            [loan.pk for loan in closing_context["closing_selected_loans"]]
+            if closing_context
+            else []
+        )
+    )
     header = _style(
         ConfirmationForm(
             data if confirming else None, initial={"request_key": uuid.uuid4()}

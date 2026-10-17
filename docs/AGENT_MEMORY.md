@@ -35,6 +35,15 @@ accounting safeguards. See [constitution](constitution.md), [ADRs](adr/),
 
 ## Origination, corrections and source evidence
 
+Closing mode must be explicit and independent of loan entry defaults. Current and
+completed full release use the ordinary saved-contract/date-aware settlement
+calculator; the monthly-only completed receipt/renewal gate must not restrict full
+release. Preserve combined-current versus independent-completed payment meanings,
+unknown handover custody and existing evidence/retry contracts. See the
+[closing refinement](adr/2026-10-17-explicit-closing-mode-and-shared-contract-checks.md).
+The owner explicitly left JSK WH02306 unchanged after the diagnostic review;
+workflow work is not authorization to correct its recorded release.
+
 Direct, earlier-paper and supported imported/opening loans share PawnLoan
 servicing capabilities. Entry method describes source evidence; it must not
 invent a separate later lifecycle. Number reservations and historical ranges
@@ -49,6 +58,15 @@ Use the [unified recording flow](flows/unified-loan-recording.md),
 and [financial read models](domain/pawn-loan-financial-read-models.md).
 Borrower/collateral fact correction and principal/agreement correction have
 different evidence/dependency gates. Never substitute a raw model update.
+
+The [origination review/recovery decision](adr/2026-10-17-origination-review-and-safe-recovery.md)
+keeps standing setup, frozen agreements and monitoring separate. Unposted mistaken
+register/product recovery creates a new numbered draft and explicitly cancels/links
+the old one; it preserves item/photo identity and cannot move a posted agreement.
+Portable preparation references remain source-local evidence. The owner confirms
+all current paper agreements use full monthly interest; do not invent a weekly
+paper agreement or silently replace a different saved rule. See the
+[capability matrix](implementation/origination-simplification-20261017.md).
 
 Retained aggregate opening-review/2 corrections preserve their original-principal,
 inclusive-anniversary, first-month-paid and cumulative HALF_EVEN rules; do not

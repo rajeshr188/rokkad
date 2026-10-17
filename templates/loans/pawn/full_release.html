@@ -3,6 +3,7 @@
 {% block title %}{% translate "Close / release loan" %} &middot; {{ loan.loan_number }}{% endblock %}
 {% block workspace_content %}
 <div hx-history="false">
+  {% if is_unified_closing %}{% include "loans/closing/_selection.html" %}{% else %}
   <div class="mb-4">
     <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
     <h1 class="h3 mt-2">{% translate "Close / release loan" %}</h1>
@@ -11,6 +12,7 @@
     </form>
     {% if closure_purpose == 'PAPER' %}<p>{% translate "Record the actual closing date and settlement. Confirm cash collection and customer return only when the source establishes them. Recording does not collect money again." %}</p>{% else %}<p>{% translate "Full release: review the settlement, collect payment and return every listed item. Confirm only when collection and handover are complete." %}</p>{% endif %}
   </div>
+  {% endif %}
   <div class="loan-workflow-grid"><div class="loan-workflow-main">
     {% include "components/forms/accessible.html#errors" %}
     {% if closure_purpose == 'PAPER' %}{% include "loans/pawn/_completed_closure.html" %}{% else %}
@@ -45,7 +47,7 @@
     {% endpartialdef %}
     <section class="card mb-3" aria-labelledby="release-confirm-title"><div class="card-body">
       <h2 class="h5" id="release-confirm-title">{% translate "3. Record collection and handover" %}</h2>
-      <form method="post" novalidate>{% csrf_token %}{{ form.request_key }}<input type="hidden" name="purpose" value="CURRENT">
+      <form method="post" data-closing-review {% if is_unified_closing %}action="{{ closing_action_url }}"{% endif %} novalidate>{% csrf_token %}{{ form.request_key }}{% if is_unified_closing %}{% include "loans/closing/_hidden_selection.html" %}{% else %}<input type="hidden" name="purpose" value="CURRENT">{% endif %}
         {% include "components/forms/accessible.html#field" with field=form.settlement_amount %}
         {% if can_concede_interest %}
         <details class="border rounded p-3 mb-3" {% if form.interest_concession.errors or form.concession_reason.errors or form.is_bound %}open{% endif %}>

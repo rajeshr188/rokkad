@@ -276,6 +276,22 @@ class SeriesCalculationPolicyTests(WorkspaceTestCase):
         )
         request.user, request.workspace, request.session = self.user, self.tenant, {}
         request._messages = FallbackStorage(request)
+        response = pawn_economics_setup(request)
+        self.assertContains(response, "Review configuration change")
+        import re
+
+        token = re.search(
+            r'name="economic_review_token" value="([^"]+)"', response.content.decode()
+        ).group(1)
+        confirmation = request.POST.copy()
+        confirmation.update(
+            economic_confirm="1",
+            economic_acknowledged="on",
+            economic_review_token=token,
+        )
+        request = RequestFactory().post(path, confirmation)
+        request.user, request.workspace, request.session = self.user, self.tenant, {}
+        request._messages = FallbackStorage(request)
         self.assertEqual(pawn_economics_setup(request).status_code, 302)
         latest = (
             PawnLoanEconomicPolicy.objects.filter(series=series).order_by("-pk").first()

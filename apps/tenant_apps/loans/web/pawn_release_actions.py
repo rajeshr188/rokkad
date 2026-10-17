@@ -41,7 +41,7 @@ def _full_release_quote(loan):
 @loans_action_required("loan.release")
 @never_cache
 @preserve_counter_return
-def pawn_loan_release_full(request, pk):
+def pawn_loan_release_full(request, pk, *, closing_context=None):
     loan = _pawn_loan_for_workspace(request, pk)
     quote = _full_release_quote(loan)
     initial = {"request_key": uuid.uuid4().hex}
@@ -92,6 +92,7 @@ def pawn_loan_release_full(request, pk):
         request,
         "loans/pawn/full_release.html",
         {
+            **(closing_context or {}),
             "loan": loan,
             "closure_purpose": "CURRENT",
             "form": form,

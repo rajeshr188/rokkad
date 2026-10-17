@@ -1,19 +1,31 @@
 """One closing experience preserves current/completed cash and custody meaning."""
 
+from copy import deepcopy
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, connection, transaction
 from django.urls import reverse
 
+from apps.orgs.models import Membership, Role
 from apps.tenant_apps.loans.models import (
+    PawnLoan,
     PawnLoanRelease,
     PawnReleaseBatch,
     PawnLoanEvent,
 )
+from apps.tenant_apps.loans.selectors.servicing_contract import (
+    resolve_servicing_contract,
+)
+from apps.tenant_apps.loans.services import approve_pawn_loan, disburse_pawn_loan
+from apps.tenant_apps.loans.services.economic_policies import (
+    create_pawn_loan_economic_policy,
+)
+from apps.tenant_apps.loans.services.servicing_eligibility import servicing_eligibility
 from apps.tenant_apps.loans.services.paper_closures import (
     preview_paper_closures,
     complete_paper_closures,
@@ -91,16 +103,14 @@ class ClosingWorkflowTests(batch_fixtures.ReleaseBatchTests):
             | overrides
         )
 
-    def test_one_screen_selects_standing_preference_independently_of_native_origin(
-        self,
-    ):
-        with patch(
-            "apps.tenant_apps.loans.web.closing.default_entry_purpose",
-            return_value="PAPER",
-        ):
-            response = self.client.get(self.url())
+    def test_one_screen_requires_explicit_purpose_independently_of_native_origin(self):
+        response = self.client.get(self.url())
         self.assertContains(response, "Close / release loan")
-        self.assertEqual(response.context["closure_purpose"], "PAPER")
+        self.assertEqual(response.context["closing_purpose"], "")
+        self.assertEqual(
+            [loan.pk for loan in response.context["closing_selected_loans"]],
+            [self.loans[0].pk],
+        )
         self.assertContains(response, "Record a settlement already completed")
         response = self.client.get(self.url(), {"purpose": "CURRENT"})
         self.assertEqual(response.context["closure_purpose"], "CURRENT")
@@ -266,8 +276,7 @@ class ClosingWorkflowTests(batch_fixtures.ReleaseBatchTests):
             "Outage entry",
         )
         self.assertEqual(
-            self.client.get(self.url(self.loans[1])).context["closure_purpose"],
-            "CURRENT",
+            self.client.get(self.url(self.loans[1])).context["closing_purpose"], ""
         )
 
     def test_confirmed_other_recipient_requires_authority_in_both_paths(self):
@@ -364,9 +373,7 @@ class ClosingWorkflowTests(batch_fixtures.ReleaseBatchTests):
             preview_recorded_closure(
                 loan_id=self.loans[0].pk, actor=self.owner, data=self.facts()
             )
-        self.assertEqual(
-            self.client.get(self.url()).context["closure_purpose"], "CURRENT"
-        )
+        self.assertEqual(self.client.get(self.url()).context["closing_purpose"], "")
 
     def test_extended_unknown_batch_supports_later_handover_without_another_settlement(
         self,
@@ -454,6 +461,284 @@ class ClosingWorkflowTests(batch_fixtures.ReleaseBatchTests):
                 cursor.execute("RESET ROLE")
                 cursor.execute(f"DROP OWNED BY {role}")
                 cursor.execute(f"DROP ROLE {role}")
+
+    def entry(self):
+        return reverse(
+            "workspace_loans:loan_closing_create",
+            kwargs={"workspace_slug": self.tenant.slug},
+        )
+
+    def weekly_loan(self):
+        license, series = self._configured_setup()
+        # An ordinary, more-specific configuration before approval freezes it.
+        create_pawn_loan_economic_policy(
+            workspace=self.tenant,
+            license=license,
+            series=series,
+            valuation_method="LATEST_APPRAISAL",
+            maximum_ltv_ratio=Decimal(".8"),
+            advance_interest_periods=1,
+            partial_month_method="STARTED_WEEKS",
+            effective_from=date(2026, 1, 1),
+            actor=self.owner,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("loans:pawn_loan_create"), self._payload(license, series)
+            ).status_code,
+            302,
+        )
+        loan = PawnLoan.objects.latest("pk")
+        approve_pawn_loan(loan.pk, actor=self.owner)
+        disburse_pawn_loan(loan.pk, effective_date=date(2026, 7, 18), actor=self.owner)
+        loan.refresh_from_db()
+        return loan
+
+    def test_detail_and_list_expose_one_closing_entry_without_recording_anything(self):
+        detail = self.client.get(
+            reverse(
+                "workspace_loans:pawn_loan_detail",
+                args=[self.tenant.slug, self.loans[0].pk],
+            )
+        )
+        self.assertContains(detail, "data-close-release-action", count=1)
+        page = self.client.get(
+            reverse("workspace_loans:pawn_loan_list", args=[self.tenant.slug])
+        )
+        self.assertContains(page, 'href="' + self.entry() + '"')
+        self.assertNotContains(page, "Record paper closures")
+        self.assertNotContains(page, "Release multiple loans")
+        response = self.client.get(self.entry())
+        self.assertEqual(response.context["closing_purpose"], "")
+        self.assertIn("no-store", response.headers["Cache-Control"])
+        self.assertFalse(PawnLoanRelease.objects.exists())
+
+    def test_canonical_single_current_preserves_concession_and_retry(self):
+        loan = self.loans[0]
+        with patch("django.utils.timezone.localdate", return_value=date(2026, 8, 20)):
+            review = self.client.get(
+                self.entry(), {"purpose": "CURRENT", "loans": [loan.pk]}
+            )
+            due = review.context["quote"].minimum_settlement
+            payload = dict(
+                purpose="CURRENT",
+                loans=[loan.pk],
+                request_key=str(uuid4()),
+                settlement_amount=str(due - 1),
+                interest_concession="1",
+                concession_reason="Agreed discount",
+                confirm_collateral_handoff="on",
+            )
+            self.assertEqual(self.client.post(self.entry(), payload).status_code, 302)
+            self.assertEqual(self.client.post(self.entry(), payload).status_code, 302)
+        release = loan.releases.get()
+        self.assertEqual(release.settlement_amount, due - 1)
+        self.assertNotIn("paper_closure", release.loan_event.payload["release"])
+        self.assertTrue(
+            all(item.returned_at is not None for item in release.items.all())
+        )
+
+    def test_canonical_combined_current_review_completion_and_retry(self):
+        ids = [loan.pk for loan in self.loans]
+        page = self.client.get(self.entry(), {"purpose": "CURRENT", "loans": ids})
+        self.assertContains(page, "Total to collect")
+        self.assertContains(page, 'action="' + self.entry() + '"')
+        header = page.context["confirmation_form"]
+        payload = dict(
+            purpose="CURRENT",
+            loans=ids,
+            action="complete",
+            request_key=header["request_key"].value(),
+            quote_token=header["quote_token"].value(),
+            paid_by="One combined payer",
+            payment_confirmed="on",
+        )
+        for loan in self.loans:
+            payload.update(
+                {
+                    f"collector_{loan.pk}-loan_id": loan.pk,
+                    f"collector_{loan.pk}-collector_type": "borrower",
+                    f"collector_{loan.pk}-handover_confirmed": "on",
+                }
+            )
+        mismatched = dict(payload, loans=[ids[0]])
+        self.assertEqual(self.client.post(self.entry(), mismatched).status_code, 400)
+        self.assertFalse(PawnLoanRelease.objects.exists())
+        self.assertEqual(self.client.post(self.entry(), payload).status_code, 302)
+        self.assertEqual(self.client.post(self.entry(), payload).status_code, 302)
+        batch = PawnReleaseBatch.objects.get()
+        self.assertEqual(
+            (batch.mode, batch.paid_by, batch.lines.count()),
+            ("COUNTER", "One combined payer", 2),
+        )
+
+    def test_weekly_contract_closes_on_actual_date_through_shared_completed_screen(
+        self,
+    ):
+        loan = self.weekly_loan()
+        original_policy = {
+            field.name: getattr(loan.policy_snapshot, field.name)
+            for field in loan.policy_snapshot._meta.concrete_fields
+        }
+        original_payout = deepcopy(loan.disbursal_snapshot.evidence)
+        actual = date(2026, 8, 19)
+        ids = [
+            self.loans[0].pk,
+            loan.pk,
+        ]  # monthly and started-week agreements together
+        with patch("django.utils.timezone.localdate", return_value=date(2026, 8, 20)):
+            contract = resolve_servicing_contract(loan, as_of_date=actual)
+            self.assertEqual(contract.partial_month_method, "STARTED_WEEKS")
+            self.assertFalse(contract.supports_completed_monthly_servicing)
+            for purpose in ("CURRENT", "PAPER"):
+                self.assertTrue(
+                    servicing_eligibility(
+                        loan,
+                        operation="FULL_RELEASE",
+                        purpose=purpose,
+                        effective_date=actual,
+                    ).ready
+                )
+            self.assertIn(
+                "PAPER_CONTRACT",
+                [
+                    row.code
+                    for row in servicing_eligibility(
+                        loan,
+                        operation="REPAYMENT",
+                        purpose="PAPER",
+                        effective_date=actual,
+                    ).blockers
+                ],
+            )
+            with self.assertRaisesMessage(ValueError, "Finalize every completed"):
+                preview_pawn_loan_full_release(loan.pk, as_of_date=actual)
+            from apps.tenant_apps.loans.services.pawn_interest import (
+                finalize_pawn_loan_accrual,
+            )
+
+            finalize_pawn_loan_accrual(loan.pk, period_number=1, actor=self.owner)
+            initial = self.client.get(self.entry(), {"purpose": "PAPER", "loans": ids})
+            self.assertIsNone(initial.context["header"]["closure_date"].value())
+            payload = dict(
+                purpose="PAPER",
+                loans=ids,
+                action="review",
+                request_key=str(uuid4()),
+                closure_date=actual.isoformat(),
+                paper_reference="Original book",
+            )
+            page = self.client.post(self.entry(), payload)
+            self.assertEqual(len(page.context["rows"]), 2)
+            self.assertFalse(PawnLoanRelease.objects.exists())
+            payload.update(
+                action="complete",
+                confirmed="on",
+                quote_token=page.context["header"]["quote_token"].value(),
+            )
+            amounts = {}
+            for row in page.context["rows"]:
+                pk = row["loan"].pk
+                self.assertNotIn("error", row)
+                due = preview_pawn_loan_full_release(
+                    pk, as_of_date=actual
+                ).minimum_settlement
+                self.assertEqual(row["amount"], due)
+                amounts[pk] = due
+                returned = pk == loan.pk
+                payload.update(
+                    {
+                        f"row_{pk}-include": "on",
+                        f"row_{pk}-amount": format(due, ".2f"),
+                        f"row_{pk}-basis": (
+                            "RETURNED" if returned else "PAPER_SETTLEMENT"
+                        ),
+                        f"row_{pk}-collector_is_borrower": "yes",
+                        f"row_{pk}-paid_by": "Actual payer" if returned else "",
+                        f"row_{pk}-collector_name": (
+                            row["loan"].borrower.display_name if returned else ""
+                        ),
+                    }
+                )
+            response = self.client.post(self.entry(), payload)
+            self.assertNotIn("error", response.context)
+            self.assertEqual(response.context["completed"].lines.count(), 2)
+            self.assertFalse(response.context["closing_selected_loans"].exists())
+            retry = self.client.post(self.entry(), payload)
+            self.assertEqual(
+                retry.context["completed"].pk, response.context["completed"].pk
+            )
+        self.assertEqual(PawnReleaseBatch.objects.count(), 1)
+        for pk, due in amounts.items():
+            release = PawnLoanRelease.objects.get(loan_id=pk)
+            self.assertEqual(
+                (release.effective_date, release.settlement_amount), (actual, due)
+            )
+            self.assertTrue(
+                all(item.returned_at is None for item in release.items.all())
+            )
+        self.assertEqual(loan.collateral_items.get().custody_state, "WITH_CUSTOMER")
+        self.assertEqual(
+            self.loans[0].collateral_items.get().custody_state, "PAPER_CLOSED"
+        )
+        loan.refresh_from_db()
+        self.assertEqual(loan.disbursal_snapshot.evidence, original_payout)
+        self.assertEqual(
+            {
+                field.name: getattr(loan.policy_snapshot, field.name)
+                for field in loan.policy_snapshot._meta.concrete_fields
+            },
+            original_policy,
+        )
+
+    def test_canonical_rejects_invalid_selection_future_dates_and_missing_confirmation(
+        self,
+    ):
+        for values, status in (
+            ({"purpose": "bad"}, 400),
+            ({"loans": ["bad"]}, 400),
+            ({"loans": [self.loans[0].pk] * 2}, 400),
+            ({"loans": [99999999]}, 404),
+        ):
+            self.assertEqual(self.client.get(self.entry(), values).status_code, status)
+        payload = dict(
+            purpose="PAPER",
+            loans=[self.loans[0].pk],
+            action="review",
+            request_key=str(uuid4()),
+        )
+        self.assertContains(
+            self.client.post(self.entry(), payload), "This field is required"
+        )
+        self.assertContains(
+            self.client.post(self.entry(), dict(payload, closure_date="2026-07-19")),
+            "today or earlier",
+        )
+        self.assertEqual(self.client.post(self.entry(), {}).status_code, 400)
+        self.assertFalse(PawnLoanRelease.objects.exists())
+
+    def test_canonical_permissions_csrf_and_detail_visibility(self):
+        self.client.handler.enforce_csrf_checks = True
+        self.assertEqual(self.client.post(self.entry(), {}).status_code, 403)
+        self.client.handler.enforce_csrf_checks = False
+        user = get_user_model().objects.create_user(username="closing-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(company=self.tenant, user=user, role=role)
+        self.client.force_login(user)
+        self.assertEqual(self.client.get(self.entry()).status_code, 403)
+        self.assertEqual(
+            self.client.post(
+                self.entry(), {"purpose": "CURRENT", "loans": [self.loans[0].pk]}
+            ).status_code,
+            403,
+        )
+        response = self.client.get(
+            reverse(
+                "workspace_loans:pawn_loan_detail",
+                args=[self.tenant.slug, self.loans[0].pk],
+            )
+        )
+        self.assertNotContains(response, "data-close-release-action")
 
 
 from apps.tenant_apps.loans.tests import test_release_concessions as concession_fixtures

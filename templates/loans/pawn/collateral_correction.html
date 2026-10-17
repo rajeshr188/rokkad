@@ -9,6 +9,7 @@
   <p class="small text-muted">For jewellery actually exchanged, returned or newly pledged, record the business action. Adding or removing a mistaken item needs a separate reconciliation.</p>
   {% if blockers %}<div class="alert alert-warning"><ul class="mb-0">{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
   <form method="post">{% csrf_token %}{{ form.non_field_errors }}
+    {% include "loans/pawn/_correction_next_steps.html" %}
     {% for field in form %}
       {% if field.is_hidden %}{{ field }}
       {% elif field.name == 'confirmed' %}{% if review %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% endif %}

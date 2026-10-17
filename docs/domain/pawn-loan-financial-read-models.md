@@ -87,7 +87,12 @@ current payment. Concessions retain separate interest-loss evidence and authorit
 Previously complete book coverage is carried through a reconciled completed
 closure; a prior Rokkad-only future-capture claim is not carried forward. Existing
 records and older paper-closure/1 batches retain their evidence and retry meaning.
-See the [closing decision](../adr/2026-10-08-unified-closing-and-completed-recording.md).
+See the [closing decision](../adr/2026-10-08-unified-closing-and-completed-recording.md)
+and [explicit-mode refinement](../adr/2026-10-17-explicit-closing-mode-and-shared-contract-checks.md).
+The shared closing screen requires a mode independent of origination defaults.
+Full settlement uses the ordinary saved-contract calculator for current and
+completed activity, including supported started-week agreements. The monthly-only
+completed receipt/renewal capability does not narrow full-release eligibility.
 
 LC-05 adds a verified terminal position: an ordinary CLOSED loan with its original
 agreement and a sole zero-valued opening at verified closure. At/after closure its

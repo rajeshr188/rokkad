@@ -2,8 +2,9 @@
 {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
 {% if form_errors %}<div class="alert alert-danger">{{ form_errors }}</div>{% endif %}
 {% if preview %}
-<form method="post" action="{% url 'workspace_loans:release_batch_create' request.workspace.slug %}" id="batch-confirm">
+<form method="post" data-closing-review action="{% if is_unified_closing %}{{ closing_action_url }}{% else %}{% url 'workspace_loans:release_batch_create' request.workspace.slug %}{% endif %}" id="batch-confirm">
 {% csrf_token %}<input type="hidden" name="action" value="complete">
+{% include "loans/closing/_hidden_selection.html" %}
 {{ confirmation_form.request_key }}{{ confirmation_form.quote_token }}
 {% if confirmation_errors %}<div class="alert alert-warning">{{ confirmation_errors }}</div>{% endif %}
 {% for row in preview.rows %}

@@ -13,6 +13,67 @@ limits, is preserved in the [17 October context snapshot](archive/context/2026-1
 See [memory](AGENT_MEMORY.md) for durable rules and [completed work](plans/completed.md)
 for delivery history.
 
+## Combined origination and closing release
+
+The owner authorized integration, commit/push and the verified production release
+on 17 October. Candidate `work/loan-workflow-release-20261017` starts at maintained
+main `ed585f33`. Both source worktrees are frozen into checksum-verified private
+snapshots and retained unchanged. Commit `4898c243` contains only AST-equivalent
+formatting; behavior is integrated separately. Shared URLs, detail actions and
+documentation retain both features. Five combined correction-to-closing and draft
+replacement-to-closing journeys pass. Broader tests and release gates are in
+progress; see the [release record](implementation/loan-workflow-release-20261017.md).
+No production switch or business-record correction has occurred.
+WhatsApp work remains separate; JSK WH02306 stays unchanged.
+
+The following two sections retain the independent source-worktree checkpoints;
+the combined release status above is authoritative for integration.
+
+## Local: origination simplification
+
+The owner approved the [review](implementation/loan-origination-friction-review-20261017.md)
+and its recommended order. The isolated `work/origination-simplification-20261017`
+implements shared rule/provenance review and changed-term explanation, reviewed
+configuration/rate amendments, contextual correction guidance and unposted mistaken
+register/product replacement. The owner confirms all paper agreements use full
+monthly interest; existing monthly correction parity is retained and other direct
+rules' capability limits are disclosed. See the
+[implementation/capability matrix](implementation/origination-simplification-20261017.md)
+and [plan](plans/origination-simplification-20261017.md).
+Local verification passes: 368 regression tests, 88 final focused tests including
+concurrent confirmation/restricted-role DML/recovery, and 18 offline desktop/mobile
+page checks. Ruff, changed-file Black/AST formatting review and documentation/
+archive/boundary/hygiene checks pass. This is uncommitted local implementation;
+integration and release remain pending. Closing and WhatsApp work remain separate.
+No production setup, customer correction, deployment or outbound action is performed.
+
+## Closing workflow: local implementation
+
+Local implementation in isolated `work/unified-closing-20261017` adds a prominent
+active-loan Close / release action and one shared one/many-loan selection with an
+explicit current/completed mode. Completed recording requires the actual date;
+ordinary date-aware settlement supports saved started-week agreements without
+converting their terms to monthly rules. Existing posting, custody, concessions,
+atomic batches and legacy issued forms are retained.
+See the [decision](adr/2026-10-17-explicit-closing-mode-and-shared-contract-checks.md).
+No production transactions or deployment are part of this local implementation;
+the owner explicitly requested leaving WH02306 unchanged.
+
+Changed-file quality gates require Black formatting of the touched Python files.
+For Python review, `.tmp/closing-behavior.patch` compares the change against the formatted
+baseline; `.tmp/closing-formatting-only.patch` isolates baseline formatting, whose
+AST equivalence was checked. Keep these changes separate when committing.
+
+Validation passes in the isolated local `.test` database: 105 closing, completed
+batch, servicing eligibility, concessions and opening-release regression tests,
+plus the connected mixed completed-batch servicing-bundle round trip. This includes
+50 real fictional loans completed atomically. Offline Chromium checks pass for
+six screens at 1440px and 390px, including both detail layouts, Select2 setup,
+selection/mode invalidation and no page overflow or JavaScript exceptions.
+Ruff, Black on nine changed Python files, app boundaries, repository hygiene,
+diff whitespace, 2,665 documentation links across 767 files and all 22 preserved
+document originals pass. The work remains uncommitted and has not been deployed.
+
 ## Production baseline
 
 The original-rate correction release is verified in production as application

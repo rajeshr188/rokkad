@@ -1,17 +1,30 @@
 ---
 status: active
 owner: project
-updated: 2026-09-11
+updated: 2026-10-17
 tags: [loans, releases, operator-guide]
 ---
 
 # Release multiple loans
 
-Open **Loans** or **Releases → Release multiple loans**. Search official loan numbers,
+Open **Loans → Close / release loans**, or **Close / release loan** on an active
+loan to start with that loan selected. Explicitly choose **Collect payment and
+return collateral now** or **Record a settlement already completed**. Origination
+source and entry defaults do not choose for you. Search official loan numbers,
 borrower names or phone numbers. Select up to 20 active loans with outstanding
 collateral in the current business. Different borrowers and licenses are supported.
 Selection uses Select2 with a paginated authorized endpoint; no Redis widget cache is
-needed. HTMX refreshes the review as loans are added or removed.
+needed. Choose **Continue to review** after selecting or changing loans/mode.
+
+For completed activity, enter the actual settlement date and review up to 50
+independent settlements on that date. The date initially stays blank. Check each
+record's amount, payer, recipient and confirmed/unspecified handover basis. No
+money is collected again; unconfirmed customer handover retains last-known storage
+and PAPER_CLOSED. Saved full-month and started-week contracts use the same
+ordinary date-aware settlement calculator as current release. Later recorded
+activity and other actual blockers still need reconciliation. Single-loan current
+release retains its ordinary authorized interest concession. The remaining steps
+below describe a current combined payment covering several loans.
 
 Review each loan's principal, interest, fees, exact settlement and collateral photos/
 identifiers. An active loan can still be blocked by incomplete accruals, financial

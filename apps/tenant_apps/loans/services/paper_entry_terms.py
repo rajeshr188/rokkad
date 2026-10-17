@@ -6,6 +6,9 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.tenant_apps.loans import models as m
+from apps.tenant_apps.loans.domain.origination_capabilities import (
+    supports_paper_monthly_terms,
+)
 from .economic_policies import (
     PawnEconomicPolicyError,
     resolve_pawn_loan_economic_policy,
@@ -25,11 +28,16 @@ def paper_entry_terms(*, workspace, series, day, metal, principal=None):
             series_id=series.pk,
             as_of_date=day,
         )
-        if (
-            policy.interest_method != "SIMPLE"
-            or policy.partial_month_method != "FULL_MONTH"
-            or policy.advance_interest_periods not in (0, 1)
-            or policy.currency_quantum not in (Decimal("0.01"), Decimal("1"))
+        if not supports_paper_monthly_terms(
+            **{
+                key: getattr(policy, key)
+                for key in (
+                    "interest_method",
+                    "partial_month_method",
+                    "advance_interest_periods",
+                    "currency_quantum",
+                )
+            }
         ):
             messages.append(
                 "The dated setup uses calculation rules outside this paper profile. Record the actual supported agreement as an exception; do not substitute these rules."

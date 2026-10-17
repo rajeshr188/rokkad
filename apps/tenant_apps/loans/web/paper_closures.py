@@ -134,13 +134,20 @@ def style(form):
 @loans_action_required("loan.release")
 @require_http_methods(["GET", "POST"])
 @never_cache
-def create(request):
+def create(request, *, closing_context=None):
+    if request.method == "GET" and closing_context is None:
+        from .closing import legacy_entry
+
+        return legacy_entry(request, purpose="PAPER")
     workspace = request.loans_workspace
     data = request.POST if request.method == "POST" else None
     header = style(
         HeaderForm(
             data,
-            initial={"closure_date": timezone.localdate(), "request_key": uuid.uuid4()},
+            initial={
+                "closure_date": None if closing_context else timezone.localdate(),
+                "request_key": uuid.uuid4(),
+            },
         )
     )
     context = {
@@ -150,8 +157,17 @@ def create(request):
         "can_admin": request.loans_workspace_access.can("workspace.settings.manage"),
         "can_owner": request.loans_workspace_access.can("workspace.transfer"),
         "rows": [],
+        **(closing_context or {}),
     }
-    ids = data.getlist("loans") if data else []
+    ids = (
+        data.getlist("loans")
+        if data
+        else (
+            [loan.pk for loan in closing_context["closing_selected_loans"]]
+            if closing_context
+            else []
+        )
+    )
     forms_by_id = {}
     if data and header.is_valid() and ids:
         values = header.cleaned_data
@@ -273,6 +289,8 @@ def create(request):
     context["selected_loans"] = PawnLoan.objects.filter(
         workspace=workspace, pk__in=safe_ids
     ).select_related("borrower")
+    if closing_context:
+        context["closing_selected_loans"] = context["selected_loans"]
     return render(request, "loans/paper/create.html", context)
 
 

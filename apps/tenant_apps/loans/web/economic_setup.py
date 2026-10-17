@@ -21,13 +21,14 @@ from apps.tenant_apps.loans.web.economic_forms import (
     PawnFeePolicyForm,
     PawnSeriesInterestForm,
 )
-from apps.tenant_apps.loans.services.economic_policies import (
-    create_pawn_series_interest_rates,
-)
 from apps.tenant_apps.loans.services.monitoring_policies import cancellation_values
 from apps.tenant_apps.loans.services.monitoring_policy_reviews import (
     preview_monitoring_policy,
     confirm_monitoring_policy,
+)
+from apps.tenant_apps.loans.services.economic_policy_reviews import (
+    preview_economic_change,
+    confirm_economic_change,
 )
 from apps.tenant_apps.loans.services.economic_policies import (
     PawnEconomicPolicyError,
@@ -41,7 +42,6 @@ from apps.tenant_apps.loans.models import (
 )
 from apps.tenant_apps.loans.services import (
     create_loan_monitoring_policy,
-    create_pawn_economic_configuration,
     create_pawn_loan_fee_policy,
 )
 
@@ -133,24 +133,34 @@ def pawn_economics_setup(request):
         initial={"effective_from": timezone.localdate()},
         prefix="series-rates",
     )
+    series_review, series_review_token = None, ""
     if action == "series_rates" and series_rate_form.is_valid():
         try:
-            create_pawn_series_interest_rates(
+            if request.POST.get("economic_confirm") == "1":
+                confirm_economic_change(
+                    workspace=request.loans_workspace,
+                    actor=request.user,
+                    kind=action,
+                    values=series_rate_form.cleaned_data,
+                    token=request.POST.get("economic_review_token"),
+                    acknowledged=request.POST.get("economic_acknowledged") == "on",
+                )
+                messages.success(
+                    request,
+                    "Series monthly interest rates added. Approved loans retain their agreed rates.",
+                )
+                return setup_saved_redirect(request, step="terms") or redirect(
+                    "workspace_loans:pawn_economics_setup",
+                    workspace_slug=request.workspace.slug,
+                )
+            series_review, series_review_token = preview_economic_change(
                 workspace=request.loans_workspace,
                 actor=request.user,
-                **series_rate_form.cleaned_data,
+                kind=action,
+                values=series_rate_form.cleaned_data,
             )
         except (ValidationError, ValueError) as exc:
             series_rate_form.add_error(None, str(exc))
-        else:
-            messages.success(
-                request,
-                "Series monthly interest rates added. Approved loans retain their agreed rates.",
-            )
-            return setup_saved_redirect(request, step="terms") or redirect(
-                "workspace_loans:pawn_economics_setup",
-                workspace_slug=request.workspace.slug,
-            )
     monitoring_initial = {
         "effective_from": timezone.localdate(),
         "compliance_profile": "Workspace monitoring v1",
@@ -216,28 +226,38 @@ def pawn_economics_setup(request):
         configuration_form.add_error(
             None, _("Choose which policy to save and try again.")
         )
+    configuration_review, configuration_review_token = None, ""
     if action == "configuration" and configuration_form.is_valid():
         data = configuration_form.cleaned_data
         try:
-            create_pawn_economic_configuration(
+            if request.POST.get("economic_confirm") == "1":
+                confirm_economic_change(
+                    workspace=request.loans_workspace,
+                    actor=request.user,
+                    kind=action,
+                    values=data,
+                    token=request.POST.get("economic_review_token"),
+                    acknowledged=request.POST.get("economic_acknowledged") == "on",
+                )
+                messages.success(
+                    request,
+                    "New calculation policy version saved. Earlier approved loans retain their agreed terms.",
+                )
+                return setup_saved_redirect(request, step="terms") or redirect(
+                    "workspace_loans:pawn_economics_setup",
+                    workspace_slug=request.workspace.slug,
+                )
+            configuration_review, configuration_review_token = preview_economic_change(
                 workspace=request.loans_workspace,
                 actor=request.user,
-                **data,
+                kind=action,
+                values=data,
             )
         except (ValidationError, ValueError) as exc:
             for message in (
                 exc.messages if isinstance(exc, ValidationError) else [str(exc)]
             ):
                 configuration_form.add_error(None, message)
-        else:
-            messages.success(
-                request,
-                "New calculation policy version saved. Earlier approved loans retain their agreed terms.",
-            )
-            return setup_saved_redirect(request, step="terms") or redirect(
-                "workspace_loans:pawn_economics_setup",
-                workspace_slug=request.workspace.slug,
-            )
     if action == "fee" and fee_form.is_valid():
         try:
             create_pawn_loan_fee_policy(
@@ -291,6 +311,10 @@ def pawn_economics_setup(request):
     context = {
         "configuration_form": configuration_form,
         "configuration_source": source_policy,
+        "configuration_review": configuration_review,
+        "configuration_review_token": configuration_review_token,
+        "series_review": series_review,
+        "series_review_token": series_review_token,
         "series_rate_form": series_rate_form,
         "fee_form": fee_form,
         "monitoring_form": monitoring_form,

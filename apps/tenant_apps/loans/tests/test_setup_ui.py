@@ -119,6 +119,21 @@ class LoansSetupUiTests(WorkspaceTestCase):
     def tenant_post(self, url, data=None):
         return self.client.workspace_post(url, data or {})
 
+    def confirm_configuration(self, response):
+        self.assertContains(response, "Review configuration change")
+        payload = response.wsgi_request.POST.copy()
+        key = (
+            "series_review_token"
+            if payload["action"] == "series_rates"
+            else "configuration_review_token"
+        )
+        payload.update(
+            economic_confirm="1",
+            economic_acknowledged="on",
+            economic_review_token=response.context[key],
+        )
+        return self.tenant_post(reverse("loans:pawn_economics_setup"), payload)
+
     def test_photo_policy_defaults_optional_and_changes_are_audited_and_authorized(
         self,
     ):
@@ -786,6 +801,8 @@ class LoansSetupUiTests(WorkspaceTestCase):
             },
         )
 
+        self.assertEqual(PawnLoanEconomicPolicy.objects.count(), 0)
+        response = self.confirm_configuration(response)
         self.assertRedirects(
             response,
             reverse("loans:pawn_economics_setup"),
@@ -811,6 +828,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         payload["configuration-effective_from"] = "2026-08-05"
         payload["configuration-maximum_ltv_ratio"] = "0.95"
         response = self.tenant_post(reverse("loans:pawn_economics_setup"), payload)
+        response = self.confirm_configuration(response)
         self.assertEqual(response.status_code, 302)
         revisions = list(PawnLoanEconomicPolicy.objects.order_by("revision"))
         self.assertEqual(

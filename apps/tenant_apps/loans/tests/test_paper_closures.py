@@ -237,7 +237,9 @@ class PaperClosureTests(ReleaseBatchTests):
             "workspace_loans:paper_closure_create",
             kwargs={"workspace_slug": self.tenant.slug},
         )
-        self.assertContains(self.client.get(url), "Record completed closures")
+        self.assertContains(
+            self.client.get(url, follow=True), "Record a settlement already completed"
+        )
         data = {
             "action": "review",
             "loans": [str(loan.pk) for loan in self.loans],

@@ -142,6 +142,95 @@ class OriginationReviewTests(WorkspaceTestCase):
             ),
         )
 
+    def test_review_explains_resolved_terms_and_changed_calculation_without_posting(
+        self,
+    ):
+        from decimal import Decimal
+        from apps.tenant_apps.loans.services.economic_policies import (
+            create_pawn_loan_economic_policy,
+        )
+
+        loan, path, _, page = self.start_review()
+        self.assertContains(page, "How this agreement is calculated")
+        self.assertContains(page, "Where these terms came from")
+        self.assertContains(page, "interest for a started month")
+        create_pawn_loan_economic_policy(
+            workspace=self.tenant,
+            actor=self.owner,
+            license=self.license,
+            valuation_method="LATEST_APPRAISAL",
+            maximum_ltv_ratio=Decimal(".8"),
+            advance_interest_periods=1,
+            partial_month_method="STARTED_WEEKS",
+            effective_from=date(2026, 7, 18),
+        )
+        from apps.tenant_apps.loans.services.paper_entry_terms import paper_entry_terms
+
+        paper_defaults = paper_entry_terms(
+            workspace=self.tenant, series=self.series, day=loan.loan_date, metal="GOLD"
+        )
+        self.assertNotIn("advance_months", paper_defaults["values"])
+        self.assertTrue(paper_defaults["messages"])
+        failed = self.confirm(path, page)
+        self.assertContains(failed, "Changed since your review")
+        self.assertContains(failed, "Interest for started 7-day blocks")
+        self.assertContains(failed, "Financial agreement correction currently requires")
+        self.assertFalse(loan.loan_events.exists())
+        self.assertFalse(loan.approval_snapshots.exists())
+        fresh = self.client.get(path)
+        self.assertEqual(self.confirm(path, fresh).status_code, 302)
+
+    def test_saved_approval_rules_are_shown_without_replacing_them_from_setup(self):
+        from decimal import Decimal
+        from apps.tenant_apps.loans.services import approve_pawn_loan
+        from apps.tenant_apps.loans.services.economic_policies import (
+            create_pawn_loan_economic_policy,
+        )
+        from apps.tenant_apps.loans.services.origination_summary import (
+            native_origination_summary,
+        )
+
+        loan, _, _, page = self.start_review()
+        self.assertContains(page, "18/08/2026")
+        approve_pawn_loan(loan.pk, actor=self.owner)
+        loan.refresh_from_db()
+        create_pawn_loan_economic_policy(
+            workspace=self.tenant,
+            actor=self.owner,
+            license=self.license,
+            valuation_method="LATEST_APPRAISAL",
+            maximum_ltv_ratio=Decimal(".8"),
+            partial_month_method="STARTED_WEEKS",
+            effective_from=loan.loan_date,
+        )
+        terms = dict(native_origination_summary(loan, None)["calculation_terms"])
+        self.assertIn("full month's", terms["Part-month charging"])
+        self.assertNotIn("Capability limits", terms)
+
+    def test_change_summary_does_not_disclose_foreign_or_malformed_signed_reviews(self):
+        from apps.tenant_apps.loans.services.loan_workflow import reviewed_term_changes
+
+        loan, _, _, page = self.start_review()
+        agreement = page.context["agreement"]
+        token = page.context["form"].initial["review_token"]
+        foreign = get_user_model().objects.create_user(username="foreign-reviewer")
+        self.assertEqual(
+            reviewed_term_changes(
+                loan, actor=foreign, token=token, agreement=agreement
+            ),
+            [],
+        )
+        for value in ([], {}, {"version": 99}):
+            self.assertEqual(
+                reviewed_term_changes(
+                    loan,
+                    actor=self.owner,
+                    token=signing.dumps(value, salt=SALT),
+                    agreement=agreement,
+                ),
+                [],
+            )
+
     def test_final_payout_failure_rolls_back_approval_and_all_financial_effects(self):
         loan, path, _, page = self.start_review()
         with patch(

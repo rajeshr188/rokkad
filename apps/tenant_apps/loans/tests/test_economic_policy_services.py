@@ -28,6 +28,208 @@ from apps.tenant_apps.loans.services import (
 
 
 class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
+    def test_reviewed_series_scope_uses_its_licence_and_rechecks_scope_changes(self):
+        from apps.tenant_apps.loans.models import LoanSeries, PawnLoanEconomicPolicy
+        from apps.tenant_apps.loans.services.economic_policy_reviews import (
+            preview_economic_change,
+            confirm_economic_change,
+        )
+
+        series = LoanSeries.objects.create(license=self.license, name="WH", code="WH")
+        args = dict(
+            workspace=self.tenant,
+            actor=self.user,
+            kind="configuration",
+            values=self.reviewed_values(license=None, series=series),
+        )
+        _, old_token = preview_economic_change(**args)
+        LoanSeries.objects.filter(pk=series.pk).update(name="Correct register name")
+        with self.assertRaisesMessage(ValueError, "Setup changed"):
+            confirm_economic_change(**args, token=old_token, acknowledged=True)
+        self.assertFalse(PawnLoanEconomicPolicy.objects.exists())
+        _, token = preview_economic_change(**args)
+        confirm_economic_change(**args, token=token, acknowledged=True)
+        self.assertEqual(
+            PawnLoanEconomicPolicy.objects.get().license_id, self.license.pk
+        )
+
+    def reviewed_values(self, **changes):
+        return (
+            dict(
+                valuation_method="LATEST_APPRAISAL",
+                maximum_ltv_ratio=Decimal(".8"),
+                gold_monthly_interest_rate=Decimal("1.1"),
+                silver_monthly_interest_rate=Decimal("3"),
+                effective_from=date(2026, 9, 25),
+                license=self.license,
+            )
+            | changes
+        )
+
+    def test_configuration_review_is_read_only_and_confirmation_is_once_only(self):
+        from apps.configuration.models import PreferenceAuditLog
+        from apps.tenant_apps.loans.models import PawnLoanEconomicPolicy
+        from apps.tenant_apps.loans.services.economic_policy_reviews import (
+            preview_economic_change,
+            confirm_economic_change,
+        )
+
+        values = self.reviewed_values()
+        args = dict(
+            workspace=self.tenant, actor=self.user, kind="configuration", values=values
+        )
+        before = (
+            PawnLoanEconomicPolicy.objects.count(),
+            PreferenceAuditLog.objects.count(),
+        )
+        review, token = preview_economic_change(**args)
+        self.assertIn(self.license.license_number, review["scope"])
+        self.assertEqual(
+            before,
+            (
+                PawnLoanEconomicPolicy.objects.count(),
+                PreferenceAuditLog.objects.count(),
+            ),
+        )
+        with self.assertRaisesMessage(ValueError, "Confirm the scope"):
+            confirm_economic_change(**args, token=token)
+        result = confirm_economic_change(**args, token=token, acknowledged=True)
+        self.assertFalse(result["already_saved"])
+        self.assertTrue(
+            confirm_economic_change(**args, token=token, acknowledged=True)[
+                "already_saved"
+            ]
+        )
+        self.assertEqual(PawnLoanEconomicPolicy.objects.count(), before[0] + 1)
+        with self.assertRaisesMessage(ValueError, "different values"):
+            confirm_economic_change(
+                **(
+                    args
+                    | {"values": self.reviewed_values(maximum_ltv_ratio=Decimal(".7"))}
+                ),
+                token=token,
+                acknowledged=True,
+            )
+
+    def test_review_rechecks_setup_changes_and_reports_narrower_overrides(self):
+        from apps.tenant_apps.loans.models import LoanSeries
+        from apps.tenant_apps.loans.services.economic_policy_reviews import (
+            preview_economic_change,
+            confirm_economic_change,
+        )
+
+        series = LoanSeries.objects.create(license=self.license, name="WH", code="WH")
+        self.configuration(license=self.license, series=series)
+        args = dict(
+            workspace=self.tenant,
+            actor=self.user,
+            kind="configuration",
+            values=self.reviewed_values(license=None),
+        )
+        review, token = preview_economic_change(**args)
+        self.assertTrue(review["shadowing"])
+        self.configuration(maximum_ltv_ratio=Decimal(".9"))
+        with self.assertRaisesMessage(ValueError, "Setup changed"):
+            confirm_economic_change(**args, token=token, acknowledged=True)
+
+    def test_configuration_review_rejects_expiry_tampering_and_other_users(self):
+        from unittest.mock import patch
+        from django.core import signing
+        from django.core.exceptions import PermissionDenied
+        from apps.tenant_apps.loans.models import PawnLoanEconomicPolicy
+        from apps.tenant_apps.loans.services.economic_policy_reviews import (
+            SALT,
+            preview_economic_change,
+            confirm_economic_change,
+        )
+
+        args = dict(
+            workspace=self.tenant,
+            actor=self.user,
+            kind="configuration",
+            values=self.reviewed_values(),
+        )
+        _, token = preview_economic_change(**args)
+        signed = signing.loads(token, salt=SALT)
+        with patch("django.core.signing.time.time", return_value=1):
+            expired = signing.dumps(signed, salt=SALT)
+        for invalid in (
+            token + "tampered",
+            None,
+            signing.dumps([], salt=SALT),
+            expired,
+        ):
+            with self.assertRaises(ValueError):
+                confirm_economic_change(**args, token=invalid, acknowledged=True)
+        other = get_user_model().objects.create_user(
+            username="different-setup-reviewer"
+        )
+        with self.assertRaises(PermissionDenied):
+            confirm_economic_change(
+                **(args | {"actor": other}), token=token, acknowledged=True
+            )
+        self.assertFalse(PawnLoanEconomicPolicy.objects.exists())
+        confirm_economic_change(**args, token=token, acknowledged=True)
+        with patch("django.core.signing.time.time", return_value=9999999999):
+            self.assertTrue(
+                confirm_economic_change(**args, token=token, acknowledged=True)[
+                    "already_saved"
+                ]
+            )
+
+    def test_setup_discloses_started_week_capability_limits_before_saving(self):
+        from apps.tenant_apps.loans.services.economic_policy_reviews import (
+            preview_economic_change,
+        )
+        from apps.tenant_apps.loans.models import PawnLoanEconomicPolicy
+
+        review, _ = preview_economic_change(
+            workspace=self.tenant,
+            actor=self.user,
+            kind="configuration",
+            values=self.reviewed_values(partial_month_method="STARTED_WEEKS"),
+        )
+        self.assertEqual(len(review["warnings"]), 2)
+        self.assertIn("cannot be substituted", review["warnings"][0])
+        self.assertIn("Financial agreement correction", review["warnings"][1])
+        self.assertFalse(PawnLoanEconomicPolicy.objects.exists())
+
+    def test_rate_only_review_retains_calculation_policy_and_other_scopes(self):
+        from apps.tenant_apps.loans.models import LoanSeries, PawnLoanEconomicPolicy
+        from apps.tenant_apps.loans.services.economic_policy_reviews import (
+            preview_economic_change,
+            confirm_economic_change,
+        )
+
+        original = self.configuration()
+        series = LoanSeries.objects.create(license=self.license, name="WH", code="WH")
+        args = dict(
+            workspace=self.tenant,
+            actor=self.user,
+            kind="series_rates",
+            values=dict(
+                series=series,
+                effective_from=date(2026, 9, 25),
+                gold_monthly_interest_rate=Decimal("1.1"),
+                silver_monthly_interest_rate=Decimal("3"),
+            ),
+        )
+        _, token = preview_economic_change(**args)
+        confirm_economic_change(**args, token=token, acknowledged=True)
+        self.assertEqual(
+            PawnLoanEconomicPolicy.objects.get().pk, original.economic_policy.pk
+        )
+        self.assertEqual(
+            resolve_pawn_metal_interest_rate_policy(
+                workspace_id=self.tenant.pk,
+                license_id=self.license.pk,
+                series_id=series.pk,
+                as_of_date=date(2026, 9, 25),
+                metal="GOLD",
+            ).monthly_interest_rate,
+            Decimal("1.1"),
+        )
+
     def configuration(self, **changes):
         values = dict(
             workspace=self.tenant,
@@ -160,6 +362,23 @@ class PawnEconomicPolicyServiceTests(WorkspaceTestCase):
             self.configuration()
             revised = self.configuration(maximum_ltv_ratio=Decimal("0.95"))
             self.assertEqual(revised.economic_policy.revision, 2)
+            from apps.tenant_apps.loans.services.economic_policy_reviews import (
+                preview_economic_change,
+                confirm_economic_change,
+            )
+
+            reviewed = dict(
+                workspace=self.tenant,
+                actor=self.user,
+                kind="configuration",
+                values=self.reviewed_values(maximum_ltv_ratio=Decimal(".7")),
+            )
+            _, token = preview_economic_change(**reviewed)
+            self.assertFalse(
+                confirm_economic_change(**reviewed, token=token, acknowledged=True)[
+                    "already_saved"
+                ]
+            )
             with (
                 self.assertRaises(DatabaseError),
                 transaction.atomic(),

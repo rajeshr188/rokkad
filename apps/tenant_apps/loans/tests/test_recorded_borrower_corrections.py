@@ -283,6 +283,25 @@ class RecordedBorrowerCorrectionTests(WorkspaceTestCase):
         )
         with self.assertRaisesMessage(ValueError, "both borrowers"):
             preview_borrower_correction(successor.pk, actor=self.actor, data=self.facts)
+        self.start_active_trial()
+        client = self.make_workspace_client()
+        client.force_login(self.actor)
+        page = client.get(
+            reverse(
+                "workspace_loans:pawn_loan_correct_borrower",
+                args=[self.tenant.slug, successor.pk],
+            )
+        )
+        self.assertContains(page, "What to review next")
+        self.assertContains(page, f"Review linked agreement {self.loan.loan_number}")
+        self.assertContains(
+            page,
+            reverse(
+                "workspace_loans:pawn_loan_detail",
+                args=[self.tenant.slug, self.loan.pk],
+            ),
+        )
+        self.assertNotContains(page, 'value="preview"')
 
     def test_failed_projection_write_rolls_back_audit(self):
         _, token = self.preview()

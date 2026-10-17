@@ -551,6 +551,11 @@ def pawn_loan_detail(request, pk):
     context["can_split_draft"] = context[
         "can_edit_loan"
     ] and request.loans_workspace_access.can("data.create")
+    from apps.tenant_apps.loans.selectors.correction_guidance import (
+        draft_replacement_link,
+    )
+
+    context["draft_replacement"] = draft_replacement_link(loan)
     context["can_delete_draft_photos"] = (
         loan.state == "DRAFT" and request.loans_workspace_access.can("data.edit")
     )

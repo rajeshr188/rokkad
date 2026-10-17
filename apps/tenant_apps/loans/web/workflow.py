@@ -22,6 +22,7 @@ from apps.tenant_apps.loans.services.loan_workflow import (
     make_review,
     review_and_disburse,
     set_loan_workflow,
+    reviewed_term_changes,
 )
 from apps.tenant_apps.loans.services.origination_summary import (
     native_origination_summary,
@@ -116,6 +117,17 @@ def pawn_loan_review_disburse(request, pk):
     except (ValueError, ValidationError) as exc:
         available = False
         review_error = str(exc)
+    agreement = native_origination_summary(loan, economics)
+    changes = (
+        reviewed_term_changes(
+            loan,
+            actor=request.user,
+            token=request.POST.get("review_token", ""),
+            agreement=agreement,
+        )
+        if request.method == "POST"
+        else []
+    )
     return render(
         request,
         "loans/pawn/review_disburse.html",
@@ -126,7 +138,8 @@ def pawn_loan_review_disburse(request, pk):
             "available": available,
             "review_error": review_error,
             "can_edit_loan": request.loans_workspace_access.can("data.edit"),
-            "agreement": native_origination_summary(loan, economics),
+            "agreement": agreement,
+            "review_changes": changes,
         },
     )
 
@@ -301,6 +314,8 @@ def _completed_payout_review(request, loan):
     )
     review, token = None, ""
     agreement = native_origination_summary(loan, None)
+    # Actual completed-payout terms are supplied by the reviewed source adapter.
+    agreement.update(calculation_terms=[], term_sources=[])
     if post is not None and post.get("action") != "edit" and form.is_valid():
         arguments = dict(
             workspace=request.loans_workspace,
@@ -430,10 +445,17 @@ def _retained_payout_review(request, pk):
                 workspace_slug=request.workspace.slug,
                 pk=loan.pk,
             )
-    economics, quotes, basis, error = None, {}, None, None
+    economics, quotes, basis, error, agreement = None, {}, None, None, None
     try:
         economics, token, quotes, basis = make_earlier_payout_review(
             loan, actor=request.user
+        )
+        from apps.tenant_apps.loans.services.historical_origination import (
+            historical_basis,
+        )
+
+        agreement = native_origination_summary(
+            loan, economics, historical_context=historical_basis(loan)
         )
         if request.method != "POST":
             form.initial["review_token"] = token
@@ -451,7 +473,7 @@ def _retained_payout_review(request, pk):
             "review_error": error,
             "available": error is None,
             "is_earlier_payout_review": True,
-            "agreement": native_origination_summary(loan, economics),
+            "agreement": agreement,
             "can_edit_loan": request.loans_workspace_access.can("data.edit"),
         },
     )

@@ -1,0 +1,7 @@
+{% extends "base_tenant.html" %}
+{% block title %}Close / release loans{% endblock %}
+{% block workspace_content %}
+{% include "loans/closing/_selection.html" %}
+<p>Select one or several active loans and choose what happened. The same saved agreement determines the settlement regardless of how the loan was entered.</p>
+<p>Current multiple-loan release collects one combined payment. Completed closures retain an independent settlement for each loan; their total is for reconciliation.</p>
+{% endblock %}

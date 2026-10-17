@@ -10,13 +10,14 @@
   <p>The loan number, agreed amounts, payments and jewellery stay the same. Previously issued documents remain available with their original details. Existing transaction confirmations and queued reminders may require fresh review.</p>
   {% if blockers %}<div class="alert alert-warning"><ul class="mb-0">{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
   <form method="post">{% csrf_token %}
+    {% include "loans/pawn/_correction_next_steps.html" %}
     {{ form.non_field_errors }}
     {% for field in form %}
       {% if field.is_hidden %}{{ field }}
       {% elif field.name == 'confirmed' %}{% if review %}<div class="form-check mb-3">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}</div>{% endif %}
       {% else %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}
     {% endfor %}
-    <button class="btn btn-primary" name="action" value="preview">Review borrower correction</button>
+    {% if not blockers %}<button class="btn btn-primary" name="action" value="preview">Review borrower correction</button>{% endif %}
     {% if review %}<section class="border rounded p-3 mt-4" aria-label="Review borrower correction">
       <h2 class="h5">Review before recording</h2>
       <p><strong>{{ review.before.name }} ({{ review.before.code }})</strong> &rarr; <strong>{{ review.after.name }} ({{ review.after.code }})</strong></p>
