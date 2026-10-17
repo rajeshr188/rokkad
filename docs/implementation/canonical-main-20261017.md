@@ -40,3 +40,15 @@ New work should branch from current main. Existing branches can incorporate main
 through a separately reviewed merge/rebase when useful; the pointer update itself
 does not modify their commits or recover an obsolete feature into today's domain.
 The broader development workflow remains a proposal pending owner adoption.
+
+## Published transition verification
+
+The ordinary push advances remote main from `84653457` to documentation/release
+revision `03a79a10`, whose application tree is identical to verified `b0d57294`.
+All twelve remote heads are compared before/after: only main changes, and the
+integration checkpoint stays at `b0d57294`. A fresh shallow clone selects main
+and resolves HEAD to `03a79a10`; the local worktree is clean after publishing.
+The remote default remains main. This follow-up records the actual published
+verification; subsequent documentation commits do not change the application
+release identity. Incremental Python formatting and current documentation links
+are checked against the verified application baseline.
