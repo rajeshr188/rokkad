@@ -7,35 +7,39 @@ tags: [status, architecture]
 
 # Status
 
-The combined loan-workflow candidate passes 481 local regression tests, 30
-browser checks, 20 guided-onboarding tests and 17 operator journeys including
-review/save integration. Restricted read-only candidate acceptance also passes.
-Final exact-revision CI and production qualification remain release gates; see
-the [joint release record](implementation/loan-workflow-release-20261017.md).
-
 Current delivery and open work only. The full prior chronology, including old
 release gates, test counts, migration/import approvals and source/customer-specific
 limits, is preserved in the [17 October context snapshot](archive/context/2026-10-17/INDEX.md).
 See [memory](AGENT_MEMORY.md) for durable rules and [completed work](plans/completed.md)
 for delivery history.
 
-## Combined origination and closing release
+## Production baseline: origination and closing
 
-The owner authorized integration, commit/push and the verified production release
-on 17 October. Candidate `work/loan-workflow-release-20261017` starts at maintained
-main `ed585f33`. Both source worktrees are frozen into checksum-verified private
-snapshots and retained unchanged. Commit `4898c243` contains only AST-equivalent
-formatting; behavior is integrated separately. Shared URLs, detail actions and
-documentation retain both features. Five combined correction-to-closing and draft
-replacement-to-closing journeys pass. Broader tests and release gates are in
-progress; see the [release record](implementation/loan-workflow-release-20261017.md).
-No production switch or business-record correction has occurred.
-WhatsApp work remains separate; JSK WH02306 stays unchanged.
+The combined loan workflow is deployed from `a14b5a7f0ca8ee753a57aac9ae5944a0c4d0e233`, image
+`sha256:60868e8324cb16040e4ae7f0eabb5d6ddfd79c35bb465a03841edb2acbbeb73a`. All seven exact-source CI jobs pass;
+481 combined local regression tests, 366 fresh boundary tests and 30 browser
+page/viewport checks pass. The release adds reviewed origination/setup changes,
+safe unposted wrong-register/product recovery and one explicit one/many closing
+flow, including the prominent active-loan Close / release action.
+
+No schema, saved agreement, monitoring-policy, subscription/grace or messaging
+activation change is part of deployment. Risk V13, Loans 0092, portability
+0031/package 4 and servicing bundle 8 remain compatible. Both readers match all
+1,962 runtime files; four scheduled readers, six timers, three-Workspace read-only
+screen acceptance, 15 shared-snapshot financial/policy/grace comparisons, separate
+static assets, exact encrypted application recovery and encrypted pre/post R2
+backup download/retention checks pass. See the
+[release record](implementation/loan-workflow-release-20261017.md) and
+[de-identified proof](implementation/loan-workflow-release-20261017.deployment.json).
+
+Maintained remote main includes the verified source. Independent source worktrees
+and unrelated root WhatsApp changes remain preserved. The dirty root checkout is
+not reset or overwritten. JSK WH02306 remains unchanged.
 
 The following two sections retain the independent source-worktree checkpoints;
 the combined release status above is authoritative for integration.
 
-## Local: origination simplification
+## Independent origination checkpoint (before integration)
 
 The owner approved the [review](implementation/loan-origination-friction-review-20261017.md)
 and its recommended order. The isolated `work/origination-simplification-20261017`
@@ -53,7 +57,7 @@ archive/boundary/hygiene checks pass. This is uncommitted local implementation;
 integration and release remain pending. Closing and WhatsApp work remain separate.
 No production setup, customer correction, deployment or outbound action is performed.
 
-## Closing workflow: local implementation
+## Independent closing checkpoint (before integration)
 
 Local implementation in isolated `work/unified-closing-20261017` adds a prominent
 active-loan Close / release action and one shared one/many-loan selection with an
@@ -80,9 +84,9 @@ Ruff, Black on nine changed Python files, app boundaries, repository hygiene,
 diff whitespace, 2,665 documentation links across 767 files and all 22 preserved
 document originals pass. The work remains uncommitted and has not been deployed.
 
-## Production baseline
+## Previous baseline: original-rate correction
 
-The original-rate correction release is verified in production as application
+The previous original-rate correction release was verified as application
 `b0d572940dd2ed3f33f8e860d6a1a3ba6202e1b2`, image
 `sha256:00d351bd154c1f68d27d6c5d72302a6b2beb4352e830d8708979d7c62053de98`.
 Runtime V13, Loans 0092, `data_portability` 0031/package 4 and servicing bundle 8

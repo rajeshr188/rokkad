@@ -8,6 +8,17 @@ related: [../STATUS.md, ../archive/]
 
 # Completed Work
 
+## Shared origination and explicit closing release (2026-10-17)
+
+Reviewed draft terms/setup, contextual correction guidance, safe unposted register/
+product replacement and one explicit current/completed one/many closing flow are
+deployed as `a14b5a7f`. Seven exact-source CI jobs, 481 combined local regression
+tests, 366 fresh boundary tests and 30 browser checks pass. Restricted production
+screens, financial/policy/grace parity, exact source/recovery, compatible readers,
+static assets and encrypted pre/post backups pass. Saved contracts and risk V13
+remain unchanged. Source/dirty worktrees and WH02306 are preserved. See the
+[release record](../implementation/loan-workflow-release-20261017.md).
+
 ## FW-024 repository hygiene and reviewed retention (2026-10-17)
 
 Core cleanup `d4a5d5ed` and reviewed retention record `693031a7` are committed/pushed.

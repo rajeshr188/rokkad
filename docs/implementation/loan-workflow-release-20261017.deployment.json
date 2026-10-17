@@ -1,0 +1,136 @@
+{
+  "profile": "rokkad-loan-workflow-deployment/1",
+  "source_revision": "a14b5a7f0ca8ee753a57aac9ae5944a0c4d0e233",
+  "image_id": "sha256:60868e8324cb16040e4ae7f0eabb5d6ddfd79c35bb465a03841edb2acbbeb73a",
+  "ci_url": "https://github.com/rajeshr188/rokkad/actions/runs/39024358778",
+  "ci_jobs": [
+    {
+      "name": "rates",
+      "conclusion": "success"
+    },
+    {
+      "name": "boundary",
+      "conclusion": "success"
+    },
+    {
+      "name": "billing",
+      "conclusion": "success"
+    },
+    {
+      "name": "foundation",
+      "conclusion": "success"
+    },
+    {
+      "name": "portability",
+      "conclusion": "success"
+    },
+    {
+      "name": "Python dependencies and quality",
+      "conclusion": "success"
+    },
+    {
+      "name": "loans",
+      "conclusion": "success"
+    }
+  ],
+  "ci_test_summary": {
+    "rates": [
+      {
+        "tests": 43,
+        "seconds": 7.14
+      }
+    ],
+    "boundary": [
+      {
+        "tests": 366,
+        "seconds": 156.244
+      }
+    ],
+    "billing": [
+      {
+        "tests": 320,
+        "seconds": 265.616
+      }
+    ],
+    "foundation": [
+      {
+        "tests": 3,
+        "seconds": 0.002
+      },
+      {
+        "tests": 4,
+        "seconds": 0.002
+      },
+      {
+        "tests": 10,
+        "seconds": 1.516
+      }
+    ],
+    "portability": [
+      {
+        "tests": 928,
+        "seconds": 810.302
+      }
+    ],
+    "loans": [
+      {
+        "tests": 2764,
+        "seconds": 2725.738
+      }
+    ]
+  },
+  "local_regression_tests": 481,
+  "local_boundary_tests": 366,
+  "browser_page_viewports": 30,
+  "state": "PASS",
+  "completed_at": "2026-10-17T11:11:52.914454+00:00",
+  "migrations": [],
+  "schema_unchanged": true,
+  "write_pause_and_switch_seconds": 62.939,
+  "runtime_files_per_reader": 1962,
+  "compatible_scheduled_readers": 4,
+  "restricted_runtime": true,
+  "configuration_preserved": true,
+  "static_assets_verified": true,
+  "read_only_screens": 24,
+  "financial_policy_grace_parity_samples": 15,
+  "operator_financial_posts": false,
+  "operator_messages_created": false,
+  "production_loan_corrections": 0,
+  "predecessor_retained": true,
+  "post_acceptance": {
+    "passed": true,
+    "source_revision": "a14b5a7f0ca8ee753a57aac9ae5944a0c4d0e233",
+    "image_id": "sha256:60868e8324cb16040e4ae7f0eabb5d6ddfd79c35bb465a03841edb2acbbeb73a",
+    "runtime_files_per_reader": 1962,
+    "web_and_monitoring_exact": true,
+    "compatible_scheduled_readers": 4,
+    "active_timers": 6,
+    "restricted_runtime": true,
+    "empty_migration_plan": true,
+    "risk_contract": "LOAN_RISK_SNAPSHOT_V13",
+    "workspaces": 3,
+    "read_only_screens": 24,
+    "public_https": true,
+    "hashed_javascript_assets": 3,
+    "startup_errors": 0,
+    "protected_configuration_unchanged": true,
+    "whatsapp_receive_only_preserved": true,
+    "previous_image_retained": true,
+    "financial_database_never_restored": true
+  },
+  "backup_verification": {
+    "pre_backup_success": true,
+    "pre_backup_sha256": "496e7f2bebe370b17641c15d10e5b4e28e9b2c3c3e89434f3d65def9b1d2eef3",
+    "post_backup_success": true,
+    "post_backup_sha256": "5e821c09ec3ccf06785a41f6a80f9a8c765ca7c6c59c07af44f23f4ebdd37f92",
+    "remote_download_verified": true,
+    "retention_and_recovery_checks": true,
+    "destination_and_policy_unchanged": true
+  },
+  "monitoring_policy_changed": false,
+  "loan_terms_changed_by_deployment": false,
+  "subscription_grace_changed": false,
+  "whatsapp_activation": false,
+  "root_dirty_worktree_preserved": true
+}

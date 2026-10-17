@@ -1,5 +1,5 @@
 ---
-status: verification-in-progress
+status: deployed
 owner: project
 updated: 2026-10-17
 tags: [loans, origination, closing, integration, release]
@@ -48,7 +48,11 @@ The same older assumption in the first-loan operator fixture is updated through
 an explicit review and acknowledged confirmation; all 17 operator journey tests
 pass. Its formatting-only baseline is separate in `e6f5127f`. All 12 closing
 browser checks pass, including selection invalidation and both detail layouts.
-Final exact-revision Linux CI remains required before promotion.
+All seven exact-source Linux CI jobs pass for `a14b5a7f0ca8ee753a57aac9ae5944a0c4d0e233`.
+The fresh isolated boundary selection passes 366 tests in 297.244 seconds.
+An earlier reused-database run lacked migration-seeded roles after prior transaction
+fixtures flushed them; clean migration replay resolves that local setup failure.
+The two follow-up formatting commits also pass explicit AST-equivalence checks.
 Prior independent selections are overlapping evidence:
 368 origination regression tests, 88 final origination checks, 106 closing checks,
 18 origination and 12 closing desktop/mobile page checks. They are not added into
@@ -70,12 +74,35 @@ the guarded switch. Use the already approved encrypted backup job before/after
 promotion and preserve the predecessor for code rollback. Release acceptance must
 not post a loan transaction or turn unknown collateral/history into healthy risk.
 
-This checkpoint records preparation only. No production service has been switched.
+The following records the pre-switch acceptance gates, now completed.
 The candidate has passed 24 restricted read-only screens across three Workspaces,
 an empty migration plan, and 15 financial/release-quote comparisons covering three
 saved-contract profiles within one exported PostgreSQL snapshot. Monitoring-policy
 and grace evidence fingerprints also match. Separate static collection preserves
 the live volume; encrypted application-only recovery verifies the exact image.
-These gates must bind to the final committed candidate before switching.
+All gates bind to the final committed candidate and exact image below.
 Private snapshots, logs and deployment helpers live in ignored
 `.tmp/loan-workflow-release-20261017/` and the matching protected server directory.
+
+## Verified production release
+
+Application `a14b5a7f0ca8ee753a57aac9ae5944a0c4d0e233` is deployed as
+`sha256:60868e8324cb16040e4ae7f0eabb5d6ddfd79c35bb465a03841edb2acbbeb73a` at 2026-10-17T11:11:52.914454+00:00.
+The coordinated code/static switch took 62.939 seconds; no migration or
+production financial correction ran. Exact 1,962-file manifests pass for web and
+monitoring; four compatible scheduled readers and all six timers are verified.
+Twenty-four restricted read-only screens across three Workspaces, public HTTPS,
+three hashed JavaScript assets, unchanged protected configuration and error-free
+startup pass. Risk remains V13, Loans 0092, portability 0031/package 4 and servicing
+bundle 8. Monitoring policies, subscription/grace, media and WhatsApp activation
+are preserved. The predecessor image/static volume remain available for code
+rollback; the customer database is never restored by this release.
+
+The existing encrypted R2 backup job passes before and after promotion, including
+remote download and retention/recovery verification. Application-only encrypted
+recovery verifies the exact candidate image with the local key; transient plaintext
+is removed and the private key stays off-server. See the
+[de-identified deployment proof](loan-workflow-release-20261017.deployment.json).
+Source worktrees and unrelated dirty WhatsApp work remain intact. Maintained main
+receives the verified source and this documentation; the dirty root checkout is
+left untouched rather than rewriting its outstanding changes.

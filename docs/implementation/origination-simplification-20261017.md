@@ -8,10 +8,11 @@ related: [../plans/origination-simplification-20261017.md, loan-origination-fric
 
 # Origination review, configuration and preparation recovery
 
-Implementation is isolated on `work/origination-simplification-20261017`, based on
-`ed585f33`. The owner's recommended order is followed. This is local work, with no
-deployment, customer corrections, production configuration or message delivery.
-The independent closing and WhatsApp worktrees remain separate.
+The independent implementation was prepared on
+`work/origination-simplification-20261017`, based on `ed585f33`, following the
+owner's recommended order. It is now integrated with closing and deployed as
+`a14b5a7f`; original worktrees and unrelated WhatsApp work remain preserved.
+Deployment performs no customer correction, setup amendment or messaging activation.
 
 The owner subsequently authorized the [combined closing integration/release](loan-workflow-release-20261017.md).
 That record owns the combined candidate and production status; this document
@@ -92,16 +93,17 @@ before confirmation instead of being discovered only after a mistake.
 | Other direct rules or legacy/native policy 1 | Existing saved-rule/product/period prerequisites apply | Concrete supported profile only; legacy native is bounded to an unserviced disbursal | No automatic upgrade or substitution |
 | Verified migration opening | Existing supported checkpoint continuation, not invented full history | Existing checkpoint review | Retains unknown earlier transactions and original/cutover distinction |
 
-Completed weekly release compatibility belongs to the separate, already tested
-closing worktree. Integrate and verify the two candidates together before a release;
-this branch alone does not claim that pending closing change. Broader weekly paper
+Completed weekly release compatibility is supplied by the jointly verified,
+deployed [closing integration](loan-workflow-release-20261017.md), using the
+existing saved-rule full-release calculator. Broader weekly paper
 admission or financial replay, if later required, needs explicitly versioned source
 and recovery contracts. Removing a monthly guard alone is insufficient.
 
 ## Validation
 
-Local implementation and verification are complete; integration/release remain
-pending. All tests use a dedicated localhost `.test` database and synthetic facts:
+The following retains the independent local verification checkpoint. Joint tests,
+exact-source CI and production acceptance now pass in the linked release record.
+All tests below use a dedicated localhost `.test` database and synthetic facts:
 
 - **368 regression tests pass** across origination, setup, partial-month rules,
   draft UI, agreement/borrower/collateral correction, completed payouts and paper
