@@ -1,15 +1,32 @@
 ---
-status: evidence-review
+status: correction-preparation
 owner: loans
 updated: 2026-10-17
 tags: [loans, corrections, legacy, interest, review]
 related: [../implementation/jsk-wh-interest-verification-20261016.md, ../contracts/loan-agreement-correction-v1.md]
 ---
 
-# JSK WH original-rate correction: evidence before application
+# JSK WH original-rate correction: confirmed basis and preparation
 
-The owner confirms 1.1% monthly was intended from each original date, and on
-17 October selects paper/payment-record review with uncertain balances held.
+The owner confirms 1.1% monthly was intended from each original date. The earlier
+17 October instruction selected paper/payment-record review with uncertain
+balances held. The owner subsequently clarifies that all WH loans originated on
+paper at 1.1%, with the first month's interest paid upfront; 2% was inherited
+from the Workspace default during migration. The owner also confirms no later
+transaction on the 685 imported, now-active loans under discussion.
+The owner initially selected "Keep this proposal to 685", then explicitly
+superseded that limit: "actually fix all active loans carrying wrong 2 % rate in
+wh series of jsk". The current scope is all 826 active affected loans: 824 imports
+and two native policy-1 agreements. The owner separately confirms 1.1% at
+disbursal for WH02145 and WH02146 in response to the original-net-proceeds review;
+retain their saved document charges and correct the original advance/proceeds,
+without recording a new cash movement.
+
+This is the business basis for preparing their correction; do not require
+individual paper records merely to reconfirm those stated facts. Retained 2%
+source rows establish what was imported, not the actual paper agreement. This
+latest all-active fix request authorizes the scoped production correction after
+compatible release, recovery and rehearsal checks.
 This is an original-terms correction, not a later concession. Use the ordinary
 shared agreement/checkpoint correction boundary; do not add a JSK-specific loan
 type, correction screen or alternative balance calculator.
@@ -41,15 +58,31 @@ Every row is held with `application_allowed=False`. Hashes identify this review
 snapshot; they are not confirmation tokens or proof that every funding/custody
 dependency was checked. Ordinary locked services must re-evaluate the full graph
 and current activity before any later application.
+These are private proposal flags, not operational holds on loans or collections.
+The frozen flags predate the owner's subsequent clarification above.
 
-## Paper/payment evidence to establish
+## Remaining reconciliation
 
-For each reviewed loan, bind the paper/source reference and reviewer to its
-original terms, original and cutover dates, principal/item identities, first-month
-payment evidence, later interest payments and accepted unpaid checkpoint.
-Record unknown facts as unknown. Retain the original source's 2% rows and the
-owner's clarification separately. Do not scale saved interest by 1.1/2 or infer
-receipts from the difference between recognized and unpaid interest.
+The fresh all-active check at 00:18:30 UTC selects every active WH loan with an
+item or header rate of 2%, independently of metal: exactly 826, all with gold items
+at 2%. All have a sole financial origin and no connected funding, renewal, auction
+or out-of-vault collateral. The 685 nonzero-interest imports retain identical
+membership and hashes. Another 139 imports have zero opening interest but require
+rate correction for later continuation. All 824 pure opening recalculations pass.
+The two native records retain original licence revisions, one advance period,
+no accruals and simple/full-month policy 1 at quantum 0.01.
+
+Use the owner's confirmed original rate and first-month payment basis, together
+with retained principal, original/cutover dates and payment evidence, to prepare
+old/new positions. Preserve the paid first month as covered at 1.1%; the erroneous
+2% imported rate does not establish that cash was collected at 2%. The absence of
+post-migration transactions alone does not establish all pre-migration payments.
+Seek additional paper/payment evidence only for a concrete contradiction or a
+missing fact needed to determine unpaid interest. Leave that uncertain component
+unchanged rather than infer a payment or apply a blanket hold to the whole cohort.
+Retain the original source's 2% rows and the owner's clarification separately.
+Do not scale saved interest by 1.1/2 or infer receipts from the difference between
+recognized and unpaid interest.
 
 For opening/2, retain its inclusive original-anniversary, original-principal,
 aggregate HALF_EVEN whole-rupee rule. The first-month-paid premise is part of
@@ -63,15 +96,20 @@ rounding and period behavior. A change to monthly rate cannot establish a new
 payout, refund, extra paid period or customer credit. Any unreconciled cash or
 advance difference stays held for explicit supported treatment.
 
-## Compatibility implementation after evidence review
+## Compatibility implementation and release sequence
 
 1. Prepare a reviewed old/new checkpoint proposal for each evidence-complete loan.
    Show which interest was recognized, unpaid, paid or advanced; do not create
    missing pre-cutover transactions. Keep uncertain loans out of the apply set.
-2. Extend existing audited services for retained opening/2 and native policy-1
-   semantics. Today's opening writer requires /4 or /5; native agreement correction
-   requires policy 2. Removing these guards alone is invalid: the implementations
-   consume different continuation shapes and calculation/advance rules.
+2. Extend existing audited services for retained opening/2 and unserviced native
+   policy-1 semantics. Serviced policy-1 agreements still require connected review.
+   The prior opening writer required
+   /4 or /5; merely removing the guard is invalid because the continuation shapes
+   differ. The implementation now distinguishes aggregate carry facts, preserves
+   the retained validator/rule, reuses the typed form and signed write boundary,
+   and versions the portable correction graph as servicing bundle 8. Native policy
+   1 retains its existing period calculator/calendar, actual reviewed original
+   proceeds and immutable approval; it is not promoted to policy 2.
 3. Test synthetic anniversary/rounding cases, first-month coverage, zero/nonzero
    checkpoint interest, actual cash preservation, source immutability, authorization,
    stale review, exactly-once retry, RLS and newly connected history rejection.
@@ -82,11 +120,16 @@ advance difference stays held for explicit supported treatment.
    the old rate before accepting corrected-rate differences. This is separate from
    enabling compatibility or deploying code.
 5. Present a concrete correction proposal with its exact selection, source state,
-   financial effects and exceptions. Only a separately authorized production apply
-   may use verified backups and locked/idempotent ordinary correction services.
+   financial effects and exceptions. The owner's later all-active fix request now
+   authorizes this scoped apply, using verified backups and locked/idempotent services.
    Changed financial evidence invalidates risk; valuation/monitoring policy stays
    independent. Recheck new activity and verify postconditions before refresh.
 
-The current completed slice is cohort identification and evidence-review preparation.
-No financial correction or compatibility deployment has been performed. The next
-input is verified paper/payment evidence, not another broad rate-field update.
+The completed preparation includes the confirmed expanded selection, all 824 pure
+old/new calculations and local service/reader support. The final 49-case correction
+selection passes; earlier overlapping selections pass 100 servicing and 213
+portability cases. See the [implementation record](../implementation/aggregate-checkpoint-corrections-20261017.md).
+No financial correction or compatibility deployment has been performed. The owner
+has now requested the actual all-active correction and confirmed the two native
+advance/proceeds basis. Compatible release and isolated production-data rehearsal
+must precede application; a pure proposal is not a service confirmation token.

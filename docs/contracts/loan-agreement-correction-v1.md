@@ -22,7 +22,11 @@ review when the new principal allocation cannot retain them. Original proceeds
 equal principal less captured advance interest and retained deducted fees.
 
 Saved direct policy/2 simple/full-month bullet or flexible agreements retain native
-monthly recognition. `CORRECTED` disbursal snapshots point to the preceding
+monthly recognition. Unserviced active policy/1 simple/full-month bullet or flexible
+agreements also retain their saved legacy period calendar/calculator and require
+explicit reviewed original proceeds; later charges/payments remain blocked for
+independent policy-1 correction. Their export requires servicing bundle 8.
+`CORRECTED` disbursal snapshots point to the preceding
 snapshot and genuine original approval. That approval is provenance, not approval
 of the revised terms. The frozen policy is copied exactly. `agreement_revision`
 on retained monthly calculation headers distinguishes replacement calculations
@@ -40,8 +44,12 @@ entered; transaction completeness remains independent.
 ## Verified checkpoint
 
 Inputs are the complete corrected `checkpoint` review, supporting reference,
-reason and request key. Only retained shared monthly review/4 and review/5
-checkpoints are supported. Source identities, mappings, original dates, cutover,
+reason and request key. Retained aggregate review/2 and shared monthly review/4
+and review/5 checkpoints are supported. Aggregate checkpoints retain their
+original-principal anniversary calendar, first-month-paid coverage and cumulative
+HALF_EVEN whole-rupee rounding; they do not gain monthly-period carry fields.
+Their corrected export requires [servicing bundle 8](loan-servicing-bundle-v8.md).
+Source identities, mappings, original dates, cutover,
 physical evidence and captured calculation rule remain unchanged. Original item
 principal, remaining principal, rates, current-period bases, cumulative/current
 recognized and unpaid interest, advance coverage and remaining obligations must

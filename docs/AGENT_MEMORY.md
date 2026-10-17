@@ -50,6 +50,15 @@ and [financial read models](domain/pawn-loan-financial-read-models.md).
 Borrower/collateral fact correction and principal/agreement correction have
 different evidence/dependency gates. Never substitute a raw model update.
 
+Retained aggregate opening-review/2 corrections preserve their original-principal,
+inclusive-anniversary, first-month-paid and cumulative HALF_EVEN rules; do not
+upgrade them to monthly checkpoint shapes. Their corrected portable graph requires
+[servicing bundle 8](contracts/loan-servicing-bundle-v8.md), also required for
+unserviced native policy-1 corrections retaining their legacy calendar and explicit
+original proceeds. Later legacy servicing still requires connected reconciliation.
+A pure rate proposal
+cannot establish unrecorded payments or authorize production application.
+
 Represented positions and actual source transactions are distinct evidence.
 Optional paper-book assurance cannot disable otherwise supported servicing.
 Required missing transaction evidence remains a blocker for the affected action;

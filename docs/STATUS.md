@@ -77,15 +77,28 @@ routine retention and a reviewed canonical-main transition remain separate work.
 
 ## Open business and acceptance work
 
-- **JSK WH original terms:** owner confirms 1.1% monthly from original dates for
-  826 active gold loans saved at 2%; 824 opening/2 and two native policy-1 loans
-  are outside current correction contracts. No live correction is applied.
-  Preserve source 2%, actual cash and history limits; 685 openings contain unpaid
-  interest. See [verification and feasibility](implementation/jsk-wh-interest-verification-20261016.md).
-  The [17 October review plan](plans/jsk-wh-original-rate-correction-20261017.md)
-  freezes the same 826-loan cohort using approved read-only evidence. All 824
-  openings retain first-month-paid evidence; every row is held pending paper/payment
-  reconciliation and retained-contract compatibility. No live correction is applied.
+- **JSK WH original terms:** owner confirms paper agreements at 1.1% monthly,
+  first-month interest paid upfront, inherited 2% migration error and no later
+  transactions on the intended 685 imported active loans. Use this confirmed basis;
+  request further records only for specific missing or contradictory payment facts.
+  The explicitly approved fresh read-only check matches the exact 685 nonzero-
+  interest imports and unchanged source hashes. All retain a sole opening,
+  entirely unpaid additional interest, first-month-paid coverage and no connected
+  custody/funding/renewal/auction activity. All 685 pure recalculations succeed.
+  The owner supersedes the initial 685-only scope and requests correcting all
+  active WH loans carrying wrong 2%: 824 imports and two unserviced native policy-1
+  records, 826 total. All 824 import recalculations pass. For WH02145/WH02146 the
+  owner confirms the original 1.1% advance/proceeds basis, retaining saved fees.
+  [Aggregate checkpoint support](implementation/aggregate-checkpoint-corrections-20261017.md)
+  extends the existing signed correction/form for aggregate and unserviced legacy
+  native evidence, and adds guarded Loans 0092,
+  portability 0031 and servicing bundle 8. The final 49-case correction selection
+  passes, including native/aggregate exact and portable recovery. Earlier
+  overlapping 100 servicing and 213 portability selections also pass. The owner
+  requests actual all-active correction; exact-source release/rehearsal precedes apply.
+  Private proposal flags do not restrict live loans or collections. No financial
+  correction or deployment is applied. See the updated
+  [correction plan](plans/jsk-wh-original-rate-correction-20261017.md).
 - **Monitoring capacity:** normal bounded catch-up is deployed. Scheduling and
   scale optimization remain measurement-gated [FW-004](plans/future-work.md#fw-004-launch-scale-loan-monitoring-capacity).
   No one-hour launch-scale claim; large local runs remain paused by the owner.
