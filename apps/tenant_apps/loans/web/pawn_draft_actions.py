@@ -1,4 +1,5 @@
 from .counter_navigation import preserve_counter_return
+
 """Ordinary Django adapters for PawnLoan draft origination."""
 
 from decimal import Decimal
@@ -11,36 +12,61 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 
-from apps.tenant_apps.loans.access import loans_workspace_required, loans_action_required
-from apps.tenant_apps.loans.domain import CollateralEconomicsError, LoanDocumentKind, PawnLoanState
+from apps.tenant_apps.loans.access import (
+    loans_workspace_required,
+    loans_action_required,
+)
+from apps.tenant_apps.loans.domain import (
+    CollateralEconomicsError,
+    LoanDocumentKind,
+    PawnLoanState,
+)
 from apps.tenant_apps.loans.forms import (
-    PawnCollateralDraftFormSet, PawnCollateralPhotoForm, PawnDraftForm,
-    PawnDraftSplitForm, PawnTransitionReasonForm,
+    PawnCollateralDraftFormSet,
+    PawnCollateralPhotoForm,
+    PawnDraftForm,
+    PawnDraftSplitForm,
+    PawnTransitionReasonForm,
 )
 from apps.tenant_apps.loans.models import PawnCollateralItem, PawnLoan
-from apps.tenant_apps.loans.services.origination_settings import collateral_photos_required
+from apps.tenant_apps.loans.services.origination_settings import (
+    collateral_photos_required,
+)
 from apps.tenant_apps.loans.services import (
-    CollateralDraftInput, CreatePawnDraftCommand, DraftCollateralPhotoInput,
-    NumberAllocationError, PawnCollateralMediaError, PawnDraftError,
-    PawnLifecycleError, UpdatePawnDraftCommand, append_collateral_photo,
-    approve_pawn_loan, cancel_pawn_loan,
-    preview_number, reopen_pawn_loan, resolve_pawn_draft_economics,
+    CollateralDraftInput,
+    CreatePawnDraftCommand,
+    DraftCollateralPhotoInput,
+    NumberAllocationError,
+    PawnCollateralMediaError,
+    PawnDraftError,
+    PawnLifecycleError,
+    UpdatePawnDraftCommand,
+    append_collateral_photo,
+    approve_pawn_loan,
+    cancel_pawn_loan,
+    preview_number,
+    reopen_pawn_loan,
+    resolve_pawn_draft_economics,
     update_pawn_draft_with_photos,
 )
 from apps.tenant_apps.loans.services.pawn_draft_split import (
-    PawnDraftSplitError, preview_pawn_draft_split, split_pawn_draft,
+    PawnDraftSplitError,
+    preview_pawn_draft_split,
+    split_pawn_draft,
 )
 from apps.tenant_apps.loans.services.draft_submissions import (
-    new_draft_submission, saved_draft_submission, submit_new_draft,
+    new_draft_submission,
+    saved_draft_submission,
+    submit_new_draft,
 )
 from .routine_entry import routine_entry_context
 
 
 def _pawn_loan_for_workspace(request, pk):
     return get_object_or_404(
-        PawnLoan.objects.select_related("borrower", "license", "series").prefetch_related(
-            "collateral_items", "collateral_items__photos"
-        ),
+        PawnLoan.objects.select_related(
+            "borrower", "license", "series"
+        ).prefetch_related("collateral_items", "collateral_items__photos"),
         pk=pk,
         workspace=request.loans_workspace,
     )
@@ -51,16 +77,22 @@ def _pawn_loan_for_workspace(request, pk):
 @preserve_counter_return
 def pawn_loan_create(request):
     from .entry_presentation import entry_presentation, presentation_errors
+
     selected, presentation = entry_presentation(request)
     request.loan_entry_presentation = presentation
     if selected == "paper":
         from .recorded_history import paper_history_entry
+
         return paper_history_entry(request)
-    token = request.POST.get("submission_token", "") if request.method == "POST" else None
+    token = (
+        request.POST.get("submission_token", "") if request.method == "POST" else None
+    )
     token_error = None
     if request.method == "POST" and not presentation["entry_changing"]:
         try:
-            saved = saved_draft_submission(workspace=request.loans_workspace, actor=request.user, token=token)
+            saved = saved_draft_submission(
+                workspace=request.loans_workspace, actor=request.user, token=token
+            )
         except ValueError as exc:
             token_error = str(exc)
         else:
@@ -68,10 +100,16 @@ def pawn_loan_create(request):
                 return _draft_submission_redirect(request, saved, created=False)
     readiness = get_pawn_draft_readiness(request.loans_workspace)
     if not readiness["ready"]:
-        return render(request, "loans/pawn/blocked.html", {
-            "readiness": readiness,
-            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
-        })
+        return render(
+            request,
+            "loans/pawn/blocked.html",
+            {
+                "readiness": readiness,
+                "can_manage_loan_setup": request.loans_workspace_access.can(
+                    "workspace.settings.manage"
+                ),
+            },
+        )
     initial = {"loan_date": timezone.localdate()}
     if request.method == "GET" and request.GET.get("party"):
         initial["borrower"] = request.GET["party"]
@@ -83,26 +121,44 @@ def pawn_loan_create(request):
         initial=initial,
     )
     from .direct_entry_layout import direct_entry_layout_context
+
     layout_context = direct_entry_layout_context(request, form)
     collateral_post = request.POST.copy() if request.method == "POST" else None
-    adding = collateral_post is not None and collateral_post.get("action") == "add_collateral"
+    adding = (
+        collateral_post is not None
+        and collateral_post.get("action") == "add_collateral"
+    )
     if adding:
         try:
-            collateral_post["collateral-TOTAL_FORMS"] = str(min(100, int(collateral_post.get("collateral-TOTAL_FORMS", "1")) + 1))
+            collateral_post["collateral-TOTAL_FORMS"] = str(
+                min(100, int(collateral_post.get("collateral-TOTAL_FORMS", "1")) + 1)
+            )
         except ValueError:
             pass
     formset = PawnCollateralDraftFormSet(
-        collateral_post, request.FILES or None, prefix="collateral",
-        form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")}
+        collateral_post,
+        request.FILES or None,
+        prefix="collateral",
+        form_kwargs={
+            "can_override_interest": request.loans_workspace_access.can("loan.approve")
+        },
     )
     economics_preview = None
     if request.method == "GET" or (presentation["entry_changing"] and not token):
-        token = new_draft_submission(workspace=request.loans_workspace, actor=request.user)
+        token = new_draft_submission(
+            workspace=request.loans_workspace, actor=request.user
+        )
     if token_error:
         form.add_error(None, token_error)
     if presentation["entry_changing"]:
         presentation_errors(form, formset)
-    if request.method == "POST" and not adding and not presentation["entry_changing"] and form.is_valid() and formset.is_valid():
+    if (
+        request.method == "POST"
+        and not adding
+        and not presentation["entry_changing"]
+        and form.is_valid()
+        and formset.is_valid()
+    ):
         command = _create_command(request.loans_workspace.pk, form, formset)
         try:
             if request.POST.get("action") == "preview":
@@ -147,19 +203,43 @@ def pawn_loan_create(request):
 
 
 def _draft_submission_redirect(request, loan, *, created):
-    if request.POST.get("action") == "review" and loan.state == "DRAFT" and _can_review_payout(request):
+    if (
+        request.POST.get("action") == "review"
+        and loan.state == "DRAFT"
+        and _can_review_payout(request)
+    ):
         if created:
-            messages.info(request, f"Draft {loan.loan_number} saved. Check the agreement before confirming payout.")
+            messages.info(
+                request,
+                f"Draft {loan.loan_number} saved. Check the agreement before confirming payout.",
+            )
         else:
-            messages.info(request, f"Draft {loan.loan_number} was already saved; this repeated form applied no changes. "
-                "Check the saved agreement before confirming payout, or use Correct draft to edit it.")
-        return redirect('workspace_loans:pawn_loan_review_disburse', pk=loan.pk, workspace_slug=request.workspace.slug)
+            messages.info(
+                request,
+                f"Draft {loan.loan_number} was already saved; this repeated form applied no changes. "
+                "Check the saved agreement before confirming payout, or use Correct draft to edit it.",
+            )
+        return redirect(
+            "workspace_loans:pawn_loan_review_disburse",
+            pk=loan.pk,
+            workspace_slug=request.workspace.slug,
+        )
     if created:
-        messages.success(request, f"Draft {loan.loan_number} created. Use Correct draft to update this same loan.")
+        messages.success(
+            request,
+            f"Draft {loan.loan_number} created. Use Correct draft to update this same loan.",
+        )
     else:
-        messages.info(request, f"This form already saved loan {loan.loan_number} ({loan.get_state_display()}). "
-            "No changes were applied and no additional loan was created. Use Correct draft with edit access to change a saved draft.")
-    return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+        messages.info(
+            request,
+            f"This form already saved loan {loan.loan_number} ({loan.get_state_display()}). "
+            "No changes were applied and no additional loan was created. Use Correct draft with edit access to change a saved draft.",
+        )
+    return redirect(
+        "workspace_loans:pawn_loan_detail",
+        pk=loan.pk,
+        workspace_slug=request.workspace.slug,
+    )
 
 
 def _can_review_payout(request):
@@ -176,8 +256,14 @@ def pawn_loan_update(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     if loan.state != PawnLoanState.DRAFT.value:
         messages.error(request, "Only draft PawnLoans can be edited.")
-        return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
-    form = PawnDraftForm(request.POST or None, workspace=request.loans_workspace, instance=loan)
+        return redirect(
+            "workspace_loans:pawn_loan_detail",
+            pk=loan.pk,
+            workspace_slug=request.workspace.slug,
+        )
+    form = PawnDraftForm(
+        request.POST or None, workspace=request.loans_workspace, instance=loan
+    )
     existing_items = tuple(loan.collateral_items.all())
     initial = [
         {
@@ -200,7 +286,9 @@ def pawn_loan_update(request, pk):
         request.FILES or None,
         prefix="collateral",
         initial=initial,
-        form_kwargs={"can_override_interest": request.loans_workspace_access.can("loan.approve")},
+        form_kwargs={
+            "can_override_interest": request.loans_workspace_access.can("loan.approve")
+        },
     )
     _attach_existing_collateral(formset, existing_items)
     economics_preview = None
@@ -227,7 +315,11 @@ def pawn_loan_update(request, pk):
         else:
             if request.POST.get("action") != "preview":
                 messages.success(request, f"Draft {loan.loan_number} updated.")
-                return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+                return redirect(
+                    "workspace_loans:pawn_loan_detail",
+                    pk=loan.pk,
+                    workspace_slug=request.workspace.slug,
+                )
     return render(
         request,
         "loans/pawn/form.html",
@@ -237,8 +329,13 @@ def pawn_loan_update(request, pk):
             "loan": loan,
             "economics_preview": economics_preview,
             "photos_required": collateral_photos_required(request.loans_workspace.pk),
-            "can_add_customer": any(request.loans_workspace_access.can(p) for p in ("contact.create", "data.create")),
-            "can_manage_loan_setup": request.loans_workspace_access.can("workspace.settings.manage"),
+            "can_add_customer": any(
+                request.loans_workspace_access.can(p)
+                for p in ("contact.create", "data.create")
+            ),
+            "can_manage_loan_setup": request.loans_workspace_access.can(
+                "workspace.settings.manage"
+            ),
         },
     )
 
@@ -253,6 +350,7 @@ def pawn_loan_split(request, pk):
         preview_pawn_draft_split,
         split_pawn_draft,
     )
+
     loan = _pawn_loan_for_workspace(request, pk)
     if request.method == "GET" and request.GET.get("completed"):
         completed = loan.change_log.filter(
@@ -260,15 +358,33 @@ def pawn_loan_split(request, pk):
         ).first()
         if completed:
             ids = completed.metadata["draft_split_out"]["new_loan_ids"]
-            loans = {item.pk: item for item in PawnLoan.objects.filter(
-                workspace=request.loans_workspace, pk__in=ids)}
-            return render(request, "loans/pawn/split.html", {
-                "loan": loan, "completed_loans": tuple(loans[identity] for identity in ids),
-            })
+            loans = {
+                item.pk: item
+                for item in PawnLoan.objects.filter(
+                    workspace=request.loans_workspace, pk__in=ids
+                )
+            }
+            return render(
+                request,
+                "loans/pawn/split.html",
+                {
+                    "loan": loan,
+                    "completed_loans": tuple(loans[identity] for identity in ids),
+                },
+            )
     if loan.state != PawnLoanState.DRAFT.value:
         messages.error(request, "Only a draft PawnLoan can be split.")
-        return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
-    initial = {"series": loan.series_id, "product_version": loan.product_version_id, "loan_date": loan.loan_date, "tenure_months": loan.tenure_months}
+        return redirect(
+            "workspace_loans:pawn_loan_detail",
+            pk=loan.pk,
+            workspace_slug=request.workspace.slug,
+        )
+    initial = {
+        "series": loan.series_id,
+        "product_version": loan.product_version_id,
+        "loan_date": loan.loan_date,
+        "tenure_months": loan.tenure_months,
+    }
     if request.method == "GET" and request.GET.get("item"):
         initial["collateral_items"] = [request.GET["item"]]
     data = request.POST.copy() if request.method == "POST" else None
@@ -285,22 +401,35 @@ def pawn_loan_split(request, pk):
         values = form.cleaned_data
         try:
             arguments = dict(
-                collateral_item_ids=tuple(values["collateral_items"].values_list("pk", flat=True)),
-                series=values["series"], product_version=values["product_version"],
-                loan_date=values["loan_date"], tenure_months=values["tenure_months"],
+                collateral_item_ids=tuple(
+                    values["collateral_items"].values_list("pk", flat=True)
+                ),
+                series=values["series"],
+                product_version=values["product_version"],
+                loan_date=values["loan_date"],
+                tenure_months=values["tenure_months"],
                 split_each=values["split_mode"] == "each",
             )
             if request.POST.get("action") == "confirm":
                 split_pawn_draft(
-                    loan.pk, **arguments,
-                    expected_fingerprint=request.POST.get("fingerprint", ""), actor=request.user,
+                    loan.pk,
+                    **arguments,
+                    expected_fingerprint=request.POST.get("fingerprint", ""),
+                    actor=request.user,
                 )
-                url = reverse('workspace_loans:pawn_loan_split', args=[request.workspace.slug, loan.pk])
+                url = reverse(
+                    "workspace_loans:pawn_loan_split",
+                    args=[request.workspace.slug, loan.pk],
+                )
                 return redirect(f"{url}?completed={request.POST['fingerprint']}")
             preview = preview_pawn_draft_split(loan.pk, **arguments)
         except (PawnDraftSplitError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
-    template = "loans/pawn/_split_form.html" if request.headers.get("HX-Request") else "loans/pawn/split.html"
+    template = (
+        "loans/pawn/_split_form.html"
+        if request.headers.get("HX-Request")
+        else "loans/pawn/split.html"
+    )
     return render(request, template, {"loan": loan, "form": form, "preview": preview})
 
 
@@ -309,7 +438,10 @@ def pawn_loan_split(request, pk):
 @preserve_counter_return
 def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
     from apps.tenant_apps.loans.models import PawnCollateralPhoto
-    from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
+    from apps.tenant_apps.loans.services.collateral_media import (
+        delete_draft_collateral_photo,
+    )
+
     loan = _pawn_loan_for_workspace(request, pk)
     item = get_object_or_404(PawnCollateralItem, pk=item_pk, loan=loan)
     get_object_or_404(PawnCollateralPhoto, pk=photo_pk, collateral_item=item)
@@ -318,8 +450,13 @@ def pawn_collateral_photo_delete(request, pk, item_pk, photo_pk):
     except (PawnCollateralMediaError, ValidationError) as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, "Draft photograph deleted. Your workspace photo rule applies at approval.")
-    return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}")
+        messages.success(
+            request,
+            "Draft photograph deleted. Your workspace photo rule applies at approval.",
+        )
+    return redirect(
+        f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}"
+    )
 
 
 @loans_action_required("data.edit")
@@ -342,7 +479,9 @@ def pawn_collateral_photo_add(request, pk, item_pk):
             messages.success(request, f"Photograph appended to {item.description}.")
     else:
         messages.error(request, "Select a valid collateral photograph.")
-    return redirect(f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}")
+    return redirect(
+        f"{reverse('workspace_loans:pawn_loan_detail', args=[request.workspace.slug, loan.pk])}#collateral-{item.public_id}"
+    )
 
 
 @loans_action_required("loan.approve")
@@ -352,10 +491,16 @@ def pawn_loan_approve(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
         approve_pawn_loan(loan.pk, actor=request.user)
-        messages.success(request, f"{loan.loan_number} approved. Its economic payload is frozen.")
+        messages.success(
+            request, f"{loan.loan_number} approved. Its economic payload is frozen."
+        )
     except (PawnLifecycleError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
-    return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+    return redirect(
+        "workspace_loans:pawn_loan_detail",
+        pk=loan.pk,
+        workspace_slug=request.workspace.slug,
+    )
 
 
 @loans_action_required("data.edit")
@@ -388,12 +533,15 @@ def get_pawn_draft_readiness(workspace):
     for step in checklist["steps"]:
         if not step["complete"] and step.get("blocking", True):
             return {
-                "ready": False, "requires_setup": True,
+                "ready": False,
+                "requires_setup": True,
                 "message": step["description"],
-                "action_label": step["action_label"], "action_url": step["action_url"],
+                "action_label": step["action_label"],
+                "action_url": step["action_url"],
             }
     if not Party.objects.filter(
-        workspace=workspace, status=Party.PartyStatus.ACTIVE,
+        workspace=workspace,
+        status=Party.PartyStatus.ACTIVE,
     ).exists():
         return {
             "ready": False,
@@ -433,7 +581,7 @@ def _add_pawn_draft_error(form, formset, exc):
     if isinstance(exc, CollateralEconomicsError) and exc.reference and exc.field:
         try:
             item_form = formset.forms[int(exc.reference) - 1]
-        except (IndexError, TypeError, ValueError):
+        except IndexError, TypeError, ValueError:
             pass
         else:
             if exc.field in item_form.fields:
@@ -521,8 +669,14 @@ def _reason_transition(request, pk, action):
         except (PawnLifecycleError, ValidationError, ValueError) as exc:
             form.add_error(None, str(exc))
         else:
-            messages.success(request, f"{loan.loan_number}: {labels[action].lower()} completed.")
-            return redirect('workspace_loans:pawn_loan_detail', pk=loan.pk, workspace_slug=request.workspace.slug)
+            messages.success(
+                request, f"{loan.loan_number}: {labels[action].lower()} completed."
+            )
+            return redirect(
+                "workspace_loans:pawn_loan_detail",
+                pk=loan.pk,
+                workspace_slug=request.workspace.slug,
+            )
     return render(
         request,
         "loans/pawn/transition_form.html",

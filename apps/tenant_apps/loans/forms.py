@@ -70,10 +70,16 @@ class LoanProductVersionDraftForm(forms.ModelForm):
     class Meta:
         model = LoanProductVersion
         fields = (
-            "available_from", "available_until", "repayment_structure",
-            "amortisation_method", "payment_frequency", "minimum_tenor_months",
-            "maximum_tenor_months", "operational_grace_days",
-            "extra_payment_rule", "calculation_contract_version",
+            "available_from",
+            "available_until",
+            "repayment_structure",
+            "amortisation_method",
+            "payment_frequency",
+            "minimum_tenor_months",
+            "maximum_tenor_months",
+            "operational_grace_days",
+            "extra_payment_rule",
+            "calculation_contract_version",
         )
         widgets = {
             "available_from": forms.DateInput(attrs={"type": "date"}),
@@ -83,7 +89,14 @@ class LoanProductVersionDraftForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "form-select" if isinstance(field.widget, forms.Select) else "form-control")
+            field.widget.attrs.setdefault(
+                "class",
+                (
+                    "form-select"
+                    if isinstance(field.widget, forms.Select)
+                    else "form-control"
+                ),
+            )
 
 
 class LoanSeriesChoiceField(forms.ModelChoiceField):
@@ -92,6 +105,7 @@ class LoanSeriesChoiceField(forms.ModelChoiceField):
         if not getattr(self, "show_availability", False):
             return label
         from .selectors.series import series_new_loan_status
+
         status = series_new_loan_status(obj)
         return label if status["running"] else f"{label} — {status['label']}"
 
@@ -103,14 +117,18 @@ class PawnDraftForm(forms.Form):
         widget=PartyAutocompleteWidget(
             attrs={
                 "autofocus": True,
-                "data-placeholder": _("Search by name, party code, phone, relation, or email"),
+                "data-placeholder": _(
+                    "Search by name, party code, phone, relation, or email"
+                ),
             },
             select2_options={"width": "100%"},
         ),
     )
     series = LoanSeriesChoiceField(
         label=_("Series (license / register)"),
-        help_text=_("The selected series determines the regulatory license and loan-number sequence."),
+        help_text=_(
+            "The selected series determines the regulatory license and loan-number sequence."
+        ),
         queryset=LoanSeries.objects.none(),
         widget=s2forms.Select2Widget(
             attrs={"data-placeholder": "Search by license number or series"},
@@ -120,8 +138,12 @@ class PawnDraftForm(forms.Form):
         label=_("Loan product"),
         queryset=LoanProductVersion.objects.none(),
     )
-    loan_date = forms.DateField(label=_("Loan date"), widget=forms.DateInput(attrs={"type": "date"}))
-    tenure_months = forms.IntegerField(label=_("Tenure (months)"), min_value=1, initial=3)
+    loan_date = forms.DateField(
+        label=_("Loan date"), widget=forms.DateInput(attrs={"type": "date"})
+    )
+    tenure_months = forms.IntegerField(
+        label=_("Tenure (months)"), min_value=1, initial=3
+    )
 
     def __init__(self, *args, workspace, instance=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -131,18 +153,26 @@ class PawnDraftForm(forms.Form):
         self.fields["borrower"].queryset = Party.objects.filter(
             workspace=workspace, status=Party.PartyStatus.ACTIVE
         ).order_by("display_name", "party_code")
-        self.fields["series"].queryset = LoanSeries.objects.filter(
-            license__workspace=workspace
-        ).select_related("license").prefetch_related("number_sequences").order_by("license__license_number", "code")
+        self.fields["series"].queryset = (
+            LoanSeries.objects.filter(license__workspace=workspace)
+            .select_related("license")
+            .prefetch_related("number_sequences")
+            .order_by("license__license_number", "code")
+        )
         if instance is None:
             from .selectors.series import running_series
+
             self.fields["series"].queryset = running_series(workspace)
             self.fields["series"].help_text += " Only running series are listed."
-        self.fields["product_version"].queryset = LoanProductVersion.objects.filter(
-            product__workspace=workspace,
-            product__is_active=True,
-            status=LoanProductVersionStatus.ACTIVE.value,
-        ).select_related("product").order_by("product__name", "version")
+        self.fields["product_version"].queryset = (
+            LoanProductVersion.objects.filter(
+                product__workspace=workspace,
+                product__is_active=True,
+                status=LoanProductVersionStatus.ACTIVE.value,
+            )
+            .select_related("product")
+            .order_by("product__name", "version")
+        )
         if instance is not None:
             self.initial.update(
                 {
@@ -158,8 +188,14 @@ class PawnDraftForm(forms.Form):
         elif not self.is_bound:
             self._select_single_options()
         for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control")
-
+            field.widget.attrs.setdefault(
+                "class",
+                (
+                    "form-select"
+                    if isinstance(field, forms.ModelChoiceField)
+                    else "form-control"
+                ),
+            )
 
     def _select_single_options(self):
         from django.core.exceptions import ValidationError
@@ -169,17 +205,23 @@ class PawnDraftForm(forms.Form):
         from .domain import LoanDocumentKind
 
         try:
-            loan_date = self.fields["loan_date"].clean(self.initial.get("loan_date", timezone.localdate()))
+            loan_date = self.fields["loan_date"].clean(
+                self.initial.get("loan_date", timezone.localdate())
+            )
         except ValidationError:
             return
         if "series" not in self.initial:
             candidates = []
             for series in self.fields["series"].queryset.filter(
-                is_active=True, license__is_active=True,
-                license__issued_on__lte=loan_date, license__expires_on__gte=loan_date,
+                is_active=True,
+                license__is_active=True,
+                license__issued_on__lte=loan_date,
+                license__expires_on__gte=loan_date,
             ):
                 try:
-                    preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
+                    preview_number(
+                        series=series, document_kind=LoanDocumentKind.PAWN_LOAN
+                    )
                 except ValueError:
                     continue
                 candidates.append(series.pk)
@@ -187,22 +229,39 @@ class PawnDraftForm(forms.Form):
                     break
             if len(candidates) == 1:
                 self.initial["series"] = candidates[0]
-                self.fields["series"].help_text += " Selected automatically because only one series is currently usable. Review it for your loan date."
+                self.fields[
+                    "series"
+                ].help_text += " Selected automatically because only one series is currently usable. Review it for your loan date."
         if "product_version" not in self.initial:
-            candidates = list(self.fields["product_version"].queryset.filter(
-                Q(available_from__isnull=True) | Q(available_from__lte=loan_date),
-            ).filter(
-                Q(available_until__isnull=True) | Q(available_until__gte=loan_date),
-            ).values_list("pk", flat=True)[:2])
+            candidates = list(
+                self.fields["product_version"]
+                .queryset.filter(
+                    Q(available_from__isnull=True) | Q(available_from__lte=loan_date),
+                )
+                .filter(
+                    Q(available_until__isnull=True) | Q(available_until__gte=loan_date),
+                )
+                .values_list("pk", flat=True)[:2]
+            )
             if len(candidates) == 1:
                 self.initial["product_version"] = candidates[0]
-                self.fields["product_version"].help_text = "The only product available for this date is selected. Review its terms and tenure."
+                self.fields["product_version"].help_text = (
+                    "The only product available for this date is selected. Review its terms and tenure."
+                )
         if self.initial.get("series") and "tenure_months" not in self.initial:
-            from .services.economic_policies import resolve_pawn_loan_economic_policy, PawnEconomicPolicyError
+            from .services.economic_policies import (
+                resolve_pawn_loan_economic_policy,
+                PawnEconomicPolicyError,
+            )
+
             series = self.fields["series"].queryset.get(pk=self.initial["series"])
             try:
-                policy = resolve_pawn_loan_economic_policy(workspace_id=series.workspace_id,
-                    license_id=series.license_id, series_id=series.pk, as_of_date=loan_date)
+                policy = resolve_pawn_loan_economic_policy(
+                    workspace_id=series.workspace_id,
+                    license_id=series.license_id,
+                    series_id=series.pk,
+                    as_of_date=loan_date,
+                )
             except PawnEconomicPolicyError:
                 return
             if policy.default_tenure_months:
@@ -210,15 +269,32 @@ class PawnDraftForm(forms.Form):
 
 
 class PawnCollateralDraftForm(forms.ModelForm):
-    quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1, required=False,
-        help_text=_("Number of pieces. Weights and amounts below are totals for this row."))
-    interest_rate_override = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, max_value=100,
-        required=False, label=_("Override monthly interest (%)"),
-        help_text=_("Leave blank to use the policy rate shown below. Changing it requires loan approval permission."))
+    quantity = forms.IntegerField(
+        min_value=1,
+        max_value=10000,
+        initial=1,
+        required=False,
+        help_text=_(
+            "Number of pieces. Weights and amounts below are totals for this row."
+        ),
+    )
+    interest_rate_override = forms.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=0,
+        max_value=100,
+        required=False,
+        label=_("Override monthly interest (%)"),
+        help_text=_(
+            "Leave blank to use the policy rate shown below. Changing it requires loan approval permission."
+        ),
+    )
     collateral_item_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     photograph = forms.FileField(
         required=False,
-        help_text=_("JPEG or PNG, up to 10 MB. Optional for drafts; your workspace may require a photo before approval."),
+        help_text=_(
+            "JPEG or PNG, up to 10 MB. Optional for drafts; your workspace may require a photo before approval."
+        ),
     )
 
     class Meta:
@@ -239,30 +315,42 @@ class PawnCollateralDraftForm(forms.ModelForm):
     def __init__(self, *args, can_override_interest=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["purity_percentage"].initial = Decimal("75")
-        self.fields["interest_override_reason"].label = _("Reason for interest override")
+        self.fields["interest_override_reason"].label = _(
+            "Reason for interest override"
+        )
         if not can_override_interest:
             for name in ("interest_rate_override", "interest_override_reason"):
                 self.fields[name].disabled = True
         for name, label in {
-            "description": _("Item description"), "metal": _("Metal"),
-            "gross_weight": _("Gross weight (g)"), "net_weight": _("Net weight (g)"),
-            "purity_percentage": _("Purity (%)"), "latest_appraised_value": _("Appraised value (INR)"),
-            "allocated_principal": _("Principal for this item (INR)"), "photograph": _("Item photograph"),
+            "description": _("Item description"),
+            "metal": _("Metal"),
+            "gross_weight": _("Gross weight (g)"),
+            "net_weight": _("Net weight (g)"),
+            "purity_percentage": _("Purity (%)"),
+            "latest_appraised_value": _("Appraised value (INR)"),
+            "allocated_principal": _("Principal for this item (INR)"),
+            "photograph": _("Item photograph"),
         }.items():
             self.fields[name].label = label
         self.fields["allocated_principal"].required = True
-        self.fields["photograph"].widget.attrs.update({
-            "class": "form-control js-collateral-photo-input",
-            "accept": "image/jpeg,image/png",
-            "capture": "environment",
-        })
+        self.fields["photograph"].widget.attrs.update(
+            {
+                "class": "form-control js-collateral-photo-input",
+                "accept": "image/jpeg,image/png",
+                "capture": "environment",
+            }
+        )
         self.fields["metal"].choices = [
             (item.value, item.name.title())
             for item in CollateralMetal
-            if item in {CollateralMetal.GOLD, CollateralMetal.SILVER, CollateralMetal.BRONZE}
+            if item
+            in {CollateralMetal.GOLD, CollateralMetal.SILVER, CollateralMetal.BRONZE}
         ]
         for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "form-select" if field is self.fields["metal"] else "form-control")
+            field.widget.attrs.setdefault(
+                "class",
+                "form-select" if field is self.fields["metal"] else "form-control",
+            )
 
     def clean(self):
         cleaned = super().clean()
@@ -271,7 +359,10 @@ class PawnCollateralDraftForm(forms.ModelForm):
         override = cleaned.get("interest_rate_override")
         reason = (cleaned.get("interest_override_reason") or "").strip()
         if override is not None and not reason:
-            self.add_error("interest_override_reason", _("Explain why this item needs a different interest rate."))
+            self.add_error(
+                "interest_override_reason",
+                _("Explain why this item needs a different interest rate."),
+            )
         if override is None:
             cleaned["interest_override_reason"] = ""
         return cleaned
@@ -280,18 +371,27 @@ class PawnCollateralDraftForm(forms.ModelForm):
         # Default quantity/purity must not turn an untouched optional renewal row
         # into a partially completed item, including older open forms without them.
         if self.is_bound and self.empty_permitted:
-            defaults = {"quantity": (None, "", "1", 1), "purity_percentage": (None, "", "75", "75.0000", 75),
-                        "metal": (None, "", "GOLD")}
-            if all(self[name].value() in defaults.get(name, (None, "", False)) for name in self.fields):
+            defaults = {
+                "quantity": (None, "", "1", 1),
+                "purity_percentage": (None, "", "75", "75.0000", 75),
+                "metal": (None, "", "GOLD"),
+            }
+            if all(
+                self[name].value() in defaults.get(name, (None, "", False))
+                for name in self.fields
+            ):
                 return False
         return super().has_changed()
 
 
 class PawnDraftSplitForm(forms.Form):
     split_mode = forms.ChoiceField(
-        choices=(("selected", "Move selected collateral to one new loan"),
-                 ("each", "One loan per collateral")),
-        initial="selected", label="How to split",
+        choices=(
+            ("selected", "Move selected collateral to one new loan"),
+            ("each", "One loan per collateral"),
+        ),
+        initial="selected",
+        label="How to split",
         widget=forms.RadioSelect,
     )
     collateral_items = forms.ModelMultipleChoiceField(
@@ -301,66 +401,126 @@ class PawnDraftSplitForm(forms.Form):
         help_text="Selected items move to one new draft. At least one item stays here.",
     )
     retained_collateral = forms.ModelChoiceField(
-        queryset=PawnCollateralItem.objects.none(), required=False,
+        queryset=PawnCollateralItem.objects.none(),
+        required=False,
         label="Collateral to keep on the original loan",
         help_text="For one loan per collateral: every other entry moves to its own draft. Quantity within an entry stays together.",
     )
     series = forms.ModelChoiceField(queryset=LoanSeries.objects.none())
-    product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label=_("Loan product"))
+    product_version = forms.ModelChoiceField(
+        queryset=LoanProductVersion.objects.none(), label=_("Loan product")
+    )
     loan_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     tenure_months = forms.IntegerField(min_value=1, initial=3)
 
     def __init__(self, *args, workspace, source, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["collateral_items"].queryset = source.collateral_items.order_by("pk")
+        self.fields["collateral_items"].queryset = source.collateral_items.order_by(
+            "pk"
+        )
         completed = None
         # A successful confirmation can be retried after its items have moved.
         # Only identities in that source's persisted split may be accepted.
-        if self.is_bound and self.data.get("action") == "confirm" and self.data.get("fingerprint"):
+        if (
+            self.is_bound
+            and self.data.get("action") == "confirm"
+            and self.data.get("fingerprint")
+        ):
             completed = source.change_log.filter(
                 metadata__draft_split_out__fingerprint=self.data["fingerprint"],
             ).first()
             if completed:
-                self.fields["collateral_items"].queryset = PawnCollateralItem.objects.filter(
-                    workspace=workspace,
-                    pk__in=completed.metadata["draft_split_out"]["original_collateral_item_ids"],
-                ).order_by("pk")
-        self.fields["retained_collateral"].queryset = self.fields["collateral_items"].queryset
+                self.fields["collateral_items"].queryset = (
+                    PawnCollateralItem.objects.filter(
+                        workspace=workspace,
+                        pk__in=completed.metadata["draft_split_out"][
+                            "original_collateral_item_ids"
+                        ],
+                    ).order_by("pk")
+                )
+        self.fields["retained_collateral"].queryset = self.fields[
+            "collateral_items"
+        ].queryset
+
         def item_label(item):
-            return (f"{item.description} — {item.metal.title()}, {item.net_weight:g} g; "
-                    f"principal ₹{item.allocated_principal:,.2f}")
+            return (
+                f"{item.description} — {item.metal.title()}, {item.net_weight:g} g; "
+                f"principal ₹{item.allocated_principal:,.2f}"
+            )
+
         self.fields["collateral_items"].label_from_instance = item_label
         self.fields["retained_collateral"].label_from_instance = item_label
         first = self.fields["retained_collateral"].queryset.first()
         self.initial.setdefault("retained_collateral", first.pk if first else None)
-        self.fields["series"].queryset = LoanSeries.objects.filter(license__workspace=workspace, is_active=True).select_related("license")
-        self.fields["product_version"].queryset = LoanProductVersion.objects.filter(product__workspace=workspace, product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value).select_related("product")
+        self.fields["series"].queryset = LoanSeries.objects.filter(
+            license__workspace=workspace, is_active=True
+        ).select_related("license")
+        self.fields["product_version"].queryset = LoanProductVersion.objects.filter(
+            product__workspace=workspace,
+            product__is_active=True,
+            status=LoanProductVersionStatus.ACTIVE.value,
+        ).select_related("product")
         if completed:
             details = completed.metadata["draft_split_out"]
-            self.fields["series"].queryset = LoanSeries.objects.filter(license__workspace=workspace).filter(
-                Q(is_active=True) | Q(pk=details["series_id"])).select_related("license")
-            self.fields["product_version"].queryset = LoanProductVersion.objects.filter(product__workspace=workspace).filter(
-                Q(product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value)
-                | Q(pk=details["product_version_id"])).select_related("product")
-        for field in ("retained_collateral", "series", "product_version", "loan_date", "tenure_months"):
-            self.fields[field].widget.attrs.setdefault("class", "form-select" if field in {"series", "product_version"} else "form-control")
+            self.fields["series"].queryset = (
+                LoanSeries.objects.filter(license__workspace=workspace)
+                .filter(Q(is_active=True) | Q(pk=details["series_id"]))
+                .select_related("license")
+            )
+            self.fields["product_version"].queryset = (
+                LoanProductVersion.objects.filter(product__workspace=workspace)
+                .filter(
+                    Q(
+                        product__is_active=True,
+                        status=LoanProductVersionStatus.ACTIVE.value,
+                    )
+                    | Q(pk=details["product_version_id"])
+                )
+                .select_related("product")
+            )
+        for field in (
+            "retained_collateral",
+            "series",
+            "product_version",
+            "loan_date",
+            "tenure_months",
+        ):
+            self.fields[field].widget.attrs.setdefault(
+                "class",
+                (
+                    "form-select"
+                    if field in {"series", "product_version"}
+                    else "form-control"
+                ),
+            )
 
     def clean(self):
         values = super().clean()
         if values.get("split_mode") == "each":
             retained = values.get("retained_collateral")
             if retained is None:
-                self.add_error("retained_collateral", "Choose the collateral to keep on the original loan.")
+                self.add_error(
+                    "retained_collateral",
+                    "Choose the collateral to keep on the original loan.",
+                )
             else:
-                values["collateral_items"] = self.fields["collateral_items"].queryset.exclude(pk=retained.pk)
+                values["collateral_items"] = self.fields[
+                    "collateral_items"
+                ].queryset.exclude(pk=retained.pk)
                 if not values["collateral_items"].exists():
-                    self.add_error("retained_collateral", "Splitting needs at least two collateral entries.")
+                    self.add_error(
+                        "retained_collateral",
+                        "Splitting needs at least two collateral entries.",
+                    )
         elif "collateral_items" in values:
             selected = values["collateral_items"]
             if not selected:
                 self.add_error("collateral_items", "Select collateral to move.")
             elif len(selected) >= self.fields["collateral_items"].queryset.count():
-                self.add_error("collateral_items", "At least one collateral item must remain on the source draft.")
+                self.add_error(
+                    "collateral_items",
+                    "At least one collateral item must remain on the source draft.",
+                )
         return values
 
 
@@ -369,11 +529,13 @@ class PawnCollateralPhotoForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["photograph"].widget.attrs.update({
-            "class": "form-control js-collateral-photo-input",
-            "accept": "image/jpeg,image/png",
-            "capture": "environment",
-        })
+        self.fields["photograph"].widget.attrs.update(
+            {
+                "class": "form-control js-collateral-photo-input",
+                "accept": "image/jpeg,image/png",
+                "capture": "environment",
+            }
+        )
 
 
 PawnCollateralDraftFormSet = forms.formset_factory(
@@ -394,7 +556,9 @@ PawnAdditionalCollateralFormSet = forms.formset_factory(
 
 
 class PawnTransitionReasonForm(forms.Form):
-    reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}))
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"})
+    )
 
 
 class PawnSetupTransferForm(forms.Form):
@@ -404,12 +568,21 @@ class PawnSetupTransferForm(forms.Form):
 
     def __init__(self, *args, workspace, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["license"].queryset = LoanLicense.objects.filter(workspace=workspace)
+        self.fields["license"].queryset = LoanLicense.objects.filter(
+            workspace=workspace
+        )
         self.fields["series"].queryset = LoanSeries.objects.filter(
             license__workspace=workspace
         ).select_related("license")
         for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "form-select" if isinstance(field, forms.ModelChoiceField) else "form-control")
+            field.widget.attrs.setdefault(
+                "class",
+                (
+                    "form-select"
+                    if isinstance(field, forms.ModelChoiceField)
+                    else "form-control"
+                ),
+            )
 
     def clean(self):
         cleaned = super().clean()
@@ -421,7 +594,11 @@ class PawnSetupTransferForm(forms.Form):
 
 
 class PawnDisbursalForm(forms.Form):
-    effective_date = forms.DateField(label=_("Payment date"), help_text=_("Enter the date the money was paid to the customer."), widget=forms.DateInput(attrs={"type": "date"}))
+    effective_date = forms.DateField(
+        label=_("Payment date"),
+        help_text=_("Enter the date the money was paid to the customer."),
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -430,28 +607,59 @@ class PawnDisbursalForm(forms.Form):
 
 class PawnRepaymentForm(forms.Form):
     recording_purpose = forms.ChoiceField(
-        label=_("Payment entry"), required=False,
-        choices=(("CURRENT", _("Receive and record now")), ("PAPER", _("Record a paper receipt"))),
+        label=_("Payment entry"),
+        required=False,
+        choices=(
+            ("CURRENT", _("Receive and record now")),
+            ("PAPER", _("Record a paper receipt")),
+        ),
         initial="CURRENT",
     )
-    amount = forms.DecimalField(label=_("Amount received (INR)"), help_text=_("Use Preview allocation to check the split before recording payment."), max_digits=18, decimal_places=2, min_value=0.01)
+    amount = forms.DecimalField(
+        label=_("Amount received (INR)"),
+        help_text=_(
+            "Use Preview allocation to check the split before recording payment."
+        ),
+        max_digits=18,
+        decimal_places=2,
+        min_value=0.01,
+    )
     received_on = forms.DateField(
-        label=_("Actual paper receipt date"), required=False,
+        label=_("Actual paper receipt date"),
+        required=False,
         widget=forms.DateInput(attrs={"type": "date"}),
-        help_text=_("For paper entry only. Interest is calculated at this date using the recorded loan terms."),
+        help_text=_(
+            "For paper entry only. Interest is calculated at this date using the recorded loan terms."
+        ),
     )
     receipt_reference = forms.CharField(
-        label=_("Paper receipt or book/page reference"), max_length=255, required=False,
+        label=_("Paper receipt or book/page reference"),
+        max_length=255,
+        required=False,
         help_text=_("Identify this receipt within this loan. A scan is not required."),
     )
-    fees_paid = forms.DecimalField(label=_("Actual paper payment toward fees"), required=False,
-        max_digits=18, decimal_places=2, min_value=0,
-        help_text=_("Required if fees are outstanding. Enter the actual fee component, including zero; the remaining receipt pays interest, then principal."))
-    received_at = forms.DateTimeField(label=_("Actual receipt time, if known"), required=False,
+    fees_paid = forms.DecimalField(
+        label=_("Actual paper payment toward fees"),
+        required=False,
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        help_text=_(
+            "Required if fees are outstanding. Enter the actual fee component, including zero; the remaining receipt pays interest, then principal."
+        ),
+    )
+    received_at = forms.DateTimeField(
+        label=_("Actual receipt time, if known"),
+        required=False,
         widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
-        help_text=_("Required for a receipt on a precise checkpoint's cutover day. Use the actual source time; do not estimate it."))
+        help_text=_(
+            "Required for a receipt on a precise checkpoint's cutover day. Use the actual source time; do not estimate it."
+        ),
+    )
     confirmed_received = forms.BooleanField(
-        label=_("I confirm this total was already received on the stated paper date and have checked the allocation."),
+        label=_(
+            "I confirm this total was already received on the stated paper date and have checked the allocation."
+        ),
         required=False,
     )
     review_token = forms.CharField(required=False, widget=forms.HiddenInput())
@@ -461,19 +669,40 @@ class PawnRepaymentForm(forms.Form):
         super().__init__(*args, **kwargs)
         if allow_paper and len(collateral_items) > 1:
             for item in collateral_items:
-                self.fields[f"item_principal_{item.pk}"] = forms.DecimalField(required=False,
-                    max_digits=18, decimal_places=2, min_value=0,
-                    label=_("Paper principal applied: %(item)s") % {"item": item.description},
-                    help_text=_("For paper receipts only. Enter principal paid against this item, after interest. Leave blank for an interest-only receipt."))
+                self.fields[f"item_principal_{item.pk}"] = forms.DecimalField(
+                    required=False,
+                    max_digits=18,
+                    decimal_places=2,
+                    min_value=0,
+                    label=_("Paper principal applied: %(item)s")
+                    % {"item": item.description},
+                    help_text=_(
+                        "For paper receipts only. Enter principal paid against this item, after interest. Leave blank for an interest-only receipt."
+                    ),
+                )
         if not allow_paper:
-            self.fields["recording_purpose"].choices = (("CURRENT", _("Receive and record now")),)
+            self.fields["recording_purpose"].choices = (
+                ("CURRENT", _("Receive and record now")),
+            )
             self.fields["recording_purpose"].widget = forms.HiddenInput()
-            for name in ("received_on", "receipt_reference", "fees_paid", "received_at", "confirmed_received", "review_token"):
+            for name in (
+                "received_on",
+                "receipt_reference",
+                "fees_paid",
+                "received_at",
+                "confirmed_received",
+                "review_token",
+            ):
                 self.fields.pop(name)
         for field in self.fields.values():
             field.widget.attrs["class"] = (
-                "form-check-input" if isinstance(field.widget, forms.CheckboxInput)
-                else "form-select" if isinstance(field.widget, forms.Select) else "form-control"
+                "form-check-input"
+                if isinstance(field.widget, forms.CheckboxInput)
+                else (
+                    "form-select"
+                    if isinstance(field.widget, forms.Select)
+                    else "form-control"
+                )
             )
 
     def clean(self):
@@ -481,19 +710,29 @@ class PawnRepaymentForm(forms.Form):
         if cleaned.get("recording_purpose") == "PAPER":
             for name in ("received_on", "receipt_reference"):
                 if not cleaned.get(name):
-                    self.add_error(name, _("This is required when recording a paper payment."))
+                    self.add_error(
+                        name, _("This is required when recording a paper payment.")
+                    )
         return cleaned
 
     @property
     def paper_item_split(self):
-        values = {name.removeprefix("item_principal_"): value for name, value in self.cleaned_data.items()
-                  if name.startswith("item_principal_")}
-        return {key: str(value or Decimal("0")) for key, value in values.items()} if any(
-            value is not None for value in values.values()) else None
+        values = {
+            name.removeprefix("item_principal_"): value
+            for name, value in self.cleaned_data.items()
+            if name.startswith("item_principal_")
+        }
+        return (
+            {key: str(value or Decimal("0")) for key, value in values.items()}
+            if any(value is not None for value in values.values())
+            else None
+        )
 
     @property
     def paper_item_fields(self):
-        return [self[name] for name in self.fields if name.startswith("item_principal_")]
+        return [
+            self[name] for name in self.fields if name.startswith("item_principal_")
+        ]
 
 
 class PawnAccrualForm(forms.Form):
@@ -515,20 +754,30 @@ class PawnCapitalizationForm(forms.Form):
 class PawnFullReleaseForm(forms.Form):
     settlement_amount = forms.DecimalField(
         label=_("Cash collected (INR)"),
-        help_text=_("Enter the actual amount received. Cash plus any authorized interest concession must equal the exact settlement."),
+        help_text=_(
+            "Enter the actual amount received. Cash plus any authorized interest concession must equal the exact settlement."
+        ),
         max_digits=18,
         decimal_places=2,
         min_value=0,
     )
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
     interest_concession = forms.DecimalField(
-        label=_("Interest lost / concession"), required=False, max_digits=18,
-        decimal_places=2, min_value=0, initial=0,
-        help_text=_("Interest you explicitly agree to forgo. Requires Workspace administration permission."),
+        label=_("Interest lost / concession"),
+        required=False,
+        max_digits=18,
+        decimal_places=2,
+        min_value=0,
+        initial=0,
+        help_text=_(
+            "Interest you explicitly agree to forgo. Requires Workspace administration permission."
+        ),
         widget=forms.NumberInput(attrs={"class": "form-control"}),
     )
     concession_reason = forms.CharField(
-        label=_("Reason for interest concession"), required=False, max_length=255,
+        label=_("Reason for interest concession"),
+        required=False,
+        max_length=255,
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     confirm_collateral_handoff = forms.BooleanField(
@@ -541,16 +790,22 @@ class PawnFullReleaseForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["settlement_amount"].widget.attrs["class"] = "form-control"
-        self.fields["confirm_collateral_handoff"].widget.attrs["class"] = "form-check-input"
+        self.fields["confirm_collateral_handoff"].widget.attrs[
+            "class"
+        ] = "form-check-input"
 
     def clean(self):
         data = super().clean()
         concession = data.get("interest_concession") or Decimal("0")
         reason = data.get("concession_reason", "").strip()
         if concession and not reason:
-            self.add_error("concession_reason", _("Explain the interest you agree to forgo."))
+            self.add_error(
+                "concession_reason", _("Explain the interest you agree to forgo.")
+            )
         elif reason and not concession:
-            self.add_error("interest_concession", _("Enter the interest concession amount."))
+            self.add_error(
+                "interest_concession", _("Enter the interest concession amount.")
+            )
         return data
 
 
@@ -578,8 +833,7 @@ class PawnLoanNoticeForm(forms.Form):
     )
     channel = forms.ChoiceField(
         choices=[
-            (channel.value, channel.name.title())
-            for channel in PawnLoanNoticeChannel
+            (channel.value, channel.name.title()) for channel in PawnLoanNoticeChannel
         ]
     )
     scheduled_for = forms.DateTimeField(
@@ -607,10 +861,8 @@ class PawnAuctionInitiateForm(forms.Form):
     channel = forms.ChoiceField(
         required=False,
         label="Optional courtesy reminder (separate from statutory postal notice)",
-        choices=[("", "No digital reminder")] + [
-            (channel.value, channel.name.title())
-            for channel in PawnLoanNoticeChannel
-        ]
+        choices=[("", "No digital reminder")]
+        + [(channel.value, channel.name.title()) for channel in PawnLoanNoticeChannel],
     )
     request_key = forms.CharField(max_length=120, widget=forms.HiddenInput())
 
@@ -621,7 +873,9 @@ class PawnAuctionInitiateForm(forms.Form):
 
 
 class PawnAuctionCompletionForm(forms.Form):
-    recovery_amount = forms.DecimalField(max_digits=18, decimal_places=2, min_value=0.01)
+    recovery_amount = forms.DecimalField(
+        max_digits=18, decimal_places=2, min_value=0.01
+    )
     buyer_name = forms.CharField(max_length=255)
     buyer_reference = forms.CharField(max_length=120, required=False)
 
@@ -632,7 +886,9 @@ class PawnAuctionCompletionForm(forms.Form):
 
 
 class PawnRenewalForm(forms.Form):
-    successor_product_version = forms.ModelChoiceField(queryset=LoanProductVersion.objects.none(), label="New loan product")
+    successor_product_version = forms.ModelChoiceField(
+        queryset=LoanProductVersion.objects.none(), label="New loan product"
+    )
     mode = forms.ChoiceField(
         choices=[
             (PawnLoanRenewalMode.PAY_AND_RENEW.value, "Pay and renew"),
@@ -674,26 +930,39 @@ class PawnRenewalForm(forms.Form):
     def __init__(self, *args, workspace, opening=False, **kwargs):
         super().__init__(*args, **kwargs)
         if opening:
-            self.fields["successor_product_version"].queryset = LoanProductVersion.objects.filter(
-                product__workspace=workspace, product__is_active=True, status=LoanProductVersionStatus.ACTIVE.value)
+            self.fields["successor_product_version"].queryset = (
+                LoanProductVersion.objects.filter(
+                    product__workspace=workspace,
+                    product__is_active=True,
+                    status=LoanProductVersionStatus.ACTIVE.value,
+                )
+            )
         else:
             del self.fields["successor_product_version"]
         self.fields["successor_license"].queryset = LoanLicense.objects.filter(
             workspace=workspace,
             is_active=True,
         ).order_by("name")
-        self.fields["successor_series"].queryset = LoanSeries.objects.filter(
-            license__workspace=workspace,
-            license__is_active=True,
-            is_active=True,
-        ).select_related("license").order_by("license__name", "name")
+        self.fields["successor_series"].queryset = (
+            LoanSeries.objects.filter(
+                license__workspace=workspace,
+                license__is_active=True,
+                is_active=True,
+            )
+            .select_related("license")
+            .order_by("license__name", "name")
+        )
         for name, field in self.fields.items():
             if isinstance(field, forms.BooleanField):
                 field.widget.attrs.setdefault("class", "form-check-input")
             elif name != "mode":
                 field.widget.attrs.setdefault(
                     "class",
-                    "form-select" if name in {"successor_license", "successor_series"} else "form-control",
+                    (
+                        "form-select"
+                        if name in {"successor_license", "successor_series"}
+                        else "form-control"
+                    ),
                 )
 
     def clean(self):
@@ -716,7 +985,9 @@ class PawnRenewalForm(forms.Form):
             self.add_error("top_up_amount", "Pay and renew cannot include a top-up.")
         if mode == PawnLoanRenewalMode.TOP_UP_RENEW.value:
             if top_up_amount is not None and top_up_amount <= 0:
-                self.add_error("top_up_amount", "Top-up renewal requires a positive amount.")
+                self.add_error(
+                    "top_up_amount", "Top-up renewal requires a positive amount."
+                )
             if principal_paid is not None and principal_paid != 0:
                 self.add_error(
                     "principal_paid",

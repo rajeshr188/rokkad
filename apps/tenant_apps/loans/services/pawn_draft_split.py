@@ -6,7 +6,11 @@ from django.db import transaction
 from apps.orgs.models import Company
 
 from .action_access import require_loan_action
-from apps.tenant_apps.loans.domain import LoanDocumentKind, PawnLoanEventKind, PawnLoanState
+from apps.tenant_apps.loans.domain import (
+    LoanDocumentKind,
+    PawnLoanEventKind,
+    PawnLoanState,
+)
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     LoanNumberSequence,
@@ -81,9 +85,9 @@ def preview_pawn_draft_split(
 ):
     workspace_id = current_tenant_workspace_id()
     try:
-        source = PawnLoan.objects.select_related("borrower", "series__license", "product_version").get(
-            pk=source_loan_id, workspace_id=workspace_id
-        )
+        source = PawnLoan.objects.select_related(
+            "borrower", "series__license", "product_version"
+        ).get(pk=source_loan_id, workspace_id=workspace_id)
     except PawnLoan.DoesNotExist as exc:
         raise PawnDraftSplitError("PawnLoan draft was not found.") from exc
     if source.state != PawnLoanState.DRAFT.value:
@@ -94,7 +98,9 @@ def preview_pawn_draft_split(
             license__workspace_id=workspace_id,
         )
     except LoanSeries.DoesNotExist as exc:
-        raise PawnDraftSplitError("The destination Series must belong to this workspace.") from exc
+        raise PawnDraftSplitError(
+            "The destination Series must belong to this workspace."
+        ) from exc
     try:
         product_version = LoanProductVersion.objects.select_related("product").get(
             pk=product_version.pk,
@@ -113,9 +119,13 @@ def preview_pawn_draft_split(
     if len(selected) != len(selected_ids) or not selected:
         raise PawnDraftSplitError("Select collateral belonging to this draft.")
     if not remaining:
-        raise PawnDraftSplitError("At least one collateral item must remain on the source draft.")
+        raise PawnDraftSplitError(
+            "At least one collateral item must remain on the source draft."
+        )
     if split_each and len(remaining) != 1:
-        raise PawnDraftSplitError("Choose exactly one collateral entry to keep on the source draft.")
+        raise PawnDraftSplitError(
+            "Choose exactly one collateral entry to keep on the source draft."
+        )
     source_economics = resolve_pawn_draft_economics(
         workspace_id=workspace_id,
         license_id=source.license_id,
@@ -124,53 +134,102 @@ def preview_pawn_draft_split(
         collateral=tuple(_input(item) for item in remaining),
     )
     groups = tuple((item,) for item in selected) if split_each else (selected,)
-    numbers = preview_numbers(series=series, document_kind=LoanDocumentKind.PAWN_LOAN, count=len(groups))
-    new_drafts = tuple(PawnDraftSplitRow(
-        items=group,
-        economics=resolve_pawn_draft_economics(
-            workspace_id=workspace_id, license_id=series.license_id,
-            series_id=series.pk, as_of_date=loan_date,
-            collateral=tuple(_input(item) for item in group),
-        ),
-        number_preview=number.value,
-    ) for group, number in zip(groups, numbers, strict=True))
+    numbers = preview_numbers(
+        series=series, document_kind=LoanDocumentKind.PAWN_LOAN, count=len(groups)
+    )
+    new_drafts = tuple(
+        PawnDraftSplitRow(
+            items=group,
+            economics=resolve_pawn_draft_economics(
+                workspace_id=workspace_id,
+                license_id=series.license_id,
+                series_id=series.pk,
+                as_of_date=loan_date,
+                collateral=tuple(_input(item) for item in group),
+            ),
+            number_preview=number.value,
+        )
+        for group, number in zip(groups, numbers, strict=True)
+    )
     original_economics = resolve_pawn_draft_economics(
-        workspace_id=workspace_id, license_id=source.license_id,
-        series_id=source.series_id, as_of_date=source.loan_date,
+        workspace_id=workspace_id,
+        license_id=source.license_id,
+        series_id=source.series_id,
+        as_of_date=source.loan_date,
         collateral=tuple(_input(item) for item in all_items),
     )
     totals = {
-        field: sum((getattr(row.economics.economics, field) for row in new_drafts),
-                   getattr(source_economics.economics, field))
-        for field in ("gross_principal", "monthly_interest", "advance_interest", "deducted_fees", "net_disbursed")
+        field: sum(
+            (getattr(row.economics.economics, field) for row in new_drafts),
+            getattr(source_economics.economics, field),
+        )
+        for field in (
+            "gross_principal",
+            "monthly_interest",
+            "advance_interest",
+            "deducted_fees",
+            "net_disbursed",
+        )
     }
     payload = {
         "source": source.pk,
         "source_updated": source.updated_at.isoformat(),
-        "selected": [(item.pk, item.updated_at.isoformat(), str(item.allocated_principal)) for item in selected],
-        "remaining": [(item.pk, item.updated_at.isoformat(), str(item.allocated_principal)) for item in remaining],
+        "selected": [
+            (item.pk, item.updated_at.isoformat(), str(item.allocated_principal))
+            for item in selected
+        ],
+        "remaining": [
+            (item.pk, item.updated_at.isoformat(), str(item.allocated_principal))
+            for item in remaining
+        ],
         "series": series.pk,
         "product": product_version.pk,
         "date": loan_date.isoformat(),
         "tenure": int(tenure_months),
         "source_policy": source_economics.economic_policy.pk,
     }
-    payload.update({
-        "split_each": bool(split_each),
-        "items": [asdict(_input(item)) for item in all_items],
-        "photos": [[(photo.pk, photo.sha256, photo.file.name) for photo in item.photos.all()] for item in all_items],
-        "source_economics": asdict(source_economics.economics),
-        "new_drafts": [{"number": row.number_preview, "economics": asdict(row.economics.economics),
-                        "policy": row.economics.economic_policy.pk} for row in new_drafts],
-    })
+    payload.update(
+        {
+            "split_each": bool(split_each),
+            "items": [asdict(_input(item)) for item in all_items],
+            "photos": [
+                [
+                    (photo.pk, photo.sha256, photo.file.name)
+                    for photo in item.photos.all()
+                ]
+                for item in all_items
+            ],
+            "source_economics": asdict(source_economics.economics),
+            "new_drafts": [
+                {
+                    "number": row.number_preview,
+                    "economics": asdict(row.economics.economics),
+                    "policy": row.economics.economic_policy.pk,
+                }
+                for row in new_drafts
+            ],
+        }
+    )
     fingerprint = _fingerprint(payload)
-    return PawnDraftSplitPreview(source, selected, remaining, source_economics,
-        new_drafts[0].economics, new_drafts[0].number_preview, fingerprint,
-        new_drafts, original_economics, totals, bool(split_each))
+    return PawnDraftSplitPreview(
+        source,
+        selected,
+        remaining,
+        source_economics,
+        new_drafts[0].economics,
+        new_drafts[0].number_preview,
+        fingerprint,
+        new_drafts,
+        original_economics,
+        totals,
+        bool(split_each),
+    )
 
 
 def _fingerprint(payload):
-    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
 
 
 @transaction.atomic
@@ -190,14 +249,23 @@ def split_pawn_draft(
     # Match owner availability/combined-entry lock order before writing audit FKs.
     Company.objects.select_for_update(no_key=True).get(pk=workspace_id)
     try:
-        source = PawnLoan.objects.select_for_update().get(pk=source_loan_id, workspace_id=workspace_id)
+        source = PawnLoan.objects.select_for_update().get(
+            pk=source_loan_id, workspace_id=workspace_id
+        )
     except PawnLoan.DoesNotExist as exc:
         raise PawnDraftSplitError("PawnLoan draft was not found.") from exc
     require_loan_action(source, actor, "data.edit", "data.create")
     collateral_item_ids = tuple(collateral_item_ids)
-    request = _fingerprint({"items": sorted(int(pk) for pk in collateral_item_ids),
-        "series": series.pk, "product": product_version.pk, "date": loan_date,
-        "tenure": int(tenure_months), "split_each": bool(split_each)})
+    request = _fingerprint(
+        {
+            "items": sorted(int(pk) for pk in collateral_item_ids),
+            "series": series.pk,
+            "product": product_version.pk,
+            "date": loan_date,
+            "tenure": int(tenure_months),
+            "split_each": bool(split_each),
+        }
+    )
     if expected_fingerprint:
         completed = source.change_log.filter(
             metadata__draft_split_out__fingerprint=expected_fingerprint,
@@ -205,17 +273,28 @@ def split_pawn_draft(
         if completed:
             details = completed.metadata["draft_split_out"]
             if details["request"] != request:
-                raise PawnDraftSplitError("The confirmed split does not match this request.")
-            loans = {loan.pk: loan for loan in PawnLoan.objects.filter(
-                pk__in=details["new_loan_ids"], workspace_id=workspace_id)}
+                raise PawnDraftSplitError(
+                    "The confirmed split does not match this request."
+                )
+            loans = {
+                loan.pk: loan
+                for loan in PawnLoan.objects.filter(
+                    pk__in=details["new_loan_ids"], workspace_id=workspace_id
+                )
+            }
             result = tuple(loans[pk] for pk in details["new_loan_ids"])
             return result if split_each else result[0]
     # Hold the destination sequence through preview and all allocations.
     if series.workspace_id != workspace_id:
-        raise PawnDraftSplitError("The destination Series must belong to this workspace.")
+        raise PawnDraftSplitError(
+            "The destination Series must belong to this workspace."
+        )
     assert_series_can_issue(series, for_update=True)
-    list(LoanNumberSequence.objects.select_for_update().filter(
-        series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value))
+    list(
+        LoanNumberSequence.objects.select_for_update().filter(
+            series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value
+        )
+    )
     list(source.collateral_items.select_for_update().order_by("pk"))
     preview = preview_pawn_draft_split(
         source.pk,
@@ -227,10 +306,21 @@ def split_pawn_draft(
         split_each=split_each,
     )
     if not expected_fingerprint or expected_fingerprint != preview.fingerprint:
-        raise PawnDraftSplitError("Draft changed after preview; review the split again.")
-    new_loans = tuple(_create_split_draft(source, row, series=series,
-        product_version=product_version, loan_date=loan_date,
-        tenure_months=tenure_months, actor=actor) for row in preview.new_drafts)
+        raise PawnDraftSplitError(
+            "Draft changed after preview; review the split again."
+        )
+    new_loans = tuple(
+        _create_split_draft(
+            source,
+            row,
+            series=series,
+            product_version=product_version,
+            loan_date=loan_date,
+            tenure_months=tenure_months,
+            actor=actor,
+        )
+        for row in preview.new_drafts
+    )
     update_pawn_draft(
         source.pk,
         UpdatePawnDraftCommand(
@@ -248,26 +338,44 @@ def split_pawn_draft(
         "new_loan_id": new_loans[0].pk,
         "new_loan_ids": [loan.pk for loan in new_loans],
         "moved_collateral_item_ids": [item.pk for item in preview.selected_items],
-        "original_collateral_item_ids": [item.pk for item in (*preview.selected_items, *preview.remaining_items)],
-        "fingerprint": expected_fingerprint, "request": request, "split_each": bool(split_each),
-        "series_id": series.pk, "product_version_id": product_version.pk,
+        "original_collateral_item_ids": [
+            item.pk for item in (*preview.selected_items, *preview.remaining_items)
+        ],
+        "fingerprint": expected_fingerprint,
+        "request": request,
+        "split_each": bool(split_each),
+        "series_id": series.pk,
+        "product_version_id": product_version.pk,
     }
     LoanChangeLog.objects.create(
-        loan=source, event_kind=PawnLoanEventKind.DRAFT_UPDATED.value,
-        from_state="DRAFT", to_state="DRAFT", actor=actor,
+        loan=source,
+        event_kind=PawnLoanEventKind.DRAFT_UPDATED.value,
+        from_state="DRAFT",
+        to_state="DRAFT",
+        actor=actor,
         metadata={"draft_split_out": metadata},
     )
     for loan, row in zip(new_loans, preview.new_drafts, strict=True):
         LoanChangeLog.objects.create(
-            loan=loan, event_kind=PawnLoanEventKind.DRAFT_UPDATED.value,
-            from_state="DRAFT", to_state="DRAFT", actor=actor,
-            metadata={"draft_split_in": {**metadata,
-                "new_loan_id": loan.pk, "moved_collateral_item_ids": [item.pk for item in row.items]}},
+            loan=loan,
+            event_kind=PawnLoanEventKind.DRAFT_UPDATED.value,
+            from_state="DRAFT",
+            to_state="DRAFT",
+            actor=actor,
+            metadata={
+                "draft_split_in": {
+                    **metadata,
+                    "new_loan_id": loan.pk,
+                    "moved_collateral_item_ids": [item.pk for item in row.items],
+                }
+            },
         )
     return new_loans if split_each else new_loans[0]
 
 
-def _create_split_draft(source, row, *, series, product_version, loan_date, tenure_months, actor):
+def _create_split_draft(
+    source, row, *, series, product_version, loan_date, tenure_months, actor
+):
     new_loan = create_pawn_draft(
         CreatePawnDraftCommand(
             workspace_id=source.workspace_id,

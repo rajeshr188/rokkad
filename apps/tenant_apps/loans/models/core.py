@@ -32,7 +32,9 @@ from apps.tenant_apps.loans.domain import (
 
 
 def enum_choices(enum_class):
-    return tuple((member.value, member.name.replace("_", " ").title()) for member in enum_class)
+    return tuple(
+        (member.value, member.name.replace("_", " ").title()) for member in enum_class
+    )
 
 
 def current_tenant_workspace_id():
@@ -85,8 +87,19 @@ class LoanLicense(models.Model):
                 name="loans_license_dates_valid",
             ),
             models.CheckConstraint(
-                condition=(Q(is_legacy_reference=True, is_active=False, issued_on__isnull=True, expires_on__isnull=True)
-                           | Q(is_legacy_reference=False, issued_on__isnull=False, expires_on__isnull=False)),
+                condition=(
+                    Q(
+                        is_legacy_reference=True,
+                        is_active=False,
+                        issued_on__isnull=True,
+                        expires_on__isnull=True,
+                    )
+                    | Q(
+                        is_legacy_reference=False,
+                        issued_on__isnull=False,
+                        expires_on__isnull=False,
+                    )
+                ),
                 name="loans_license_validity_evidence",
             ),
         ]
@@ -113,12 +126,18 @@ class LoanLicense(models.Model):
         return super().save(*args, **kwargs)
 
     def is_expired(self, as_of_date=None):
-        return self.expires_on is not None and self.expires_on < (as_of_date or timezone.localdate())
+        return self.expires_on is not None and self.expires_on < (
+            as_of_date or timezone.localdate()
+        )
 
     @property
     def document_pending(self):
         latest = self.revisions.order_by("-revision_number").first()
-        return bool(latest and not latest.has_document and self.revisions.filter(kind="ATTESTATION").exists())
+        return bool(
+            latest
+            and not latest.has_document
+            and self.revisions.filter(kind="ATTESTATION").exists()
+        )
 
 
 class LoanSeries(WorkspaceOwnedModel):
@@ -154,14 +173,24 @@ class LoanSeries(WorkspaceOwnedModel):
     @property
     def pawn_display_name(self):
         from django.utils.translation import gettext
-        sequence = next((row for row in self.number_sequences.all()
-                         if row.document_kind == LoanDocumentKind.PAWN_LOAN.value), None)
+
+        sequence = next(
+            (
+                row
+                for row in self.number_sequences.all()
+                if row.document_kind == LoanDocumentKind.PAWN_LOAN.value
+            ),
+            None,
+        )
         return (sequence.prefix or gettext("No prefix")) if sequence else self.name
 
 
 class PawnLoanEconomicPolicy(models.Model):
     series = models.ForeignKey(
-        LoanSeries, null=True, blank=True, on_delete=models.PROTECT,
+        LoanSeries,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
         related_name="economic_policies",
     )
     # False preserves existing policies; new operator configurations explicitly set True.
@@ -190,9 +219,15 @@ class PawnLoanEconomicPolicy(models.Model):
     )
     advance_interest_periods = models.PositiveSmallIntegerField(default=1)
     default_tenure_months = models.PositiveSmallIntegerField(null=True, blank=True)
-    default_entry_purpose = models.CharField(max_length=12, default="INHERIT",
-        choices=(("INHERIT", "Inherit broader default"), ("DIRECT", "Create and pay now"),
-                 ("PAPER", "Record from paper")))
+    default_entry_purpose = models.CharField(
+        max_length=12,
+        default="INHERIT",
+        choices=(
+            ("INHERIT", "Inherit broader default"),
+            ("DIRECT", "Create and pay now"),
+            ("PAPER", "Record from paper"),
+        ),
+    )
     interest_method = models.CharField(
         max_length=16,
         choices=enum_choices(InterestMethod),
@@ -246,13 +281,17 @@ class PawnLoanEconomicPolicy(models.Model):
                 condition=Q(license__isnull=False, series__isnull=True),
                 name="loans_econ_lic_date_rev_uniq",
             ),
-            models.UniqueConstraint(fields=("series", "effective_from", "revision"),
-                condition=Q(series__isnull=False), name="loans_econ_ser_date_rev_uniq"),
-            models.CheckConstraint(condition=Q(series__isnull=True) | Q(license__isnull=False),
-                name="loans_econ_series_license"),
+            models.UniqueConstraint(
+                fields=("series", "effective_from", "revision"),
+                condition=Q(series__isnull=False),
+                name="loans_econ_ser_date_rev_uniq",
+            ),
             models.CheckConstraint(
-                condition=Q(maximum_ltv_ratio__gt=0)
-                & Q(maximum_ltv_ratio__lte=1),
+                condition=Q(series__isnull=True) | Q(license__isnull=False),
+                name="loans_econ_series_license",
+            ),
+            models.CheckConstraint(
+                condition=Q(maximum_ltv_ratio__gt=0) & Q(maximum_ltv_ratio__lte=1),
                 name="loans_econ_ltv_range",
             ),
             models.CheckConstraint(
@@ -260,11 +299,14 @@ class PawnLoanEconomicPolicy(models.Model):
                 name="loans_econ_advance_range",
             ),
             models.CheckConstraint(
-                condition=Q(default_tenure_months__isnull=True) | Q(default_tenure_months__gte=1, default_tenure_months__lte=600),
+                condition=Q(default_tenure_months__isnull=True)
+                | Q(default_tenure_months__gte=1, default_tenure_months__lte=600),
                 name="loans_econ_default_tenure_range",
             ),
-            models.CheckConstraint(condition=Q(default_entry_purpose__in=("INHERIT", "DIRECT", "PAPER")),
-                name="loans_econ_entry_purpose_valid"),
+            models.CheckConstraint(
+                condition=Q(default_entry_purpose__in=("INHERIT", "DIRECT", "PAPER")),
+                name="loans_econ_entry_purpose_valid",
+            ),
             models.CheckConstraint(
                 condition=Q(partial_month_cutoff_days__gte=1)
                 & Q(partial_month_cutoff_days__lte=30),
@@ -299,9 +341,13 @@ class PawnLoanEconomicPolicy(models.Model):
     def clean(self):
         super().clean()
         _validate_policy_scope(self, label="Economic policy")
-        if self.series_id and (self.series.workspace_id != self.workspace_id
-                               or self.series.license_id != self.license_id):
-            raise ValidationError({"series": "Series must belong to the policy workspace and license."})
+        if self.series_id and (
+            self.series.workspace_id != self.workspace_id
+            or self.series.license_id != self.license_id
+        ):
+            raise ValidationError(
+                {"series": "Series must belong to the policy workspace and license."}
+            )
         try:
             DisbursalPolicySnapshot(
                 policy_version=1,
@@ -337,8 +383,13 @@ class PawnMetalInterestRatePolicy(models.Model):
         on_delete=models.PROTECT,
         related_name="metal_interest_rate_policies",
     )
-    series = models.ForeignKey(LoanSeries, null=True, blank=True,
-        on_delete=models.PROTECT, related_name="metal_interest_rate_policies")
+    series = models.ForeignKey(
+        LoanSeries,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="metal_interest_rate_policies",
+    )
     metal = models.CharField(max_length=16, choices=enum_choices(CollateralMetal))
     monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6)
     revision = models.PositiveIntegerField(default=1)
@@ -355,7 +406,14 @@ class PawnMetalInterestRatePolicy(models.Model):
     )
 
     class Meta:
-        ordering = ("workspace_id", "license_id", "metal", "-effective_from", "-revision", "-id")
+        ordering = (
+            "workspace_id",
+            "license_id",
+            "metal",
+            "-effective_from",
+            "-revision",
+            "-id",
+        )
         constraints = [
             models.UniqueConstraint(
                 fields=("workspace", "metal", "effective_from", "revision"),
@@ -367,10 +425,15 @@ class PawnMetalInterestRatePolicy(models.Model):
                 condition=Q(license__isnull=False, series__isnull=True),
                 name="loans_rate_lic_date_rev_uniq",
             ),
-            models.UniqueConstraint(fields=("series", "metal", "effective_from", "revision"),
-                condition=Q(series__isnull=False), name="loans_rate_ser_date_rev_uniq"),
-            models.CheckConstraint(condition=Q(series__isnull=True) | Q(license__isnull=False),
-                name="loans_rate_series_license"),
+            models.UniqueConstraint(
+                fields=("series", "metal", "effective_from", "revision"),
+                condition=Q(series__isnull=False),
+                name="loans_rate_ser_date_rev_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(series__isnull=True) | Q(license__isnull=False),
+                name="loans_rate_series_license",
+            ),
             models.CheckConstraint(
                 condition=Q(monthly_interest_rate__gte=0)
                 & Q(monthly_interest_rate__lte=100),
@@ -392,9 +455,13 @@ class PawnMetalInterestRatePolicy(models.Model):
     def clean(self):
         super().clean()
         _validate_policy_scope(self, label="Metal interest-rate policy")
-        if self.series_id and (self.series.workspace_id != self.workspace_id
-                               or self.series.license_id != self.license_id):
-            raise ValidationError({"series": "Series must belong to the policy workspace and license."})
+        if self.series_id and (
+            self.series.workspace_id != self.workspace_id
+            or self.series.license_id != self.license_id
+        ):
+            raise ValidationError(
+                {"series": "Series must belong to the policy workspace and license."}
+            )
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -571,12 +638,18 @@ class PawnLoan(models.Model):
     creation_submission_id = models.UUIDField(null=True, blank=True, editable=False)
     # Current operational evidence; earlier attempts remain on the history FKs.
     policy_snapshot = models.ForeignKey(
-        "loans.LoanPolicySnapshot", null=True, blank=True,
-        on_delete=models.PROTECT, related_name="+",
+        "loans.LoanPolicySnapshot",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
     disbursal_snapshot = models.ForeignKey(
-        "loans.PawnLoanDisbursalSnapshot", null=True, blank=True,
-        on_delete=models.PROTECT, related_name="+",
+        "loans.PawnLoanDisbursalSnapshot",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
     )
     workspace = models.ForeignKey(
         "orgs.Company",
@@ -619,7 +692,9 @@ class PawnLoan(models.Model):
         db_index=True,
     )
     principal_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True)
-    monthly_interest_rate = models.DecimalField(max_digits=9, decimal_places=6, null=True)
+    monthly_interest_rate = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True
+    )
     loan_date = models.DateField(default=timezone.localdate, db_index=True, null=True)
     tenure_months = models.PositiveIntegerField(default=3, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -642,9 +717,14 @@ class PawnLoan(models.Model):
     class Meta:
         ordering = ("loan_date", "loan_number")
         constraints = [
-            models.UniqueConstraint(fields=("workspace", "id"), name="loans_pawn_workspace_id_uniq"),
-            models.UniqueConstraint(fields=("workspace", "creation_submission_id"),
-                condition=Q(creation_submission_id__isnull=False), name="loans_draft_submission_uniq"),
+            models.UniqueConstraint(
+                fields=("workspace", "id"), name="loans_pawn_workspace_id_uniq"
+            ),
+            models.UniqueConstraint(
+                fields=("workspace", "creation_submission_id"),
+                condition=Q(creation_submission_id__isnull=False),
+                name="loans_draft_submission_uniq",
+            ),
             models.UniqueConstraint(
                 fields=("workspace", "loan_number"),
                 name="loans_pawn_workspace_number_uniq",
@@ -662,11 +742,24 @@ class PawnLoan(models.Model):
                 name="loans_pawn_tenure_positive",
             ),
             models.CheckConstraint(
-                condition=(Q(is_imported_closed_position=True, state="CLOSED", product_version__isnull=True,
-                    policy_snapshot__isnull=True, disbursal_snapshot__isnull=True, license_revision__isnull=True)
-                    | Q(is_imported_closed_position=False, principal_amount__isnull=False,
-                        monthly_interest_rate__isnull=False, tenure_months__isnull=False,
-                        loan_date__isnull=False, product_version__isnull=False)),
+                condition=(
+                    Q(
+                        is_imported_closed_position=True,
+                        state="CLOSED",
+                        product_version__isnull=True,
+                        policy_snapshot__isnull=True,
+                        disbursal_snapshot__isnull=True,
+                        license_revision__isnull=True,
+                    )
+                    | Q(
+                        is_imported_closed_position=False,
+                        principal_amount__isnull=False,
+                        monthly_interest_rate__isnull=False,
+                        tenure_months__isnull=False,
+                        loan_date__isnull=False,
+                        product_version__isnull=False,
+                    )
+                ),
                 name="loans_pawn_position_or_complete",
             ),
         ]
@@ -688,8 +781,13 @@ class PawnLoan(models.Model):
         for name in ("policy_snapshot", "disbursal_snapshot"):
             if getattr(self, name + "_id", None):
                 snapshot = getattr(self, name)
-                if snapshot.loan_id != self.pk or snapshot.workspace_id != self.workspace_id:
-                    errors[name] = "Current snapshot must belong to this loan and workspace."
+                if (
+                    snapshot.loan_id != self.pk
+                    or snapshot.workspace_id != self.workspace_id
+                ):
+                    errors[name] = (
+                        "Current snapshot must belong to this loan and workspace."
+                    )
         if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
             errors["workspace"] = "Loan workspace must match the active tenant."
         if self.license_id and self.workspace_id:
@@ -711,21 +809,41 @@ class PawnLoan(models.Model):
                     "Product version must belong to the loan workspace."
                 )
         if self.is_imported_closed_position:
-            if self.state != "CLOSED" or any(getattr(self, key) is not None for key in (
-                    "product_version_id", "policy_snapshot_id", "disbursal_snapshot_id", "license_revision_id")):
-                errors["state"] = "Accepted closed positions cannot acquire a new operational agreement."
+            if self.state != "CLOSED" or any(
+                getattr(self, key) is not None
+                for key in (
+                    "product_version_id",
+                    "policy_snapshot_id",
+                    "disbursal_snapshot_id",
+                    "license_revision_id",
+                )
+            ):
+                errors["state"] = (
+                    "Accepted closed positions cannot acquire a new operational agreement."
+                )
         else:
-            for key in ("product_version_id", "principal_amount", "monthly_interest_rate", "loan_date", "tenure_months"):
+            for key in (
+                "product_version_id",
+                "principal_amount",
+                "monthly_interest_rate",
+                "loan_date",
+                "tenure_months",
+            ):
                 if getattr(self, key) is None:
-                    errors[key.removesuffix("_id")] = "Ordinary origination requires complete loan terms."
+                    errors[key.removesuffix("_id")] = (
+                        "Ordinary origination requires complete loan terms."
+                    )
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         if self.pk:
-            original_product_version_id = type(self).objects.filter(pk=self.pk).values_list(
-                "product_version_id", flat=True
-            ).first()
+            original_product_version_id = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("product_version_id", flat=True)
+                .first()
+            )
             if (
                 original_product_version_id is not None
                 and self.product_version_id != original_product_version_id
@@ -743,7 +861,9 @@ class PawnLoan(models.Model):
 class PawnCollateralItem(WorkspaceOwnedModel):
     # Historical records without a piece count remain unknown.
     quantity = models.PositiveIntegerField(null=True, blank=True)
-    interest_rate_override = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    interest_rate_override = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
     interest_override_reason = models.CharField(max_length=255, blank=True, default="")
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     loan = models.ForeignKey(
@@ -809,11 +929,25 @@ class PawnCollateralItem(WorkspaceOwnedModel):
     class Meta:
         ordering = ("loan_id", "id")
         constraints = [
-            models.CheckConstraint(condition=Q(quantity__isnull=True) | Q(quantity__gte=1, quantity__lte=10000),
-                name="loans_item_quantity_range"),
-            models.CheckConstraint(condition=(Q(interest_rate_override__isnull=True, interest_override_reason="") |
-                (Q(interest_rate_override__isnull=False, interest_rate_override__gte=0, interest_rate_override__lte=100) & ~Q(interest_override_reason=""))),
-                name="loans_item_override_reason"),
+            models.CheckConstraint(
+                condition=Q(quantity__isnull=True)
+                | Q(quantity__gte=1, quantity__lte=10000),
+                name="loans_item_quantity_range",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(interest_rate_override__isnull=True, interest_override_reason="")
+                    | (
+                        Q(
+                            interest_rate_override__isnull=False,
+                            interest_rate_override__gte=0,
+                            interest_rate_override__lte=100,
+                        )
+                        & ~Q(interest_override_reason="")
+                    )
+                ),
+                name="loans_item_override_reason",
+            ),
             models.CheckConstraint(
                 condition=Q(gross_weight__gt=0),
                 name="loans_item_gross_positive",
@@ -827,8 +961,7 @@ class PawnCollateralItem(WorkspaceOwnedModel):
                 name="loans_item_gross_gte_net",
             ),
             models.CheckConstraint(
-                condition=Q(purity_percentage__gt=0)
-                & Q(purity_percentage__lte=100),
+                condition=Q(purity_percentage__gt=0) & Q(purity_percentage__lte=100),
                 name="loans_item_purity_range",
             ),
             models.CheckConstraint(
@@ -843,10 +976,7 @@ class PawnCollateralItem(WorkspaceOwnedModel):
             ),
             models.CheckConstraint(
                 condition=Q(monthly_interest_rate__isnull=True)
-                | (
-                    Q(monthly_interest_rate__gte=0)
-                    & Q(monthly_interest_rate__lte=100)
-                ),
+                | (Q(monthly_interest_rate__gte=0) & Q(monthly_interest_rate__lte=100)),
                 name="loans_item_rate_range",
             ),
         ]
@@ -863,17 +993,28 @@ class PawnCollateralItem(WorkspaceOwnedModel):
             policy = self.interest_rate_policy
             if policy.workspace_id != self.loan.workspace_id:
                 raise ValidationError(
-                    {"interest_rate_policy": "Rate policy must belong to the loan workspace."}
+                    {
+                        "interest_rate_policy": "Rate policy must belong to the loan workspace."
+                    }
                 )
             if policy.metal != self.metal:
                 # The original rate remains agreed after a reviewed metal
                 # transcription correction. Current custody saves must not
                 # silently select a different interest policy.
-                from apps.tenant_apps.loans.services.collateral_corrections import validate_correction_chain
-                chain = validate_correction_chain(self.loan).get(self.pk, []) if self.pk else []
+                from apps.tenant_apps.loans.services.collateral_corrections import (
+                    validate_correction_chain,
+                )
+
+                chain = (
+                    validate_correction_chain(self.loan).get(self.pk, [])
+                    if self.pk
+                    else []
+                )
                 if not chain or chain[0]["before"]["metal"] != policy.metal:
                     raise ValidationError(
-                        {"interest_rate_policy": "Rate policy metal must match the collateral metal."}
+                        {
+                            "interest_rate_policy": "Rate policy metal must match the collateral metal."
+                        }
                     )
             if policy.license_id and policy.license_id != self.loan.license_id:
                 raise ValidationError(
@@ -886,7 +1027,9 @@ class PawnCollateralItem(WorkspaceOwnedModel):
         if self.current_storage_location_id and self.loan_id:
             if self.current_storage_location.workspace_id != self.loan.workspace_id:
                 raise ValidationError(
-                    {"current_storage_location": "Storage location must belong to the loan workspace."}
+                    {
+                        "current_storage_location": "Storage location must belong to the loan workspace."
+                    }
                 )
 
     def save(self, *args, **kwargs):
@@ -897,9 +1040,14 @@ class PawnCollateralItem(WorkspaceOwnedModel):
 class LoanPolicySnapshot(WorkspaceOwnedModel):
     class Basis(models.TextChoices):
         ORIGINATION = "ORIGINATION", "Origination policy"
-        RECORDED_CONTRACT = "RECORDED_CONTRACT", "Recorded contract and monitoring selection"
+        RECORDED_CONTRACT = (
+            "RECORDED_CONTRACT",
+            "Recorded contract and monitoring selection",
+        )
 
-    basis = models.CharField(max_length=24, choices=Basis.choices, default=Basis.ORIGINATION)
+    basis = models.CharField(
+        max_length=24, choices=Basis.choices, default=Basis.ORIGINATION
+    )
     minimum_first_month = models.BooleanField(default=False)
     loan = models.ForeignKey(
         PawnLoan,
@@ -953,8 +1101,7 @@ class LoanPolicySnapshot(WorkspaceOwnedModel):
                 name="loans_policy_version_positive",
             ),
             models.CheckConstraint(
-                condition=Q(maximum_ltv_ratio__gt=0)
-                & Q(maximum_ltv_ratio__lte=1),
+                condition=Q(maximum_ltv_ratio__gt=0) & Q(maximum_ltv_ratio__lte=1),
                 name="loans_policy_ltv_range",
             ),
         ]
@@ -984,7 +1131,9 @@ class LoanPolicySnapshot(WorkspaceOwnedModel):
         result = super().save(*args, **kwargs)
         # Also used by migration opening/renewal importers which create a policy
         # without a native disbursal. Subsequent attempts switch in the service.
-        if PawnLoan.objects.filter(pk=self.loan_id, policy_snapshot__isnull=True).update(policy_snapshot=self):
+        if PawnLoan.objects.filter(
+            pk=self.loan_id, policy_snapshot__isnull=True
+        ).update(policy_snapshot=self):
             self.loan.policy_snapshot = self
         return result
 
@@ -1072,6 +1221,7 @@ class PawnLoanApprovalSnapshot(WorkspaceOwnedModel):
 
 class PawnLoanEvent(WorkspaceOwnedModel):
     """Immutable Loans-owned evidence for a financial lifecycle event."""
+
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -1123,8 +1273,11 @@ class PawnLoanEvent(WorkspaceOwnedModel):
                 ),
                 name="loans_event_reversal_link_valid",
             ),
-            models.UniqueConstraint(fields=("loan",), condition=Q(event_kind="MIGRATION_OPENING"),
-                                    name="loans_one_migration_opening"),
+            models.UniqueConstraint(
+                fields=("loan",),
+                condition=Q(event_kind="MIGRATION_OPENING"),
+                name="loans_one_migration_opening",
+            ),
         ]
 
 
@@ -1136,7 +1289,9 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
         RECORDED = "RECORDED", "Previously paid on paper"
         CORRECTED = "CORRECTED", "Reviewed correction of original lending facts"
 
-    basis = models.CharField(max_length=16, choices=Basis.choices, default=Basis.APPROVED)
+    basis = models.CharField(
+        max_length=16, choices=Basis.choices, default=Basis.APPROVED
+    )
     loan = models.ForeignKey(
         PawnLoan,
         on_delete=models.PROTECT,
@@ -1179,7 +1334,9 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
         ordering = ("loan_id",)
         constraints = [
             models.CheckConstraint(
-                condition=Q(basis__in=("APPROVED", "CORRECTED"), approval_snapshot__isnull=False)
+                condition=Q(
+                    basis__in=("APPROVED", "CORRECTED"), approval_snapshot__isnull=False
+                )
                 | Q(basis="RECORDED", approval_snapshot__isnull=True),
                 name="loans_disbursal_approval_basis",
             ),
@@ -1199,13 +1356,24 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
     def clean(self):
         super().clean()
         if self.basis == self.Basis.CORRECTED:
-            from apps.tenant_apps.loans.services.agreement_corrections import validate_corrected_snapshot
+            from apps.tenant_apps.loans.services.agreement_corrections import (
+                validate_corrected_snapshot,
+            )
+
             validate_corrected_snapshot(self)
         if self.basis == self.Basis.RECORDED:
-            from apps.tenant_apps.loans.services.recorded_origination_evidence import validate_recorded_origination
+            from apps.tenant_apps.loans.services.recorded_origination_evidence import (
+                validate_recorded_origination,
+            )
+
             validate_recorded_origination(self)
-        elif self.policy_snapshot_id and self.policy_snapshot.basis != LoanPolicySnapshot.Basis.ORIGINATION:
-            raise ValidationError("Approved disbursal requires an origination policy basis.")
+        elif (
+            self.policy_snapshot_id
+            and self.policy_snapshot.basis != LoanPolicySnapshot.Basis.ORIGINATION
+        ):
+            raise ValidationError(
+                "Approved disbursal requires an origination policy basis."
+            )
         if self.loan_id and self.approval_snapshot_id:
             if self.approval_snapshot.loan_id != self.loan_id:
                 raise ValidationError("Approval snapshot must belong to this PawnLoan.")
@@ -1234,7 +1402,9 @@ class PawnLoanDisbursalSnapshot(WorkspaceOwnedModel):
             raise ValidationError("Disbursal snapshots are immutable.")
         self.full_clean()
         result = super().save(*args, **kwargs)
-        if PawnLoan.objects.filter(pk=self.loan_id, disbursal_snapshot__isnull=True).update(disbursal_snapshot=self):
+        if PawnLoan.objects.filter(
+            pk=self.loan_id, disbursal_snapshot__isnull=True
+        ).update(disbursal_snapshot=self):
             self.loan.disbursal_snapshot = self
         return result
 
@@ -1563,14 +1733,16 @@ class PawnLoanPrincipalOpeningLine(WorkspaceOwnedModel):
                 fields=("loan_event", "allocation_order"),
                 name="loans_open_event_order_uniq",
             ),
-            models.UniqueConstraint(fields=("loan_event", "collateral_item"), name="loans_open_event_item_uniq"),
+            models.UniqueConstraint(
+                fields=("loan_event", "collateral_item"),
+                name="loans_open_event_item_uniq",
+            ),
             models.CheckConstraint(
                 condition=Q(allocation_order__gt=0),
                 name="loans_open_order_positive",
             ),
             models.CheckConstraint(
-                condition=Q(monthly_interest_rate__gte=0)
-                & Q(principal_opened__gt=0),
+                condition=Q(monthly_interest_rate__gte=0) & Q(principal_opened__gt=0),
                 name="loans_open_line_amounts_valid",
             ),
         ]
@@ -1584,9 +1756,18 @@ class PawnLoanPrincipalOpeningLine(WorkspaceOwnedModel):
                 )
             if self.loan_event.event_kind != TransactionKind.RENEWAL_OPENING.value:
                 raise ValidationError("Opening lines require a renewal-opening event.")
-            if type(self).objects.filter(collateral_item_id=self.collateral_item_id,
-                    loan_event__reversed_by_event__isnull=True).exclude(loan_event_id=self.loan_event_id).exists():
-                raise ValidationError("An item can have only one active renewal principal opening.")
+            if (
+                type(self)
+                .objects.filter(
+                    collateral_item_id=self.collateral_item_id,
+                    loan_event__reversed_by_event__isnull=True,
+                )
+                .exclude(loan_event_id=self.loan_event_id)
+                .exists()
+            ):
+                raise ValidationError(
+                    "An item can have only one active renewal principal opening."
+                )
         if self.predecessor_collateral_item_id and self.collateral_item_id:
             if self.predecessor_collateral_item_id == self.collateral_item_id:
                 raise ValidationError(
@@ -1676,11 +1857,19 @@ class PawnLoanRelease(models.Model):
 
     @property
     def interest_concession_amount(self):
-        return Decimal(str(self.loan_event.payload.get("values", {}).get("interest_concession", "0")))
+        return Decimal(
+            str(
+                self.loan_event.payload.get("values", {}).get(
+                    "interest_concession", "0"
+                )
+            )
+        )
 
     @property
     def interest_concession_reason(self):
-        return (self.loan_event.payload.get("release") or {}).get("interest_concession_reason", "")
+        return (self.loan_event.payload.get("release") or {}).get(
+            "interest_concession_reason", ""
+        )
 
     def save(self, *args, **kwargs):
         if self.pk:
@@ -1843,8 +2032,13 @@ class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
         max_length=32,
         choices=enum_choices(CollateralCustodyState),
     )
-    restatement_of = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT,
-        related_name="dated_restatement")
+    restatement_of = models.OneToOneField(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="dated_restatement",
+    )
     effective_date = models.DateField(db_index=True)
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1939,7 +2133,9 @@ class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
                 self.renewal.successor_loan_id,
             }:
                 raise ValidationError(
-                    {"collateral_item": "Custody item must belong to the renewal chain."}
+                    {
+                        "collateral_item": "Custody item must belong to the renewal chain."
+                    }
                 )
         if self.funding_pledge_id and self.collateral_item_id:
             pledge_item_exists = self.funding_pledge.items.filter(
@@ -1947,7 +2143,9 @@ class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
             ).exists()
             if not pledge_item_exists:
                 raise ValidationError(
-                    {"collateral_item": "Custody item must belong to the funding pledge."}
+                    {
+                        "collateral_item": "Custody item must belong to the funding pledge."
+                    }
                 )
         if self.funding_return_id and self.collateral_item_id:
             return_item_exists = self.funding_return.items.filter(
@@ -1955,7 +2153,9 @@ class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
             ).exists()
             if not return_item_exists:
                 raise ValidationError(
-                    {"collateral_item": "Custody item must belong to the funding return."}
+                    {
+                        "collateral_item": "Custody item must belong to the funding return."
+                    }
                 )
         if self.auction_reversal_id and self.auction_id:
             if self.auction_reversal.auction_id != self.auction_id:
@@ -1985,28 +2185,30 @@ class PawnCollateralCustodyEvent(WorkspaceOwnedModel):
                 {"release_reversal": "Release reversal custody requires its release."}
             )
         if self.funding_pledge_reversal_id and self.funding_pledge_id:
-            if (
-                self.funding_pledge_reversal.funding_pledge_id
-                != self.funding_pledge_id
-            ):
+            if self.funding_pledge_reversal.funding_pledge_id != self.funding_pledge_id:
                 raise ValidationError(
-                    {"funding_pledge_reversal": "Custody reversal must match the funding pledge."}
+                    {
+                        "funding_pledge_reversal": "Custody reversal must match the funding pledge."
+                    }
                 )
         elif self.funding_pledge_reversal_id:
             raise ValidationError(
-                {"funding_pledge_reversal": "Funding pledge reversal custody requires its pledge."}
+                {
+                    "funding_pledge_reversal": "Funding pledge reversal custody requires its pledge."
+                }
             )
         if self.funding_return_reversal_id and self.funding_return_id:
-            if (
-                self.funding_return_reversal.funding_return_id
-                != self.funding_return_id
-            ):
+            if self.funding_return_reversal.funding_return_id != self.funding_return_id:
                 raise ValidationError(
-                    {"funding_return_reversal": "Custody reversal must match the funding return."}
+                    {
+                        "funding_return_reversal": "Custody reversal must match the funding return."
+                    }
                 )
         elif self.funding_return_reversal_id:
             raise ValidationError(
-                {"funding_return_reversal": "Funding return reversal custody requires its return."}
+                {
+                    "funding_return_reversal": "Funding return reversal custody requires its return."
+                }
             )
 
     def delete(self, *args, **kwargs):
@@ -2055,10 +2257,7 @@ class PawnLoanReleaseReversal(WorkspaceOwnedModel):
         if not str(self.reason or "").strip():
             errors["reason"] = "A reversal reason is required."
         if self.release_id and self.loan_event_id:
-            if (
-                self.loan_event.reversal_of_id
-                != self.release.loan_event_id
-            ):
+            if self.loan_event.reversal_of_id != self.release.loan_event_id:
                 errors["loan_event"] = (
                     "Release reversal event must compensate the release event."
                 )
@@ -2116,18 +2315,29 @@ class PawnLoanNotice(models.Model):
         related_name="notice",
     )
     source_risk_alert = models.ForeignKey(
-        "loans.LoanRiskAlert", null=True, blank=True, on_delete=models.PROTECT,
+        "loans.LoanRiskAlert",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
         related_name="borrower_notices",
     )
     source_risk_event = models.ForeignKey(
-        "loans.LoanRiskEvent", null=True, blank=True, on_delete=models.PROTECT,
+        "loans.LoanRiskEvent",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
         related_name="borrower_notices",
     )
     notification_template_id = models.PositiveBigIntegerField(null=True, blank=True)
     notification_template_version = models.PositiveIntegerField(null=True, blank=True)
     notification_template_locale = models.CharField(max_length=10, blank=True)
-    transaction_review = models.ForeignKey("loans.LoanTransactionReview", null=True, blank=True,
-        on_delete=models.PROTECT, related_name="notices")
+    transaction_review = models.ForeignKey(
+        "loans.LoanTransactionReview",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="notices",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -2146,25 +2356,61 @@ class PawnLoanNotice(models.Model):
                 name="loans_notice_loan_request_uniq",
             ),
             models.CheckConstraint(
-                condition=(Q(source_risk_alert__isnull=True, source_risk_event__isnull=True)
-                           | Q(source_risk_alert__isnull=False, source_risk_event__isnull=False)),
+                condition=(
+                    Q(source_risk_alert__isnull=True, source_risk_event__isnull=True)
+                    | Q(
+                        source_risk_alert__isnull=False, source_risk_event__isnull=False
+                    )
+                ),
                 name="loans_notice_risk_pair_complete",
             ),
             models.UniqueConstraint(
-                F('source_risk_event'), F('notice_kind'), F('channel'), F('notification_template_version'),
-                Coalesce(KeyTextTransform('correction_id', KeyTransform('borrower_identity', 'payload_snapshot')),
-                    models.Value('0'), output_field=models.CharField()),
-                Coalesce(KeyTextTransform('correction_id', KeyTransform('agreement_identity', 'payload_snapshot')),
-                    models.Value('0'), output_field=models.CharField()),
-                Coalesce(KeyTextTransform('source_fingerprint', KeyTransform('transaction_review', 'payload_snapshot')),
-                    models.Value('0'), output_field=models.CharField()),
-                condition=Q(source_risk_event__isnull=False, transaction_review__isnull=True),
+                F("source_risk_event"),
+                F("notice_kind"),
+                F("channel"),
+                F("notification_template_version"),
+                Coalesce(
+                    KeyTextTransform(
+                        "correction_id",
+                        KeyTransform("borrower_identity", "payload_snapshot"),
+                    ),
+                    models.Value("0"),
+                    output_field=models.CharField(),
+                ),
+                Coalesce(
+                    KeyTextTransform(
+                        "correction_id",
+                        KeyTransform("agreement_identity", "payload_snapshot"),
+                    ),
+                    models.Value("0"),
+                    output_field=models.CharField(),
+                ),
+                Coalesce(
+                    KeyTextTransform(
+                        "source_fingerprint",
+                        KeyTransform("transaction_review", "payload_snapshot"),
+                    ),
+                    models.Value("0"),
+                    output_field=models.CharField(),
+                ),
+                condition=Q(
+                    source_risk_event__isnull=False, transaction_review__isnull=True
+                ),
                 name="loans_risk_notice_intent_uniq",
             ),
             models.UniqueConstraint(
-                F("source_risk_event"), F("notice_kind"), F("channel"), F("notification_template_version"), F("transaction_review"),
-                KeyTextTransform("source_fingerprint", KeyTransform("transaction_review", "payload_snapshot")),
-                condition=Q(source_risk_event__isnull=False, transaction_review__isnull=False),
+                F("source_risk_event"),
+                F("notice_kind"),
+                F("channel"),
+                F("notification_template_version"),
+                F("transaction_review"),
+                KeyTextTransform(
+                    "source_fingerprint",
+                    KeyTransform("transaction_review", "payload_snapshot"),
+                ),
+                condition=Q(
+                    source_risk_event__isnull=False, transaction_review__isnull=False
+                ),
                 name="loans_review_notice_intent_uniq",
             ),
         ]
@@ -2188,29 +2434,51 @@ class PawnLoanNotice(models.Model):
         if self.loan_id and self.workspace_id:
             if self.loan.workspace_id != self.workspace_id:
                 errors["loan"] = "Notice loan must belong to its workspace."
-        if self.channel == PawnLoanNoticeChannel.EMAIL.value and not self.recipient_email:
+        if (
+            self.channel == PawnLoanNoticeChannel.EMAIL.value
+            and not self.recipient_email
+        ):
             errors["recipient_email"] = "Email delivery requires a recipient email."
-        if self.channel in {
-            PawnLoanNoticeChannel.SMS.value,
-            PawnLoanNoticeChannel.WHATSAPP.value,
-        } and not self.recipient_phone:
-            errors["recipient_phone"] = "SMS/WhatsApp delivery requires a recipient phone."
+        if (
+            self.channel
+            in {
+                PawnLoanNoticeChannel.SMS.value,
+                PawnLoanNoticeChannel.WHATSAPP.value,
+            }
+            and not self.recipient_phone
+        ):
+            errors["recipient_phone"] = (
+                "SMS/WhatsApp delivery requires a recipient phone."
+            )
         if self.source_auction_id:
             if self.notice_kind != PawnLoanNoticeKind.AUCTION_NOTICE.value:
-                errors["source_auction"] = "Only an auction notice can reference an auction."
+                errors["source_auction"] = (
+                    "Only an auction notice can reference an auction."
+                )
             elif self.source_auction.loan_id != self.loan_id:
-                errors["source_auction"] = "Auction notice must reference the same loan."
+                errors["source_auction"] = (
+                    "Auction notice must reference the same loan."
+                )
         elif self.notice_kind == PawnLoanNoticeKind.AUCTION_NOTICE.value:
             errors["source_auction"] = "Auction notice requires its source auction."
         if self.source_risk_alert_id or self.source_risk_event_id:
             if not self.source_risk_alert_id or not self.source_risk_event_id:
-                errors["source_risk_alert"] = "Risk communication requires both alert and event evidence."
+                errors["source_risk_alert"] = (
+                    "Risk communication requires both alert and event evidence."
+                )
             elif self.source_risk_alert.loan_id != self.loan_id:
                 errors["source_risk_alert"] = "Risk alert must reference the same loan."
             elif self.source_risk_alert.source_event_id != self.source_risk_event_id:
-                errors["source_risk_event"] = "Risk event must be the alert source event."
-            elif not self.notification_template_id or not self.notification_template_version:
-                errors["notification_template_id"] = "Risk communication requires template identity and version."
+                errors["source_risk_event"] = (
+                    "Risk event must be the alert source event."
+                )
+            elif (
+                not self.notification_template_id
+                or not self.notification_template_version
+            ):
+                errors["notification_template_id"] = (
+                    "Risk communication requires template identity and version."
+                )
         if errors:
             raise ValidationError(errors)
 
@@ -2228,7 +2496,9 @@ class PawnLoanAuction(models.Model):
     workspace = models.ForeignKey(
         "orgs.Company", on_delete=models.PROTECT, related_name="pawn_loan_auctions"
     )
-    loan = models.ForeignKey(PawnLoan, on_delete=models.PROTECT, related_name="auctions")
+    loan = models.ForeignKey(
+        PawnLoan, on_delete=models.PROTECT, related_name="auctions"
+    )
     auction_number = models.CharField(max_length=96)
     attempt_number = models.PositiveIntegerField()
     request_key = models.CharField(max_length=120)
@@ -2246,10 +2516,18 @@ class PawnLoanAuction(models.Model):
     cancellation_reason = models.TextField(blank=True)
     buyer_name = models.CharField(max_length=255, blank=True)
     buyer_reference = models.CharField(max_length=120, blank=True)
-    recovery_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
-    principal_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
-    interest_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
-    fee_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    recovery_amount = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True
+    )
+    principal_amount = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True
+    )
+    interest_amount = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True
+    )
+    fee_amount = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True
+    )
     loan_event = models.OneToOneField(
         PawnLoanEvent,
         null=True,
@@ -2277,12 +2555,23 @@ class PawnLoanAuction(models.Model):
     class Meta:
         ordering = ("loan_id", "attempt_number")
         constraints = [
-            models.UniqueConstraint(fields=("workspace", "auction_number"), name="loans_auction_workspace_number_uniq"),
-            models.UniqueConstraint(fields=("loan", "attempt_number"), name="loans_auction_loan_attempt_uniq"),
-            models.UniqueConstraint(fields=("loan", "request_key"), name="loans_auction_loan_request_uniq"),
+            models.UniqueConstraint(
+                fields=("workspace", "auction_number"),
+                name="loans_auction_workspace_number_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("loan", "attempt_number"),
+                name="loans_auction_loan_attempt_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("loan", "request_key"), name="loans_auction_loan_request_uniq"
+            ),
         ]
         indexes = [
-            models.Index(fields=("workspace", "state", "scheduled_date"), name="loans_auction_state_date_idx"),
+            models.Index(
+                fields=("workspace", "state", "scheduled_date"),
+                name="loans_auction_state_date_idx",
+            ),
         ]
 
     def clean(self):
@@ -2291,10 +2580,20 @@ class PawnLoanAuction(models.Model):
         tenant_workspace_id = current_tenant_workspace_id()
         if tenant_workspace_id and self.workspace_id != tenant_workspace_id:
             errors["workspace"] = "Auction workspace must match the active tenant."
-        if self.loan_id and self.workspace_id and self.loan.workspace_id != self.workspace_id:
+        if (
+            self.loan_id
+            and self.workspace_id
+            and self.loan.workspace_id != self.workspace_id
+        ):
             errors["loan"] = "Auction loan must belong to its workspace."
-        if self.scheduled_date and self.notice_date and self.scheduled_date <= self.notice_date:
-            errors["scheduled_date"] = "Auction must be scheduled after its notice date."
+        if (
+            self.scheduled_date
+            and self.notice_date
+            and self.scheduled_date <= self.notice_date
+        ):
+            errors["scheduled_date"] = (
+                "Auction must be scheduled after its notice date."
+            )
         if self.state == PawnLoanAuctionState.COMPLETED.value:
             required = {
                 "recovery_amount": self.recovery_amount,
@@ -2307,10 +2606,25 @@ class PawnLoanAuction(models.Model):
             }
             for field, value in required.items():
                 if value in (None, ""):
-                    errors[field] = "Completed auction is missing required recovery evidence."
-            if all(value is not None for value in (self.recovery_amount, self.principal_amount, self.interest_amount, self.fee_amount)):
-                if self.recovery_amount != self.principal_amount + self.interest_amount + self.fee_amount:
-                    errors["recovery_amount"] = "Recovery must equal principal, interest, and fees."
+                    errors[field] = (
+                        "Completed auction is missing required recovery evidence."
+                    )
+            if all(
+                value is not None
+                for value in (
+                    self.recovery_amount,
+                    self.principal_amount,
+                    self.interest_amount,
+                    self.fee_amount,
+                )
+            ):
+                if (
+                    self.recovery_amount
+                    != self.principal_amount + self.interest_amount + self.fee_amount
+                ):
+                    errors["recovery_amount"] = (
+                        "Recovery must equal principal, interest, and fees."
+                    )
         if errors:
             raise ValidationError(errors)
 
@@ -2323,20 +2637,34 @@ class PawnLoanAuction(models.Model):
 
 
 class PawnLoanAuctionItem(WorkspaceOwnedModel):
-    auction = models.ForeignKey(PawnLoanAuction, on_delete=models.PROTECT, related_name="items")
-    collateral_item = models.ForeignKey(PawnCollateralItem, on_delete=models.PROTECT, related_name="auction_items")
+    auction = models.ForeignKey(
+        PawnLoanAuction, on_delete=models.PROTECT, related_name="items"
+    )
+    collateral_item = models.ForeignKey(
+        PawnCollateralItem, on_delete=models.PROTECT, related_name="auction_items"
+    )
     snapshot = models.JSONField(default=dict)
     disposed_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ("auction_id", "id")
-        constraints = [models.UniqueConstraint(fields=("auction", "collateral_item"), name="loans_auction_item_uniq")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("auction", "collateral_item"), name="loans_auction_item_uniq"
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if self.pk:
             raise ValidationError("PawnLoan auction items are immutable.")
-        if self.auction_id and self.collateral_item_id and self.auction.loan_id != self.collateral_item.loan_id:
-            raise ValidationError({"collateral_item": "Auction item must belong to the auction loan."})
+        if (
+            self.auction_id
+            and self.collateral_item_id
+            and self.auction.loan_id != self.collateral_item.loan_id
+        ):
+            raise ValidationError(
+                {"collateral_item": "Auction item must belong to the auction loan."}
+            )
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -2344,8 +2672,12 @@ class PawnLoanAuctionItem(WorkspaceOwnedModel):
 
 
 class PawnLoanAuctionReversal(WorkspaceOwnedModel):
-    auction = models.OneToOneField(PawnLoanAuction, on_delete=models.PROTECT, related_name="reversal")
-    loan_event = models.OneToOneField(PawnLoanEvent, on_delete=models.PROTECT, related_name="auction_reversal")
+    auction = models.OneToOneField(
+        PawnLoanAuction, on_delete=models.PROTECT, related_name="reversal"
+    )
+    loan_event = models.OneToOneField(
+        PawnLoanEvent, on_delete=models.PROTECT, related_name="auction_reversal"
+    )
     catch_up_reversal_event = models.OneToOneField(
         PawnLoanEvent,
         null=True,
@@ -2368,8 +2700,14 @@ class PawnLoanAuctionReversal(WorkspaceOwnedModel):
             raise ValidationError("PawnLoan auction reversals are immutable.")
         if not str(self.reason or "").strip():
             raise ValidationError({"reason": "A reversal reason is required."})
-        if self.auction_id and self.loan_event_id and self.loan_event.reversal_of_id != self.auction.loan_event_id:
-            raise ValidationError({"loan_event": "Auction reversal must compensate the recovery event."})
+        if (
+            self.auction_id
+            and self.loan_event_id
+            and self.loan_event.reversal_of_id != self.auction.loan_event_id
+        ):
+            raise ValidationError(
+                {"loan_event": "Auction reversal must compensate the recovery event."}
+            )
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -2393,13 +2731,17 @@ class PawnLoanRenewal(models.Model):
     mode = models.CharField(max_length=20, choices=enum_choices(PawnLoanRenewalMode))
     renewal_date = models.DateField(db_index=True)
     source_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
-    source_capitalized_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    source_capitalized_principal_amount = models.DecimalField(
+        max_digits=18, decimal_places=4
+    )
     interest_settled = models.DecimalField(max_digits=18, decimal_places=4)
     fees_settled = models.DecimalField(max_digits=18, decimal_places=4)
     principal_paid = models.DecimalField(max_digits=18, decimal_places=4)
     top_up_amount = models.DecimalField(max_digits=18, decimal_places=4)
     successor_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
-    successor_capitalized_principal_amount = models.DecimalField(max_digits=18, decimal_places=4)
+    successor_capitalized_principal_amount = models.DecimalField(
+        max_digits=18, decimal_places=4
+    )
     successor_advance_interest = models.DecimalField(
         max_digits=18,
         decimal_places=4,
@@ -2459,7 +2801,10 @@ class PawnLoanRenewal(models.Model):
         if self.source_loan_id and self.successor_loan_id:
             if self.source_loan_id == self.successor_loan_id:
                 errors["successor_loan"] = "Renewal successor must be a different loan."
-            if self.source_loan.workspace_id != self.workspace_id or self.successor_loan.workspace_id != self.workspace_id:
+            if (
+                self.source_loan.workspace_id != self.workspace_id
+                or self.successor_loan.workspace_id != self.workspace_id
+            ):
                 errors["workspace"] = "Both renewal loans must belong to the workspace."
             if self.source_loan.borrower_id != self.successor_loan.borrower_id:
                 errors["successor_loan"] = "Renewal successor must retain the borrower."
@@ -2476,12 +2821,30 @@ class PawnLoanRenewal(models.Model):
             self.successor_deducted_fees,
         )
         if any(value is None or value < 0 for value in amounts):
-            errors["successor_principal_amount"] = "Renewal amounts must be non-negative."
-        if self.source_principal_amount is not None and self.principal_paid is not None and self.top_up_amount is not None:
-            if self.successor_principal_amount != self.source_principal_amount - self.principal_paid + self.top_up_amount:
-                errors["successor_principal_amount"] = "Successor principal does not reconcile to the renewal."
-        if self.successor_principal_amount is not None and self.successor_principal_amount <= 0:
-            errors["successor_principal_amount"] = "Renewal successor principal must be positive."
+            errors["successor_principal_amount"] = (
+                "Renewal amounts must be non-negative."
+            )
+        if (
+            self.source_principal_amount is not None
+            and self.principal_paid is not None
+            and self.top_up_amount is not None
+        ):
+            if (
+                self.successor_principal_amount
+                != self.source_principal_amount
+                - self.principal_paid
+                + self.top_up_amount
+            ):
+                errors["successor_principal_amount"] = (
+                    "Successor principal does not reconcile to the renewal."
+                )
+        if (
+            self.successor_principal_amount is not None
+            and self.successor_principal_amount <= 0
+        ):
+            errors["successor_principal_amount"] = (
+                "Renewal successor principal must be positive."
+            )
         if errors:
             raise ValidationError(errors)
 
@@ -2532,11 +2895,25 @@ class PawnLoanRenewalReversal(WorkspaceOwnedModel):
         if not str(self.reason or "").strip():
             raise ValidationError({"reason": "A renewal reversal reason is required."})
         if self.renewal_id and self.settlement_reversal_event_id:
-            if self.settlement_reversal_event.reversal_of_id != self.renewal.settlement_event_id:
-                raise ValidationError({"settlement_reversal_event": "Reversal must compensate the settlement event."})
+            if (
+                self.settlement_reversal_event.reversal_of_id
+                != self.renewal.settlement_event_id
+            ):
+                raise ValidationError(
+                    {
+                        "settlement_reversal_event": "Reversal must compensate the settlement event."
+                    }
+                )
         if self.renewal_id and self.opening_reversal_event_id:
-            if self.opening_reversal_event.reversal_of_id != self.renewal.opening_event_id:
-                raise ValidationError({"opening_reversal_event": "Reversal must compensate the opening event."})
+            if (
+                self.opening_reversal_event.reversal_of_id
+                != self.renewal.opening_event_id
+            ):
+                raise ValidationError(
+                    {
+                        "opening_reversal_event": "Reversal must compensate the opening event."
+                    }
+                )
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

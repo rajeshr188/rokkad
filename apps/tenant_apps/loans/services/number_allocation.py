@@ -46,10 +46,14 @@ def preview_numbers(*, series, document_kind, count):
             f"This split needs {count} new numbers, but only "
             f"{sequence.maximum_number - first.counter + 1} remain in this series."
         )
-    return tuple(NumberAllocation(
-        value=f"{sequence.prefix}{counter:0{sequence.width}d}",
-        counter=counter, sequence_id=sequence.pk,
-    ) for counter in range(first.counter, first.counter + count))
+    return tuple(
+        NumberAllocation(
+            value=f"{sequence.prefix}{counter:0{sequence.width}d}",
+            counter=counter,
+            sequence_id=sequence.pk,
+        )
+        for counter in range(first.counter, first.counter + count)
+    )
 
 
 def allocate_number(
@@ -61,7 +65,9 @@ def allocate_number(
     """Allocate once under a row lock; committed numbers are never reclaimed."""
     kind = LoanDocumentKind(document_kind).value
     with transaction.atomic():
-        assert_series_can_issue(series, document_kind=LoanDocumentKind(document_kind), for_update=True)
+        assert_series_can_issue(
+            series, document_kind=LoanDocumentKind(document_kind), for_update=True
+        )
         try:
             sequence = (
                 LoanNumberSequence.objects.select_for_update()

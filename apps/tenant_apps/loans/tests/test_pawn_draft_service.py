@@ -128,7 +128,9 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             maximum_number=10000,
         )
         self.product_version = _seed_default_loan_products()[0]
-        type(self.product_version).objects.filter(pk=self.product_version.pk).update(status="ACTIVE")
+        type(self.product_version).objects.filter(pk=self.product_version.pk).update(
+            status="ACTIVE"
+        )
         self.product_version.refresh_from_db()
 
     def collateral(self, **changes):
@@ -175,36 +177,62 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
         from apps.orgs.models import Company
+
         role = Role.objects.create(name="DraftDelegate-" + uuid.uuid4().hex[:8])
         ct = ContentType.objects.get_for_model(Company)
         for code in ("data_view", *codes):
-            permission, _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={"name": code})
+            permission, _ = Permission.objects.get_or_create(
+                content_type=ct, codename=code, defaults={"name": code}
+            )
             workspace_role_permissions(role, self.tenant).add(permission)
-        Membership.objects.filter(user=self.actor, company=self.tenant).update(role=role)
+        Membership.objects.filter(user=self.actor, company=self.tenant).update(
+            role=role
+        )
         return role
 
     def test_draft_create_and_edit_grants_preserve_initial_photo_workflow(self):
         from django.core.exceptions import PermissionDenied
-        from apps.tenant_apps.loans.services.collateral_media import delete_draft_collateral_photo
+        from apps.tenant_apps.loans.services.collateral_media import (
+            delete_draft_collateral_photo,
+        )
+
         self._set_actor_grants("data_create")
-        photo = lambda: SimpleUploadedFile("initial.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg")
-        loan = create_pawn_draft_with_photos(self.command(), actor=self.actor,
-            photos=(DraftCollateralPhotoInput(collateral_item_id=None, upload=photo()),))
+        photo = lambda: SimpleUploadedFile(
+            "initial.jpg", b"\xff\xd8\xff\xe0evidence", content_type="image/jpeg"
+        )
+        loan = create_pawn_draft_with_photos(
+            self.command(),
+            actor=self.actor,
+            photos=(
+                DraftCollateralPhotoInput(collateral_item_id=None, upload=photo()),
+            ),
+        )
         item = loan.collateral_items.get()
         self.assertEqual(item.photos.count(), 1)
         from apps.tenant_apps.loans.services.pawn_draft_split import split_pawn_draft
+
         def split():
-            return split_pawn_draft(loan.pk, collateral_item_ids=[item.pk], series=self.series,
-                product_version=self.product_version, loan_date=loan.loan_date,
-                tenure_months=3, expected_fingerprint="stale",
+            return split_pawn_draft(
+                loan.pk,
+                collateral_item_ids=[item.pk],
+                series=self.series,
+                product_version=self.product_version,
+                loan_date=loan.loan_date,
+                tenure_months=3,
+                expected_fingerprint="stale",
                 actor=self.actor,
             )
+
         with self.assertRaises(PermissionDenied):
             split()
-        command = UpdatePawnDraftCommand(borrower_id=self.borrower.pk,
-            principal_amount=loan.principal_amount, monthly_interest_rate=loan.monthly_interest_rate,
-            loan_date=loan.loan_date, tenure_months=loan.tenure_months,
-            collateral=(self.collateral(collateral_item_id=item.pk),))
+        command = UpdatePawnDraftCommand(
+            borrower_id=self.borrower.pk,
+            principal_amount=loan.principal_amount,
+            monthly_interest_rate=loan.monthly_interest_rate,
+            loan_date=loan.loan_date,
+            tenure_months=loan.tenure_months,
+            collateral=(self.collateral(collateral_item_id=item.pk),),
+        )
         with self.assertRaises(PermissionDenied):
             append_collateral_photo(item.pk, upload=photo(), actor=self.actor)
         with self.assertRaises(PermissionDenied):
@@ -224,27 +252,54 @@ class PawnDraftServiceTests(WorkspaceTestCase):
     def test_draft_direct_commands_deny_missing_and_removed_actor_without_writes(self):
         from django.core.exceptions import PermissionDenied
         from apps.tenant_apps.loans.services.pawn_draft_split import split_pawn_draft
-        from apps.tenant_apps.loans.services.pawn_lifecycle import transfer_expired_draft_setup
-        from apps.tenant_apps.loans.services.collateral_media import render_collateral_label, inherit_collateral_photos
+        from apps.tenant_apps.loans.services.pawn_lifecycle import (
+            transfer_expired_draft_setup,
+        )
+        from apps.tenant_apps.loans.services.collateral_media import (
+            render_collateral_label,
+            inherit_collateral_photos,
+        )
+
         loan = create_pawn_draft(self.command(), actor=self.actor)
         item = loan.collateral_items.get()
-        command = UpdatePawnDraftCommand(borrower_id=self.borrower.pk,
-            principal_amount=loan.principal_amount, monthly_interest_rate=loan.monthly_interest_rate,
-            loan_date=loan.loan_date, tenure_months=loan.tenure_months,
-            collateral=(self.collateral(collateral_item_id=item.pk),))
+        command = UpdatePawnDraftCommand(
+            borrower_id=self.borrower.pk,
+            principal_amount=loan.principal_amount,
+            monthly_interest_rate=loan.monthly_interest_rate,
+            loan_date=loan.loan_date,
+            tenure_months=loan.tenure_months,
+            collateral=(self.collateral(collateral_item_id=item.pk),),
+        )
         Membership.objects.filter(user=self.actor, company=self.tenant).delete()
         for actor in (None, self.actor):
             calls = (
                 lambda: create_pawn_draft(self.command(), actor=actor),
                 lambda: update_pawn_draft(loan.pk, command, actor=actor),
-                lambda: split_pawn_draft(loan.pk, collateral_item_ids=[item.pk], series=self.series,
-                    product_version=self.product_version, loan_date=loan.loan_date,
-                    tenure_months=3, expected_fingerprint="stale", actor=actor),
+                lambda: split_pawn_draft(
+                    loan.pk,
+                    collateral_item_ids=[item.pk],
+                    series=self.series,
+                    product_version=self.product_version,
+                    loan_date=loan.loan_date,
+                    tenure_months=3,
+                    expected_fingerprint="stale",
+                    actor=actor,
+                ),
                 lambda: append_collateral_photo(item.pk, upload=None, actor=actor),
                 lambda: inherit_collateral_photos(item, item, actor=actor),
-                lambda: render_collateral_label(item.pk, qr_target="https://example.test/scan", action="PRINT", actor=actor),
-                lambda: transfer_expired_draft_setup(loan.pk, license_id=self.license.pk,
-                    series_id=self.series.pk, reason="test", actor=actor),
+                lambda: render_collateral_label(
+                    item.pk,
+                    qr_target="https://example.test/scan",
+                    action="PRINT",
+                    actor=actor,
+                ),
+                lambda: transfer_expired_draft_setup(
+                    loan.pk,
+                    license_id=self.license.pk,
+                    series_id=self.series.pk,
+                    reason="test",
+                    actor=actor,
+                ),
             )
             for call in calls:
                 with self.assertRaises(PermissionDenied):
@@ -458,8 +513,13 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.assertEqual(updated.collateral_items.count(), 2)
         events = list(updated.change_log.order_by("created_at", "pk"))
         self.assertEqual(events[-1].event_kind, PawnLoanEventKind.DRAFT_UPDATED.value)
-        self.assertEqual(events[-1].metadata["before"]["collateral"][0]["description"], "Gold bangles")
-        self.assertEqual(events[-1].metadata["after"]["collateral"][0]["description"], "Gold chain")
+        self.assertEqual(
+            events[-1].metadata["before"]["collateral"][0]["description"],
+            "Gold bangles",
+        )
+        self.assertEqual(
+            events[-1].metadata["after"]["collateral"][0]["description"], "Gold chain"
+        )
         self.assertEqual(updated.loan_number, "PL-A-00001")
 
     def test_update_with_photos_maps_existing_and_new_collateral(self):
@@ -484,7 +544,9 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                 DraftCollateralPhotoInput(
                     existing.pk,
                     SimpleUploadedFile(
-                        "existing.jpg", b"\xff\xd8\xffexisting", content_type="image/jpeg"
+                        "existing.jpg",
+                        b"\xff\xd8\xffexisting",
+                        content_type="image/jpeg",
                     ),
                 ),
                 DraftCollateralPhotoInput(
@@ -499,7 +561,9 @@ class PawnDraftServiceTests(WorkspaceTestCase):
 
         self.assertEqual(existing.photos.get().original_filename, "existing.jpg")
         self.assertEqual(
-            loan.collateral_items.get(description="Gold ring").photos.get().original_filename,
+            loan.collateral_items.get(description="Gold ring")
+            .photos.get()
+            .original_filename,
             "new.jpg",
         )
 
@@ -568,9 +632,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
     def test_item_allocation_above_its_own_ltv_fails_before_number_allocation(self):
         self._economic_setup()
         command = self.command(
-            collateral=(
-                self.collateral(allocated_principal=Decimal("96000.01")),
-            )
+            collateral=(self.collateral(allocated_principal=Decimal("96000.01")),)
         )
 
         with self.assertRaisesRegex(ValueError, "exceeds its maximum"):
@@ -584,9 +646,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self._economic_setup()
         loan = create_pawn_draft(
             self.command(
-                collateral=(
-                    self.collateral(allocated_principal=Decimal("50000.00")),
-                )
+                collateral=(self.collateral(allocated_principal=Decimal("50000.00")),)
             ),
             actor=self.actor,
         )
@@ -617,9 +677,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self._economic_setup()
         loan = create_pawn_draft(
             self.command(
-                collateral=(
-                    self.collateral(allocated_principal=Decimal("50000.00")),
-                )
+                collateral=(self.collateral(allocated_principal=Decimal("50000.00")),)
             ),
             actor=self.actor,
         )
@@ -637,9 +695,14 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.assertEqual(snapshot.gross_principal, Decimal("50000.0000"))
         self.assertEqual(snapshot.advance_interest, Decimal("1000.0000"))
         self.assertEqual(snapshot.net_disbursed, Decimal("49000.0000"))
-        self.assertEqual(snapshot.evidence["tranches"][0]["collateral_item_id"], loan.collateral_items.get().pk)
+        self.assertEqual(
+            snapshot.evidence["tranches"][0]["collateral_item_id"],
+            loan.collateral_items.get().pk,
+        )
         self.assertEqual(result.loan_event.payload["values"]["net_cash"], "49000")
-        self.assertEqual(result.loan_event.payload["values"]["advance_interest"], "1000")
+        self.assertEqual(
+            result.loan_event.payload["values"]["advance_interest"], "1000"
+        )
         with self.assertRaisesRegex(ValidationError, "immutable"):
             snapshot.save()
         with self.assertRaisesRegex(ValidationError, "cannot be deleted"):
@@ -798,7 +861,10 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             second.loan_event.payload["values"]["advance_interest_applied"],
             "0",
         )
-        self.assertEqual(PawnLoanInterestAccrualLine.objects.filter(accrual=second.accrual).count(), 2)
+        self.assertEqual(
+            PawnLoanInterestAccrualLine.objects.filter(accrual=second.accrual).count(),
+            2,
+        )
 
     def test_renewal_is_idempotent_and_records_successor_events(self):
         self._economic_setup()
@@ -827,12 +893,15 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             request_key="loans-only-renewal-idempotency",
             actor=self.actor,
         )
-        with patch(
-            "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
-            return_value=date(2026, 7, 18),
-        ), patch(
-            "apps.tenant_apps.loans.services.settlement_preparation.preview_pawn_loan_accruals",
-            return_value=(),
+        with (
+            patch(
+                "apps.tenant_apps.loans.services.pawn_renewals.timezone.localdate",
+                return_value=date(2026, 7, 18),
+            ),
+            patch(
+                "apps.tenant_apps.loans.services.settlement_preparation.preview_pawn_loan_accruals",
+                return_value=(),
+            ),
         ):
             self._set_actor_grants("loan_release", "loan_approve", "loan_disburse")
             first = renew_pawn_loan(loan.pk, **call)
@@ -854,15 +923,19 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         loan = create_pawn_draft(self.command(), actor=self.actor)
         self._add_photo(loan)
         self._originate_legacy_loan(loan)
-        with patch(
-            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
-            return_value=date(2026, 12, 4),
-        ), patch(
-            "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
-            return_value=date(2026, 12, 4),
-        ), patch(
-            "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
-            return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+        with (
+            patch(
+                "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+                return_value=date(2026, 12, 4),
+            ),
+            patch(
+                "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
+                return_value=date(2026, 12, 4),
+            ),
+            patch(
+                "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
+                return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+            ),
         ):
             first = initiate_pawn_loan_auction(
                 loan.pk,
@@ -888,7 +961,9 @@ class PawnDraftServiceTests(WorkspaceTestCase):
             actor=self.tenant.owner,
         )
         self.assertEqual(cancelled.state, "CANCELLED")
-        self.assertEqual(cancelled.cancellation_reason, "Borrower settled before auction")
+        self.assertEqual(
+            cancelled.cancellation_reason, "Borrower settled before auction"
+        )
 
     def test_auction_completion_and_reversal_restore_loan_and_custody(self):
         self._economic_setup()
@@ -897,15 +972,19 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         loan = create_pawn_draft(self.command(), actor=self.actor)
         self._add_photo(loan)
         self._originate_legacy_loan(loan)
-        with patch(
-            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
-            return_value=date(2026, 12, 4),
-        ), patch(
-            "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
-            return_value=date(2026, 12, 4),
-        ), patch(
-            "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
-            return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+        with (
+            patch(
+                "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+                return_value=date(2026, 12, 4),
+            ),
+            patch(
+                "apps.tenant_apps.loans.services.pawn_notices.timezone.localdate",
+                return_value=date(2026, 12, 4),
+            ),
+            patch(
+                "apps.tenant_apps.loans.services.pawn_notices.timezone.now",
+                return_value=timezone.make_aware(datetime(2026, 12, 4, 10, 0)),
+            ),
         ):
             auction = initiate_pawn_loan_auction(
                 loan.pk,
@@ -915,19 +994,21 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                 actor=self.tenant.owner,
             )
         from apps.tenant_apps.loans.tests.factories import prepare_test_auction_service
+
         prepare_test_auction_service(auction, self.tenant.owner, date(2026, 12, 4))
-        NotificationJob.objects.filter(
-            pk=auction.notice.notification_job_id
-        ).update(
+        NotificationJob.objects.filter(pk=auction.notice.notification_job_id).update(
             status=NotificationJob.Status.SENT,
             sent_at=timezone.make_aware(datetime(2026, 12, 4, 10, 5)),
         )
-        with patch(
-            "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
-            return_value=date(2027, 1, 20),
-        ), patch(
-            "apps.tenant_apps.loans.services.settlement_preparation.preview_pawn_loan_accruals",
-            return_value=(),
+        with (
+            patch(
+                "apps.tenant_apps.loans.services.pawn_auctions.timezone.localdate",
+                return_value=date(2027, 1, 20),
+            ),
+            patch(
+                "apps.tenant_apps.loans.services.settlement_preparation.preview_pawn_loan_accruals",
+                return_value=(),
+            ),
         ):
             auction = start_pawn_loan_auction(
                 auction.pk,
@@ -944,9 +1025,13 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         loan.refresh_from_db()
         collateral = loan.collateral_items.get()
         collateral.refresh_from_db()
-        self.assertEqual(completed.loan_event.event_kind, TransactionKind.AUCTION_RECOVERY.value)
+        self.assertEqual(
+            completed.loan_event.event_kind, TransactionKind.AUCTION_RECOVERY.value
+        )
         self.assertEqual(loan.state, PawnLoanState.CLOSED.value)
-        self.assertEqual(collateral.custody_state, CollateralCustodyState.AUCTION_DISPOSED.value)
+        self.assertEqual(
+            collateral.custody_state, CollateralCustodyState.AUCTION_DISPOSED.value
+        )
         self.assertEqual(completed.auction.items.count(), 1)
         recovery_allocation = completed.loan_event.obligation_allocations.get()
         self.assertEqual(recovery_allocation.amount, Decimal("50000.0000"))
@@ -964,7 +1049,9 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         loan.refresh_from_db()
         collateral.refresh_from_db()
         self.assertEqual(loan.state, PawnLoanState.ACTIVE.value)
-        self.assertEqual(collateral.custody_state, CollateralCustodyState.IN_VAULT.value)
+        self.assertEqual(
+            collateral.custody_state, CollateralCustodyState.IN_VAULT.value
+        )
         self.assertEqual(
             reversed_auction.recovery_reversal_event.reversal_of_id,
             completed.loan_event.pk,
@@ -978,10 +1065,19 @@ class PawnDraftServiceTests(WorkspaceTestCase):
 
     def _originate_legacy_loan(self, loan):
         """Create servicing fixtures at their historical origination time."""
-        at = timezone.make_aware(datetime.combine(loan.loan_date, datetime.min.time())).replace(hour=12)
+        at = timezone.make_aware(
+            datetime.combine(loan.loan_date, datetime.min.time())
+        ).replace(hour=12)
         with patch("django.utils.timezone.now", return_value=at):
-            source = RateSource.objects.create(name="Origination fixture", location="Local")
-            Rate.objects.create(rate_source=source, buying_rate=10000, selling_rate=10100, effective_at=at)
+            source = RateSource.objects.create(
+                name="Origination fixture", location="Local"
+            )
+            Rate.objects.create(
+                rate_source=source,
+                buying_rate=10000,
+                selling_rate=10100,
+                effective_at=at,
+            )
             approve_pawn_loan(loan.pk, actor=self.actor)
             disburse_pawn_loan(loan.pk, effective_date=loan.loan_date, actor=self.actor)
 

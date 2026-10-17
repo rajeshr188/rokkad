@@ -17,7 +17,6 @@ from .models import (
 )
 from apps.tenancy.context import current_workspace_id
 
-
 CONTROL_CLASS = "form-control"
 SELECT_CLASS = "form-select"
 
@@ -73,20 +72,35 @@ class PartyForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         labels = {
-            "display_name": _("Customer name"), "party_type": _("Record type"),
-            "primary_phone": _("Phone"), "primary_email": _("Email"),
-            "profile_photo": _("Customer photo"), "relation_label": _("Relation"),
-            "relation_name": _("Related person's name"), "party_code": _("Customer code"),
-            "legal_name": _("Legal name"), "tax_pan": _("PAN"), "gstin": _("GSTIN"),
-            "risk_level": _("Risk level"), "credit_hold": _("Credit hold"),
+            "display_name": _("Customer name"),
+            "party_type": _("Record type"),
+            "primary_phone": _("Phone"),
+            "primary_email": _("Email"),
+            "profile_photo": _("Customer photo"),
+            "relation_label": _("Relation"),
+            "relation_name": _("Related person's name"),
+            "party_code": _("Customer code"),
+            "legal_name": _("Legal name"),
+            "tax_pan": _("PAN"),
+            "gstin": _("GSTIN"),
+            "risk_level": _("Risk level"),
+            "credit_hold": _("Credit hold"),
             "status": _("Status"),
         }
         for name, label in labels.items():
             self.fields[name].label = label
-        self.fields["display_name"].help_text = _("Enter the name used to find this customer. Keep the original spelling.")
-        self.fields["profile_photo"].help_text = _("Optional. Choose a clear photo; you can add it later.")
-        self.fields["relation_name"].help_text = _("If you enter a related person's name, also choose a relation.")
-        self.fields["legal_name"].help_text = _("Enter only if different from the customer name.")
+        self.fields["display_name"].help_text = _(
+            "Enter the name used to find this customer. Keep the original spelling."
+        )
+        self.fields["profile_photo"].help_text = _(
+            "Optional. Choose a clear photo; you can add it later."
+        )
+        self.fields["relation_name"].help_text = _(
+            "If you enter a related person's name, also choose a relation."
+        )
+        self.fields["legal_name"].help_text = _(
+            "Enter only if different from the customer name."
+        )
         self.fields["primary_email"].widget.attrs["inputmode"] = "email"
         self.fields["profile_photo"].widget.attrs["accept"] = "image/*"
         self.fields["tax_pan"].widget.attrs["autocapitalize"] = "characters"
@@ -165,10 +179,15 @@ class PartyProfilePhotoForm(forms.ModelForm):
 class PartyContactMethodForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        contact_type = (self.data.get(self.add_prefix("contact_type")) if self.is_bound
-                        else self.initial.get("contact_type", PartyContactMethod.ContactType.PHONE))
+        contact_type = (
+            self.data.get(self.add_prefix("contact_type"))
+            if self.is_bound
+            else self.initial.get("contact_type", PartyContactMethod.ContactType.PHONE)
+        )
         if contact_type in PHONE_CONTACT_TYPES:
-            self.fields["value"] = PartyPhoneNumberField(label=_("Number"), max_length=32)
+            self.fields["value"] = PartyPhoneNumberField(
+                label=_("Number"), max_length=32
+            )
         self.fields["value"].widget.attrs["data-contact-value"] = ""
         self.fields["contact_type"].widget.attrs["data-contact-type"] = ""
         if contact_type == PartyContactMethod.ContactType.EMAIL:
@@ -234,10 +253,16 @@ class PartyIdentifierForm(forms.ModelForm):
     class Meta:
         model = PartyIdentifier
         fields = ["identifier_type", "value", "masked_value", "expires_on"]
-        labels = {"identifier_type": _("Identifier type"), "value": _("Identifier number"),
-                  "masked_value": _("Masked display"), "expires_on": _("Expiry date")}
-        help_texts = {"masked_value": _("Optional display value with sensitive digits hidden."),
-                      "expires_on": _("Enter an expiry date only if the document has one.")}
+        labels = {
+            "identifier_type": _("Identifier type"),
+            "value": _("Identifier number"),
+            "masked_value": _("Masked display"),
+            "expires_on": _("Expiry date"),
+        }
+        help_texts = {
+            "masked_value": _("Optional display value with sensitive digits hidden."),
+            "expires_on": _("Enter an expiry date only if the document has one."),
+        }
         widgets = {
             "identifier_type": forms.Select(attrs={"class": SELECT_CLASS}),
             "value": forms.TextInput(attrs={"class": CONTROL_CLASS}),
@@ -277,9 +302,13 @@ class PartyDocumentForm(forms.ModelForm):
     class Meta:
         model = PartyDocument
         fields = ["document_type", "title", "identifier", "file", "expires_on"]
-        labels = {"document_type": _("Document type"), "title": _("Document title"),
-                  "identifier": _("Related identifier"), "file": _("Document file"),
-                  "expires_on": _("Expiry date")}
+        labels = {
+            "document_type": _("Document type"),
+            "title": _("Document title"),
+            "identifier": _("Related identifier"),
+            "file": _("Document file"),
+            "expires_on": _("Expiry date"),
+        }
         widgets = {
             "document_type": forms.Select(attrs={"class": SELECT_CLASS}),
             "title": forms.TextInput(attrs={"class": CONTROL_CLASS}),
@@ -356,17 +385,26 @@ class PartyMergeForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["source_party"].widget = PartyMergeAutocompleteWidget(
             target_party=self.target_party,
-            data_url=reverse("workspace_party:party_merge_autocomplete", kwargs={
-                "workspace_slug": self.target_party.workspace.slug, "pk": self.target_party.pk,
-            }),
-            attrs={"data-placeholder": _("Search by name, party code, phone, relation, or email")},
+            data_url=reverse(
+                "workspace_party:party_merge_autocomplete",
+                kwargs={
+                    "workspace_slug": self.target_party.workspace.slug,
+                    "pk": self.target_party.pk,
+                },
+            ),
+            attrs={
+                "data-placeholder": _(
+                    "Search by name, party code, phone, relation, or email"
+                )
+            },
             select2_options={"width": "100%"},
         )
-        self.fields["source_party"].queryset = Party.objects.filter(
-            workspace_id=self.target_party.workspace_id
-        ).exclude(
-            pk=self.target_party.pk
-        ).exclude(status=Party.PartyStatus.ARCHIVED).order_by(
-            "display_name",
-            "party_code",
+        self.fields["source_party"].queryset = (
+            Party.objects.filter(workspace_id=self.target_party.workspace_id)
+            .exclude(pk=self.target_party.pk)
+            .exclude(status=Party.PartyStatus.ARCHIVED)
+            .order_by(
+                "display_name",
+                "party_code",
+            )
         )

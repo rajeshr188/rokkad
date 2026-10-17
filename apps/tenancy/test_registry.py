@@ -13,13 +13,23 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
         self.assertEqual(len(models), 155)
         self.assertEqual(
             {model._meta.app_label for model in models},
-            {"party", "loans", "notify_v2", "rates", "orgs", "data_portability", "platform_whatsapp"},
+            {
+                "party",
+                "loans",
+                "notify_v2",
+                "rates",
+                "orgs",
+                "data_portability",
+                "platform_whatsapp",
+            },
         )
         for model in models:
             with self.subTest(model=model._meta.label):
                 field = model._meta.get_field("workspace")
                 self.assertFalse(field.null)
-                self.assertEqual(field.remote_field.model._meta.label_lower, "orgs.company")
+                self.assertEqual(
+                    field.remote_field.model._meta.label_lower, "orgs.company"
+                )
 
     def test_rls_rollout_registry_covers_every_surviving_model(self):
         labels = {model._meta.label_lower for model in rls_protected_models()}
@@ -41,37 +51,80 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
         self.assertIn("loans.loanoriginationsettings", labels)
         self.assertEqual(
             {label.split(".", 1)[0] for label in labels},
-            {"loans", "notify_v2", "party", "rates", "orgs", "data_portability", "platform_whatsapp"},
+            {
+                "loans",
+                "notify_v2",
+                "party",
+                "rates",
+                "orgs",
+                "data_portability",
+                "platform_whatsapp",
+            },
         )
 
 
 class WorkspaceDataPlaneMetadataTests(TestCase):
     def test_model_specific_rls_migration_does_not_need_an_app_fallback(self):
         from .checks import check_workspace_rls
-        model=SimpleNamespace(_meta=SimpleNamespace(app_label='registered_control',
-            label_lower='registered_control.position',db_table='missing_registered_position'))
-        with patch('apps.tenancy.checks.rls_protected_models',return_value=[model]), patch.dict(
-            'apps.tenancy.checks.RLS_MIGRATION_BY_MODEL',{'registered_control.position':'0001_initial'}
-        ), patch('apps.tenancy.checks.MigrationRecorder.applied_migrations',
-                 return_value={('registered_control','0001_initial')}):
+
+        model = SimpleNamespace(
+            _meta=SimpleNamespace(
+                app_label="registered_control",
+                label_lower="registered_control.position",
+                db_table="missing_registered_position",
+            )
+        )
+        with (
+            patch("apps.tenancy.checks.rls_protected_models", return_value=[model]),
+            patch.dict(
+                "apps.tenancy.checks.RLS_MIGRATION_BY_MODEL",
+                {"registered_control.position": "0001_initial"},
+            ),
+            patch(
+                "apps.tenancy.checks.MigrationRecorder.applied_migrations",
+                return_value={("registered_control", "0001_initial")},
+            ),
+        ):
             # A registered model without an app-wide fallback must reach the
             # actual table/isolation check, rather than crash or skip it.
-            self.assertEqual([error.id for error in check_workspace_rls(None,databases=['default'])],['tenancy.E011'])
+            self.assertEqual(
+                [
+                    error.id
+                    for error in check_workspace_rls(None, databases=["default"])
+                ],
+                ["tenancy.E011"],
+            )
 
-    def test_new_model_rls_check_waits_for_its_migration_and_reports_missing_table(self):
+    def test_new_model_rls_check_waits_for_its_migration_and_reports_missing_table(
+        self,
+    ):
         from .checks import check_workspace_rls
         from .registry import RLS_MIGRATION_BY_MODEL
-        model = SimpleNamespace(_meta=SimpleNamespace(
-            app_label="loans", label_lower="loans.pawnreleasebatch",
-            db_table="missing_release_batch_table",
-        ))
+
+        model = SimpleNamespace(
+            _meta=SimpleNamespace(
+                app_label="loans",
+                label_lower="loans.pawnreleasebatch",
+                db_table="missing_release_batch_table",
+            )
+        )
         applied = {("loans", "0003_enable_workspace_rls")}
-        with patch("apps.tenancy.checks.rls_protected_models", return_value=[model]), patch(
-            "apps.tenancy.checks.MigrationRecorder.applied_migrations", return_value=applied
+        with (
+            patch("apps.tenancy.checks.rls_protected_models", return_value=[model]),
+            patch(
+                "apps.tenancy.checks.MigrationRecorder.applied_migrations",
+                return_value=applied,
+            ),
         ):
             self.assertEqual(check_workspace_rls(None, databases=["default"]), [])
             applied.add(("loans", RLS_MIGRATION_BY_MODEL[model._meta.label_lower]))
-            self.assertEqual([error.id for error in check_workspace_rls(None, databases=["default"])], ["tenancy.E011"])
+            self.assertEqual(
+                [
+                    error.id
+                    for error in check_workspace_rls(None, databases=["default"])
+                ],
+                ["tenancy.E011"],
+            )
 
     def test_every_registered_model_has_canonical_forced_rls_metadata(self):
         models = rls_protected_models()

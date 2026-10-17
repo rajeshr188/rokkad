@@ -10,7 +10,11 @@ from django.db.models import Max
 from django.utils import timezone
 
 from .action_access import require_loan_action
-from apps.tenant_apps.loans.domain import PawnLoanEventKind, PawnLoanState, can_transition
+from apps.tenant_apps.loans.domain import (
+    PawnLoanEventKind,
+    PawnLoanState,
+    can_transition,
+)
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
     CollateralAppraisal,
@@ -26,7 +30,10 @@ from apps.tenant_apps.loans.services.pawn_economics import (
     resolve_pawn_draft_economics,
 )
 from apps.tenant_apps.loans.selectors.origination_rates import (
-    RULE, get_origination_quote_rows, require_fresh_quotes, requires_quotes,
+    RULE,
+    get_origination_quote_rows,
+    require_fresh_quotes,
+    requires_quotes,
     assert_approved_quotes_current,
     require_current_origination_date,
 )
@@ -38,30 +45,45 @@ class PawnLifecycleError(ValueError):
 
 
 @transaction.atomic
-def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
-                      earlier_review_digest="", valuation_review=None, combined_review=None) -> PawnLoanApprovalSnapshot:
+def approve_pawn_loan(
+    loan_id: int,
+    *,
+    actor=None,
+    earlier_payout_reason=None,
+    earlier_review_digest="",
+    valuation_review=None,
+    combined_review=None,
+) -> PawnLoanApprovalSnapshot:
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.approve")
     _require_transition(loan, PawnLoanState.APPROVED)
     historical = None
     if earlier_payout_reason is not None:
         from .historical_origination import authorize, historical_basis
+
         authorize(loan, actor)
         historical = historical_basis(loan)
-    assert_series_can_issue(loan.series, as_of_date=loan.loan_date if historical else None, for_update=True)
+    assert_series_can_issue(
+        loan.series, as_of_date=loan.loan_date if historical else None, for_update=True
+    )
     loan.full_clean()
     collateral = tuple(loan.collateral_items.all())
     if not collateral:
         raise PawnLifecycleError("A PawnLoan requires collateral before approval.")
     from .origination_settings import collateral_photos_required
+
     photos_required = collateral_photos_required(loan.workspace_id)
     for item in collateral:
         item.full_clean()
-        if photos_required and not any(not photo.is_blank_legacy_image for photo in item.photos.all()):
+        if photos_required and not any(
+            not photo.is_blank_legacy_image for photo in item.photos.all()
+        ):
             raise PawnLifecycleError(
                 f"Collateral {item.description} requires at least one photograph before approval."
             )
-    resolved_economics = _validate_collateral_economics(loan, collateral, historical_context=historical)
+    resolved_economics = _validate_collateral_economics(
+        loan, collateral, historical_context=historical
+    )
     quote_evidence = approval_quote_evidence(loan, collateral, resolved_economics)
     appraisals = _freeze_approved_appraisals(loan, collateral, actor=actor)
 
@@ -75,16 +97,34 @@ def approve_pawn_loan(loan_id: int, *, actor=None, earlier_payout_reason=None,
     if combined_review is not None:
         payload["combined_review"] = combined_review
     if historical is not None:
-        from .historical_origination import RULE as EARLIER_RULE, recording_evidence, assert_historical_approval
+        from .historical_origination import (
+            RULE as EARLIER_RULE,
+            recording_evidence,
+            assert_historical_approval,
+        )
+
         quote_evidence["rule"] = EARLIER_RULE
-        payload["earlier_payout"] = recording_evidence(loan, historical, actor=actor,
-            reason=earlier_payout_reason, review_digest=earlier_review_digest)
-        assert_historical_approval(loan, actor=actor, evidence=quote_evidence,
-            recording=payload["earlier_payout"], effective_date=loan.loan_date)
+        payload["earlier_payout"] = recording_evidence(
+            loan,
+            historical,
+            actor=actor,
+            reason=earlier_payout_reason,
+            review_digest=earlier_review_digest,
+        )
+        assert_historical_approval(
+            loan,
+            actor=actor,
+            evidence=quote_evidence,
+            recording=payload["earlier_payout"],
+            effective_date=loan.loan_date,
+        )
     else:
-        assert_approved_quotes_current(workspace_id=loan.workspace_id,
-            method=quote_evidence["valuation_method"], evidence=quote_evidence,
-            effective_date=loan.loan_date)
+        assert_approved_quotes_current(
+            workspace_id=loan.workspace_id,
+            method=quote_evidence["valuation_method"],
+            evidence=quote_evidence,
+            effective_date=loan.loan_date,
+        )
     fingerprint = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -171,12 +211,18 @@ def transfer_expired_draft_setup(
     if loan.state != PawnLoanState.DRAFT.value:
         raise PawnLifecycleError("Only a reopened draft can transfer license setup.")
     if loan.license.is_active and not loan.license.is_expired():
-        raise PawnLifecycleError("License transfer is only allowed after the current license becomes unavailable.")
+        raise PawnLifecycleError(
+            "License transfer is only allowed after the current license becomes unavailable."
+        )
     try:
         license = LoanLicense.objects.get(pk=license_id, workspace_id=loan.workspace_id)
-        series = LoanSeries.objects.select_related("license").get(pk=series_id, license=license)
+        series = LoanSeries.objects.select_related("license").get(
+            pk=series_id, license=license
+        )
     except (LoanLicense.DoesNotExist, LoanSeries.DoesNotExist) as exc:
-        raise PawnLifecycleError("Replacement license and series must belong to this workspace.") from exc
+        raise PawnLifecycleError(
+            "Replacement license and series must belong to this workspace."
+        ) from exc
     assert_series_can_issue(series)
     allocation = allocate_pawn_loan_number(series=series, actor=actor)
     old = {
@@ -224,7 +270,9 @@ def transfer_expired_draft_setup(
 def _locked_loan(loan_id):
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
-        raise PawnLifecycleError("PawnLoan transitions require an active tenant schema.")
+        raise PawnLifecycleError(
+            "PawnLoan transitions require an active tenant schema."
+        )
     try:
         return (
             PawnLoan.objects.select_for_update()
@@ -232,12 +280,16 @@ def _locked_loan(loan_id):
             .get(pk=loan_id, workspace_id=workspace_id)
         )
     except PawnLoan.DoesNotExist as exc:
-        raise PawnLifecycleError("PawnLoan was not found in the active workspace.") from exc
+        raise PawnLifecycleError(
+            "PawnLoan was not found in the active workspace."
+        ) from exc
 
 
 def _require_transition(loan, target):
     if not can_transition(loan.state, target):
-        raise PawnLifecycleError(f"PawnLoan cannot transition from {loan.state} to {target.value}.")
+        raise PawnLifecycleError(
+            f"PawnLoan cannot transition from {loan.state} to {target.value}."
+        )
 
 
 def _require_reason(reason):
@@ -255,7 +307,9 @@ def _validate_collateral_economics(loan, collateral, *, historical_context=None)
     allocations = [item.allocated_principal for item in collateral]
     if not any(value is not None for value in allocations):
         if historical_context is not None:
-            raise PawnLifecycleError("Earlier payouts require itemized collateral allocations.")
+            raise PawnLifecycleError(
+                "Earlier payouts require itemized collateral allocations."
+            )
         return None
     if any(value is None for value in allocations):
         raise PawnLifecycleError(
@@ -296,25 +350,46 @@ def _validate_collateral_economics(loan, collateral, *, historical_context=None)
 
 def approval_quote_evidence(loan, collateral, resolved):
     """Also cover legacy drafts without itemized economic evidence."""
-    method = resolved.economic_policy.valuation_method if resolved else resolve_policy().valuation_method.value
+    method = (
+        resolved.economic_policy.valuation_method
+        if resolved
+        else resolve_policy().valuation_method.value
+    )
     at = resolved.evaluated_at if resolved else timezone.now()
     quotes = resolved.valuation_quotes if resolved else {}
     limit = resolved.maximum_quote_age_days if resolved else None
     if resolved is None and requires_quotes(method):
         require_current_origination_date(loan.loan_date, at=at)
-        rows = get_origination_quote_rows(workspace_id=loan.workspace_id,
-            loan_date=loan.loan_date, metals=tuple(item.metal for item in collateral), at=at)
+        rows = get_origination_quote_rows(
+            workspace_id=loan.workspace_id,
+            loan_date=loan.loan_date,
+            metals=tuple(item.metal for item in collateral),
+            at=at,
+        )
         require_fresh_quotes(rows)
         quotes = {row["metal"]: row["evidence"] for row in rows}
         limit = rows[0]["maximum_age_days"] if rows else None
-    evidence = {"rule": RULE, "valuation_method": str(method),
-        "loan_date": loan.loan_date.isoformat(), "evaluated_at": at.isoformat(),
-        "quotes": quotes}
+    evidence = {
+        "rule": RULE,
+        "valuation_method": str(method),
+        "loan_date": loan.loan_date.isoformat(),
+        "evaluated_at": at.isoformat(),
+        "quotes": quotes,
+    }
     if limit is not None:
         from django.utils.dateparse import parse_datetime
-        evidence.update(maximum_quote_age_days=limit, age_basis="LOCAL_CALENDAR_DAYS",
-            quote_ages_days={metal: (timezone.localdate(at) - timezone.localdate(
-                parse_datetime(quote["effective_at"]))).days for metal, quote in quotes.items()})
+
+        evidence.update(
+            maximum_quote_age_days=limit,
+            age_basis="LOCAL_CALENDAR_DAYS",
+            quote_ages_days={
+                metal: (
+                    timezone.localdate(at)
+                    - timezone.localdate(parse_datetime(quote["effective_at"]))
+                ).days
+                for metal, quote in quotes.items()
+            },
+        )
     return evidence
 
 
@@ -363,13 +438,21 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
                 "item_id": item.pk,
                 "description": item.description,
                 "quantity": item.quantity,
-                "interest_rate_override": str(item.interest_rate_override) if item.interest_rate_override is not None else None,
+                "interest_rate_override": (
+                    str(item.interest_rate_override)
+                    if item.interest_rate_override is not None
+                    else None
+                ),
                 "interest_override_reason": item.interest_override_reason,
                 "metal": item.metal,
                 "gross_weight": str(item.gross_weight),
                 "net_weight": str(item.net_weight),
                 "purity_percentage": str(item.purity_percentage),
-                "latest_appraised_value": str(item.latest_appraised_value) if item.latest_appraised_value is not None else None,
+                "latest_appraised_value": (
+                    str(item.latest_appraised_value)
+                    if item.latest_appraised_value is not None
+                    else None
+                ),
                 "approved_appraisal_id": (
                     appraisals[item.pk].pk if item.pk in appraisals else None
                 ),
@@ -435,8 +518,14 @@ def _approval_payload(loan, collateral, resolved_economics=None, *, appraisals=N
                 {
                     "collateral_item_id": item.pk,
                     "interest_rate_policy_id": rate_policy.pk,
-                    "policy_monthly_interest_rate": str(rate_policy.monthly_interest_rate),
-                    "interest_rate_override": str(item.interest_rate_override) if item.interest_rate_override is not None else None,
+                    "policy_monthly_interest_rate": str(
+                        rate_policy.monthly_interest_rate
+                    ),
+                    "interest_rate_override": (
+                        str(item.interest_rate_override)
+                        if item.interest_rate_override is not None
+                        else None
+                    ),
                     "interest_override_reason": item.interest_override_reason,
                     "metal": tranche.metal.value,
                     "allocated_principal": str(tranche.allocated_principal),

@@ -168,19 +168,26 @@ def _save_draft_with_photos(save_draft, *, photos, actor):
                 except Exception as cleanup_error:
                     # A storage outage may also prevent compensation. Preserve
                     # the original error and record the orphan for reconciliation.
-                    logger.error("Rolled-back draft photo cleanup failed: %s (%s).",
-                                 name, type(cleanup_error).__name__)
+                    logger.error(
+                        "Rolled-back draft photo cleanup failed: %s (%s).",
+                        name,
+                        type(cleanup_error).__name__,
+                    )
         raise
 
 
 @transaction.atomic
-def create_pawn_draft(command: CreatePawnDraftCommand, *, actor=None, submission_id=None) -> PawnLoan:
+def create_pawn_draft(
+    command: CreatePawnDraftCommand, *, actor=None, submission_id=None
+) -> PawnLoan:
     workspace_id = _require_active_workspace(command.workspace_id)
     require_workspace_action(Company.objects.get(pk=workspace_id), actor, "data.create")
     return _create_pawn_draft(command, actor=actor, submission_id=submission_id)
 
 
-def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor, submission_id=None) -> PawnLoan:
+def _create_pawn_draft(
+    command: CreatePawnDraftCommand, *, actor, submission_id=None
+) -> PawnLoan:
     """Internal draft construction inside an authorized atomic command."""
     workspace_id = _require_active_workspace(command.workspace_id)
     borrower = _active_party(command.borrower_id)
@@ -190,7 +197,10 @@ def _create_pawn_draft(command: CreatePawnDraftCommand, *, actor, submission_id=
         series_id=command.series_id,
     )
     product_version = _active_product_version(
-        workspace_id, command.product_version_id, command.loan_date, command.tenure_months
+        workspace_id,
+        command.product_version_id,
+        command.loan_date,
+        command.tenure_months,
     )
     assert_series_can_issue(series)
     _require_interest_override_access(license.workspace, actor, command.collateral)
@@ -258,13 +268,17 @@ def update_pawn_draft(
             .get(pk=loan_id, workspace_id=workspace_id)
         )
     except PawnLoan.DoesNotExist as exc:
-        raise PawnDraftError("PawnLoan draft was not found in the active workspace.") from exc
+        raise PawnDraftError(
+            "PawnLoan draft was not found in the active workspace."
+        ) from exc
     require_loan_action(loan, actor, "data.edit")
     if loan.state != PawnLoanState.DRAFT.value:
         raise PawnDraftError("Only a draft PawnLoan can be edited.")
 
     borrower = _active_party(command.borrower_id)
-    _require_interest_override_access(loan.workspace, actor, command.collateral, loan.collateral_items.all())
+    _require_interest_override_access(
+        loan.workspace, actor, command.collateral, loan.collateral_items.all()
+    )
     resolved = _resolve_new_economics(
         workspace_id=workspace_id,
         license_id=loan.license_id,
@@ -321,7 +335,9 @@ def update_pawn_draft(
         item_id not in existing for item_id in supplied_ids
     ):
         raise PawnDraftError("Collateral identity does not belong to this draft.")
-    removed = [item for item_id, item in existing.items() if item_id not in supplied_ids]
+    removed = [
+        item for item_id, item in existing.items() if item_id not in supplied_ids
+    ]
     for item in removed:
         _delete_draft_collateral(item)
     persisted = []
@@ -375,7 +391,9 @@ def _delete_draft_collateral(item):
 def _require_active_workspace(expected_workspace_id=None) -> int:
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
-        raise PawnDraftError("PawnLoan draft operations require an active tenant schema.")
+        raise PawnDraftError(
+            "PawnLoan draft operations require an active tenant schema."
+        )
     if expected_workspace_id is not None and workspace_id != expected_workspace_id:
         raise PawnDraftError("Draft workspace must match the active tenant.")
     return workspace_id
@@ -385,7 +403,9 @@ def _active_party(borrower_id: int) -> Party:
     try:
         return Party.objects.get(pk=borrower_id, status=Party.PartyStatus.ACTIVE)
     except Party.DoesNotExist as exc:
-        raise PawnDraftError("Borrower must be an active Party in this workspace.") from exc
+        raise PawnDraftError(
+            "Borrower must be an active Party in this workspace."
+        ) from exc
 
 
 def _setup_for_workspace(*, workspace_id, license_id, series_id):
@@ -419,8 +439,14 @@ def _active_product_version(workspace_id, product_version_id, loan_date, tenure_
         raise PawnDraftError("Product version is not yet available on the loan date.")
     if version.available_until and loan_date > version.available_until:
         raise PawnDraftError("Product version is no longer available on the loan date.")
-    if not version.minimum_tenor_months <= int(tenure_months) <= version.maximum_tenor_months:
-        raise PawnDraftError("Loan tenor is outside the selected product version limits.")
+    if (
+        not version.minimum_tenor_months
+        <= int(tenure_months)
+        <= version.maximum_tenor_months
+    ):
+        raise PawnDraftError(
+            "Loan tenor is outside the selected product version limits."
+        )
     return version
 
 
@@ -440,7 +466,11 @@ def _validated_collateral(loan, inputs, *, resolved=None):
                 description=item.description,
                 quantity=item.quantity,
                 interest_rate_override=item.interest_rate_override,
-                interest_override_reason=item.interest_override_reason.strip() if item.interest_rate_override is not None else "",
+                interest_override_reason=(
+                    item.interest_override_reason.strip()
+                    if item.interest_rate_override is not None
+                    else ""
+                ),
                 metal=CollateralMetal(item.metal).value,
                 gross_weight=item.gross_weight,
                 net_weight=item.net_weight,
@@ -465,11 +495,15 @@ def _validated_collateral(loan, inputs, *, resolved=None):
     return items
 
 
-def _resolve_new_economics(*, workspace_id, license_id, series_id, as_of_date, collateral):
+def _resolve_new_economics(
+    *, workspace_id, license_id, series_id, as_of_date, collateral
+):
     allocations = [item.allocated_principal for item in collateral]
     if not any(value is not None for value in allocations):
         if any(item.interest_rate_override is not None for item in collateral):
-            raise PawnDraftError("Interest overrides require allocated collateral principal and a policy.")
+            raise PawnDraftError(
+                "Interest overrides require allocated collateral principal and a policy."
+            )
         return None
     if any(value is None for value in allocations):
         raise PawnDraftError("Every collateral item requires an allocated principal.")
@@ -506,7 +540,11 @@ def _draft_snapshot(loan, collateral):
                 "public_id": str(item.public_id),
                 "description": item.description,
                 "quantity": item.quantity,
-                "interest_rate_override": str(item.interest_rate_override) if item.interest_rate_override is not None else None,
+                "interest_rate_override": (
+                    str(item.interest_rate_override)
+                    if item.interest_rate_override is not None
+                    else None
+                ),
                 "interest_override_reason": item.interest_override_reason,
                 "metal": item.metal,
                 "gross_weight": str(item.gross_weight),
@@ -538,8 +576,19 @@ def _require_interest_override_access(workspace, actor, inputs, existing=()):
     previous = {item.pk: item for item in existing}
     for item in inputs:
         old = previous.get(item.collateral_item_id)
-        before = (old.interest_rate_override, old.interest_override_reason) if old else (None, "")
-        after = (item.interest_rate_override, item.interest_override_reason.strip() if item.interest_rate_override is not None else "")
+        before = (
+            (old.interest_rate_override, old.interest_override_reason)
+            if old
+            else (None, "")
+        )
+        after = (
+            item.interest_rate_override,
+            (
+                item.interest_override_reason.strip()
+                if item.interest_rate_override is not None
+                else ""
+            ),
+        )
         if before != after:
             require_workspace_action(workspace, actor, "loan.approve")
             return

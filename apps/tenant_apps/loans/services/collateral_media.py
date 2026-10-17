@@ -25,7 +25,6 @@ from apps.tenant_apps.loans.models import (
     current_tenant_workspace_id,
 )
 
-
 MAX_PHOTO_BYTES = 10 * 1024 * 1024
 logger = logging.getLogger(__name__)
 ALLOWED_SIGNATURES = (
@@ -49,19 +48,29 @@ def validate_collateral_photo(upload):
         raise PawnCollateralMediaError("Select a JPEG or PNG collateral photograph.")
     size = int(getattr(upload, "size", 0) or 0)
     if size <= 0 or size > MAX_PHOTO_BYTES:
-        raise PawnCollateralMediaError("Collateral photographs must be between 1 byte and 10 MB.")
+        raise PawnCollateralMediaError(
+            "Collateral photographs must be between 1 byte and 10 MB."
+        )
     position = upload.tell() if hasattr(upload, "tell") else 0
     header = upload.read(16)
     upload.seek(position)
     detected = next(
-        (mime for mime, signatures in ALLOWED_SIGNATURES if any(header.startswith(value) for value in signatures)),
+        (
+            mime
+            for mime, signatures in ALLOWED_SIGNATURES
+            if any(header.startswith(value) for value in signatures)
+        ),
         None,
     )
     if detected is None:
-        raise PawnCollateralMediaError("Collateral photographs must be valid JPEG or PNG files.")
+        raise PawnCollateralMediaError(
+            "Collateral photographs must be valid JPEG or PNG files."
+        )
     declared = (getattr(upload, "content_type", "") or "").lower()
     if declared and declared not in {"image/jpeg", "image/png"}:
-        raise PawnCollateralMediaError("Collateral photograph content type must be JPEG or PNG.")
+        raise PawnCollateralMediaError(
+            "Collateral photograph content type must be JPEG or PNG."
+        )
     return detected
 
 
@@ -75,12 +84,15 @@ def append_collateral_photo(
 ) -> PawnCollateralPhoto:
     item = _locked_item(collateral_item_id)
     require_loan_action(item.loan, actor, "data.edit")
-    return _append_collateral_photo(collateral_item_id, upload=upload, actor=actor,
-                                    workflow_source=workflow_source)
+    return _append_collateral_photo(
+        collateral_item_id, upload=upload, actor=actor, workflow_source=workflow_source
+    )
 
 
 @transaction.atomic
-def _append_collateral_photo(collateral_item_id, *, upload, actor, workflow_source=None):
+def _append_collateral_photo(
+    collateral_item_id, *, upload, actor, workflow_source=None
+):
     """Internal photo persistence for an already-authorized draft/renewal command."""
     item = _locked_item(collateral_item_id)
     mime_type = validate_collateral_photo(upload)
@@ -91,21 +103,39 @@ def _append_collateral_photo(collateral_item_id, *, upload, actor, workflow_sour
             else PawnCollateralPhoto.WorkflowSource.POST_APPROVAL
         )
     if workflow_source == PawnCollateralPhoto.WorkflowSource.LEGACY_IMPORT:
-        raise PawnCollateralMediaError("Legacy photographs require the source-bound migration service.")
-    if workflow_source == PawnCollateralPhoto.WorkflowSource.DRAFT and item.loan.state != PawnLoanState.DRAFT.value:
-        raise PawnCollateralMediaError("Draft photographs can only be captured while the loan is a draft.")
-    if workflow_source == PawnCollateralPhoto.WorkflowSource.RENEWAL and item.loan.state != PawnLoanState.DRAFT.value:
-        raise PawnCollateralMediaError("Renewal photographs must be captured before successor approval.")
+        raise PawnCollateralMediaError(
+            "Legacy photographs require the source-bound migration service."
+        )
+    if (
+        workflow_source == PawnCollateralPhoto.WorkflowSource.DRAFT
+        and item.loan.state != PawnLoanState.DRAFT.value
+    ):
+        raise PawnCollateralMediaError(
+            "Draft photographs can only be captured while the loan is a draft."
+        )
+    if (
+        workflow_source == PawnCollateralPhoto.WorkflowSource.RENEWAL
+        and item.loan.state != PawnLoanState.DRAFT.value
+    ):
+        raise PawnCollateralMediaError(
+            "Renewal photographs must be captured before successor approval."
+        )
     position = upload.tell() if hasattr(upload, "tell") else 0
     digest = hashlib.sha256()
-    for chunk in upload.chunks() if hasattr(upload, "chunks") else iter(lambda: upload.read(64 * 1024), b""):
+    for chunk in (
+        upload.chunks()
+        if hasattr(upload, "chunks")
+        else iter(lambda: upload.read(64 * 1024), b"")
+    ):
         digest.update(chunk)
     upload.seek(position)
     try:
         return PawnCollateralPhoto.objects.create(
             collateral_item=item,
             file=upload,
-            original_filename=(getattr(upload, "name", "collateral-photo") or "collateral-photo")[:255],
+            original_filename=(
+                getattr(upload, "name", "collateral-photo") or "collateral-photo"
+            )[:255],
             mime_type=mime_type,
             sha256=digest.hexdigest(),
             byte_size=int(upload.size),
@@ -116,10 +146,12 @@ def _append_collateral_photo(collateral_item_id, *, upload, actor, workflow_sour
         # Let the enclosing command roll back before its adapter renders errors.
         # Provider URLs and transport details must not become form messages.
         logger.warning("Collateral photo upload failed (%s).", type(exc).__name__)
-        raise PawnCollateralMediaError(_(
-            "The collateral photo could not be uploaded. Select the photo again and retry. "
-            "If this continues, contact the workspace owner."
-        )) from exc
+        raise PawnCollateralMediaError(
+            _(
+                "The collateral photo could not be uploaded. Select the photo again and retry. "
+                "If this continues, contact the workspace owner."
+            )
+        ) from exc
 
 
 @transaction.atomic
@@ -128,27 +160,64 @@ def delete_draft_collateral_photo(collateral_item_id, photo_id, *, actor):
 
     # Match approval's lock order so approval and removal cannot race.
     workspace_id = current_tenant_workspace_id()
-    item_ref = PawnCollateralItem.objects.filter(pk=collateral_item_id, workspace_id=workspace_id).first() if workspace_id else None
+    item_ref = (
+        PawnCollateralItem.objects.filter(
+            pk=collateral_item_id, workspace_id=workspace_id
+        ).first()
+        if workspace_id
+        else None
+    )
     if item_ref is None:
-        raise PawnCollateralMediaError("Collateral item was not found in the active workspace.")
-    loan = PawnLoan.objects.select_for_update().get(pk=item_ref.loan_id, workspace_id=workspace_id)
+        raise PawnCollateralMediaError(
+            "Collateral item was not found in the active workspace."
+        )
+    loan = PawnLoan.objects.select_for_update().get(
+        pk=item_ref.loan_id, workspace_id=workspace_id
+    )
     require_loan_action(loan, actor, "data.edit")
     if loan.state != PawnLoanState.DRAFT.value:
-        raise PawnCollateralMediaError("Photographs can only be deleted while the loan is a draft.")
-    if not PawnCollateralItem.objects.select_for_update().filter(pk=collateral_item_id, loan=loan).exists():
-        raise PawnCollateralMediaError("Collateral changed loans. Reload the loan before deleting a photograph.")
-    photo = PawnCollateralPhoto.objects.select_for_update().filter(pk=photo_id, collateral_item_id=collateral_item_id).first()
+        raise PawnCollateralMediaError(
+            "Photographs can only be deleted while the loan is a draft."
+        )
+    if (
+        not PawnCollateralItem.objects.select_for_update()
+        .filter(pk=collateral_item_id, loan=loan)
+        .exists()
+    ):
+        raise PawnCollateralMediaError(
+            "Collateral changed loans. Reload the loan before deleting a photograph."
+        )
+    photo = (
+        PawnCollateralPhoto.objects.select_for_update()
+        .filter(pk=photo_id, collateral_item_id=collateral_item_id)
+        .first()
+    )
     if photo is None:
-        raise PawnCollateralMediaError("Photograph was not found on this collateral item.")
+        raise PawnCollateralMediaError(
+            "Photograph was not found on this collateral item."
+        )
     if photo.renewal_copies.exists():
-        raise PawnCollateralMediaError("This photograph is retained as renewal evidence and cannot be deleted.")
-    metadata = {"action": "collateral_photo_deleted", "collateral_item_id": collateral_item_id,
-                "photo_id": photo.pk, "original_filename": photo.original_filename, "sha256": photo.sha256,
-                "file_retained_for_review": True}
+        raise PawnCollateralMediaError(
+            "This photograph is retained as renewal evidence and cannot be deleted."
+        )
+    metadata = {
+        "action": "collateral_photo_deleted",
+        "collateral_item_id": collateral_item_id,
+        "photo_id": photo.pk,
+        "original_filename": photo.original_filename,
+        "sha256": photo.sha256,
+        "file_retained_for_review": True,
+    }
     # Deliberate queryset deletion, using the existing draft-only PostgreSQL guard.
     PawnCollateralPhoto.objects.filter(pk=photo.pk).delete()
-    LoanChangeLog.objects.create(loan=loan, actor=actor, event_kind="DRAFT_UPDATED",
-                                from_state="DRAFT", to_state="DRAFT", metadata=metadata)
+    LoanChangeLog.objects.create(
+        loan=loan,
+        actor=actor,
+        event_kind="DRAFT_UPDATED",
+        from_state="DRAFT",
+        to_state="DRAFT",
+        metadata=metadata,
+    )
     # Removal changes the draft attachment, not the lifetime of the stored bytes.
     # Tickets, migration receipts and other Workspaces can retain the same key;
     # a scoped photo query cannot authorize physical deletion.
@@ -209,7 +278,9 @@ def render_collateral_label(
 def _locked_item(collateral_item_id):
     workspace_id = current_tenant_workspace_id()
     if workspace_id is None:
-        raise PawnCollateralMediaError("Collateral media requires an active tenant schema.")
+        raise PawnCollateralMediaError(
+            "Collateral media requires an active tenant schema."
+        )
     try:
         return (
             PawnCollateralItem.objects.select_for_update()
@@ -217,7 +288,9 @@ def _locked_item(collateral_item_id):
             .get(pk=collateral_item_id, loan__workspace_id=workspace_id)
         )
     except PawnCollateralItem.DoesNotExist as exc:
-        raise PawnCollateralMediaError("Collateral item was not found in the active workspace.") from exc
+        raise PawnCollateralMediaError(
+            "Collateral item was not found in the active workspace."
+        ) from exc
 
 
 def _label_pdf(item, qr_target):
@@ -242,7 +315,18 @@ def _label_pdf(item, qr_target):
     qr = QrCodeWidget(qr_target)
     bounds = qr.getBounds()
     size = 28 * mm
-    drawing = Drawing(size, size, transform=[size / (bounds[2] - bounds[0]), 0, 0, size / (bounds[3] - bounds[1]), 0, 0])
+    drawing = Drawing(
+        size,
+        size,
+        transform=[
+            size / (bounds[2] - bounds[0]),
+            0,
+            0,
+            size / (bounds[3] - bounds[1]),
+            0,
+            0,
+        ],
+    )
     drawing.add(qr)
     renderPDF.draw(drawing, pdf, width - 34 * mm, 5 * mm)
     pdf.setFont("Helvetica", 6)

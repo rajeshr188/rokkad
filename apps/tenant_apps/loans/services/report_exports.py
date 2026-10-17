@@ -25,19 +25,28 @@ class PawnLoanReportDataset:
     notes: str = ""
 
 
-QUALITY_COLUMNS = ("Saved assessment", "Valuation availability", "Calculation support",
-    "Financial history from", "Principal history basis", "Capture basis", "Valuation blockers")
+QUALITY_COLUMNS = (
+    "Saved assessment",
+    "Valuation availability",
+    "Calculation support",
+    "Financial history from",
+    "Principal history basis",
+    "Capture basis",
+    "Valuation blockers",
+)
 
 
 def _quality_cells(row):
     quality = getattr(row, "evidence_quality", None) or {}
-    return (quality.get("assessment", {}).get("status", "UNASSESSED"),
+    return (
+        quality.get("assessment", {}).get("status", "UNASSESSED"),
         quality.get("valuation", {}).get("status", "UNASSESSED"),
         quality.get("calculation", {}).get("status", "UNASSESSED"),
         quality.get("history", {}).get("from_date") or "",
         quality.get("history", {}).get("principal_basis") or "",
         quality.get("transactions", {}).get("capture_basis") or "",
-        ", ".join(quality.get("valuation", {}).get("blockers", [])))
+        ", ".join(quality.get("valuation", {}).get("blockers", [])),
+    )
 
 
 def build_pawn_loan_report_dataset(report, section):
@@ -61,23 +70,32 @@ def build_party_statement_dataset(statement):
     for loan_row in statement.loans:
         balance = loan_row.balance
         completeness = getattr(loan_row, "transaction_completeness", None)
-        rows.append((
-            "LOAN POSITION",
-            loan_row.loan.loan_number,
-            loan_row.loan.loan_date,
-            loan_row.status,
-            balance.principal_outstanding if balance else "ERROR",
-            balance.interest_outstanding if balance else loan_row.balance_error,
-            balance.fees_outstanding if balance else "",
-            balance.total_due if balance else "",
-            "", "", "",
-            completeness.status if completeness else "", completeness.through_date if completeness else "",
-        ) + _quality_cells(loan_row))
+        rows.append(
+            (
+                "LOAN POSITION",
+                loan_row.loan.loan_number,
+                loan_row.loan.loan_date,
+                loan_row.status,
+                balance.principal_outstanding if balance else "ERROR",
+                balance.interest_outstanding if balance else loan_row.balance_error,
+                balance.fees_outstanding if balance else "",
+                balance.total_due if balance else "",
+                "",
+                "",
+                "",
+                completeness.status if completeness else "",
+                completeness.through_date if completeness else "",
+            )
+            + _quality_cells(loan_row)
+        )
     transaction_rows = getattr(statement, "transaction_rows", None)
     if transaction_rows is None:
         transaction_rows = tuple(
             (
-                event, event.get_event_kind_display(), "CURRENT", None,
+                event,
+                event.get_event_kind_display(),
+                "CURRENT",
+                None,
                 (event.payload.get("values") or {}).get("principal", "0"),
                 (event.payload.get("values") or {}).get("interest", "0"),
                 (event.payload.get("values") or {}).get("fees", "0"),
@@ -87,42 +105,66 @@ def build_party_statement_dataset(statement):
     else:
         transaction_rows = tuple(
             (
-                row.event, row.activity, row.correction_status,
+                row.event,
+                row.activity,
+                row.correction_status,
                 row.correction_event_id,
-                row.principal, row.interest, row.fees,
+                row.principal,
+                row.interest,
+                row.fees,
             )
             for row in transaction_rows
         )
     for (
-        event, activity, correction_status, correction_event_id,
-        principal, interest, fees,
+        event,
+        activity,
+        correction_status,
+        correction_event_id,
+        principal,
+        interest,
+        fees,
     ) in transaction_rows:
         transaction_total = sum(
             (Decimal(str(value)) for value in (principal, interest, fees)),
             Decimal("0"),
         )
-        rows.append((
-            "TRANSACTION",
-            event.loan.loan_number,
-            event.effective_date,
-            activity,
-            principal,
-            interest,
-            fees,
-            transaction_total,
-            getattr(event, "pk", ""),
-            correction_status,
-            correction_event_id or "",
-            "", "", *([""] * len(QUALITY_COLUMNS)),
-        ))
+        rows.append(
+            (
+                "TRANSACTION",
+                event.loan.loan_number,
+                event.effective_date,
+                activity,
+                principal,
+                interest,
+                fees,
+                transaction_total,
+                getattr(event, "pk", ""),
+                correction_status,
+                correction_event_id or "",
+                "",
+                "",
+                *([""] * len(QUALITY_COLUMNS)),
+            )
+        )
     return PawnLoanReportDataset(
         "party_statement",
         f"Party statement — {statement.party.display_name} — {statement.as_of_date}",
         (
-            "Row type", "Loan", "Date", "State / kind", "Principal", "Interest",
-            "Fees", "Total", "Event ID", "Correction status", "Correction event",
-            "Transaction review", "Paper records through",
-        ) + QUALITY_COLUMNS,
+            "Row type",
+            "Loan",
+            "Date",
+            "State / kind",
+            "Principal",
+            "Interest",
+            "Fees",
+            "Total",
+            "Event ID",
+            "Correction status",
+            "Correction event",
+            "Transaction review",
+            "Paper records through",
+        )
+        + QUALITY_COLUMNS,
         tuple(rows),
         notes="Recorded positions exclude collection interest awaiting recognition. Transaction review and Paper records through describe optional book assurance. Missing or aged assurance alone does not invalidate an accepted position; known unresolved activity remains provisional. Earlier unavailable receipts remain unavailable.",
     )
@@ -143,12 +185,20 @@ def render_report_dataset(dataset, export_format):
             sheet.append(tuple(_cell(value) for value in row))
         output = io.BytesIO()
         workbook.save(output)
-        return output.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        return (
+            output.getvalue(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
     if export_format == "pdf":
         output = io.BytesIO()
         document = SimpleDocTemplate(
-            output, pagesize=landscape(A4), leftMargin=10 * mm, rightMargin=10 * mm,
-            topMargin=10 * mm, bottomMargin=10 * mm, title=dataset.title,
+            output,
+            pagesize=landscape(A4),
+            leftMargin=10 * mm,
+            rightMargin=10 * mm,
+            topMargin=10 * mm,
+            bottomMargin=10 * mm,
+            title=dataset.title,
         )
         styles = getSampleStyleSheet()
         cell_style = styles["BodyText"].clone("ReportCell")
@@ -162,17 +212,31 @@ def render_report_dataset(dataset, export_format):
             [Paragraph(escape(str(_cell(value))), cell_style) for value in row]
             for row in dataset.rows
         )
-        table = Table(data, repeatRows=1, hAlign="LEFT",
-            colWidths=[document.width / len(dataset.columns)] * len(dataset.columns) if len(dataset.columns) >= 10 else None)
-        table.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ]))
+        table = Table(
+            data,
+            repeatRows=1,
+            hAlign="LEFT",
+            colWidths=(
+                [document.width / len(dataset.columns)] * len(dataset.columns)
+                if len(dataset.columns) >= 10
+                else None
+            ),
+        )
+        table.setStyle(
+            TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                ]
+            )
+        )
         story = [Paragraph(escape(dataset.title), styles["Title"])]
         if dataset.notes:
-            story.extend([Paragraph(escape(dataset.notes), styles["BodyText"]), Spacer(1, 8)])
+            story.extend(
+                [Paragraph(escape(dataset.notes), styles["BodyText"]), Spacer(1, 8)]
+            )
         story.extend([Spacer(1, 8), table])
         document.build(story)
         return output.getvalue(), "application/pdf"
@@ -193,19 +257,45 @@ def _overdue(report):
 
 def _portfolio_dataset(key, title, rows):
     return PawnLoanReportDataset(
-        key, title,
-        ("Loan", "Party", "Due date", "Principal", "Interest", "Fees", "Total due", "Status", "Transaction review", "Paper records through") + QUALITY_COLUMNS,
-        tuple((
-            row.loan.loan_number, row.loan.borrower.display_name,
-            row.balance.due_date if row.balance else "",
-            row.balance.principal_outstanding if row.balance else "",
-            row.balance.interest_outstanding if row.balance else "",
-            row.balance.fees_outstanding if row.balance else "",
-            row.balance.total_due if row.balance else row.balance_error,
-            row.status,
-            row.transaction_completeness.status if row.transaction_completeness else "",
-            row.transaction_completeness.through_date if row.transaction_completeness else "",
-        ) + _quality_cells(row) for row in rows),
+        key,
+        title,
+        (
+            "Loan",
+            "Party",
+            "Due date",
+            "Principal",
+            "Interest",
+            "Fees",
+            "Total due",
+            "Status",
+            "Transaction review",
+            "Paper records through",
+        )
+        + QUALITY_COLUMNS,
+        tuple(
+            (
+                row.loan.loan_number,
+                row.loan.borrower.display_name,
+                row.balance.due_date if row.balance else "",
+                row.balance.principal_outstanding if row.balance else "",
+                row.balance.interest_outstanding if row.balance else "",
+                row.balance.fees_outstanding if row.balance else "",
+                row.balance.total_due if row.balance else row.balance_error,
+                row.status,
+                (
+                    row.transaction_completeness.status
+                    if row.transaction_completeness
+                    else ""
+                ),
+                (
+                    row.transaction_completeness.through_date
+                    if row.transaction_completeness
+                    else ""
+                ),
+            )
+            + _quality_cells(row)
+            for row in rows
+        ),
         notes="Amounts derive from accepted positions and entered transactions. Transaction review and Paper records through describe optional book assurance. Known unresolved activity remains provisional; missing or aged assurance alone does not invalidate a supported position. Earlier unavailable receipts remain unavailable; valuation freshness is separate.",
     )
 
@@ -225,39 +315,68 @@ def _daily(report):
         for row in report.daily_activity
     ]
     return PawnLoanReportDataset(
-        "daily", f"Daily disbursals and repayments — {report.as_of_date}",
+        "daily",
+        f"Daily disbursals and repayments — {report.as_of_date}",
         (
-            "Date", "Kind", "Loan", "Party", "Amount", "Event ID",
-            "Correction status", "Correction event",
-        ), tuple(rows),
+            "Date",
+            "Kind",
+            "Loan",
+            "Party",
+            "Amount",
+            "Event ID",
+            "Correction status",
+            "Correction event",
+        ),
+        tuple(rows),
     )
 
 
 def _releases_renewals(report):
     rows = [
         (
-            row.effective_date, "RELEASE", row.loan.loan_number,
-            row.release_number, row.settlement_amount,
-            "REVERSED" if hasattr(row, "reversal") else getattr(row, "correction_status", "") or "COMPLETED",
+            row.effective_date,
+            "RELEASE",
+            row.loan.loan_number,
+            row.release_number,
+            row.settlement_amount,
+            (
+                "REVERSED"
+                if hasattr(row, "reversal")
+                else getattr(row, "correction_status", "") or "COMPLETED"
+            ),
             "",
         )
         for row in report.releases
     ]
     rows.extend(
         (
-            row.renewal_date, "RENEWAL", row.source_loan.loan_number,
-            row.renewal_number, row.successor_loan.loan_number,
-            "REVERSED" if hasattr(row, "reversal") else getattr(row, "correction_status", "") or "COMPLETED",
+            row.renewal_date,
+            "RENEWAL",
+            row.source_loan.loan_number,
+            row.renewal_number,
+            row.successor_loan.loan_number,
+            (
+                "REVERSED"
+                if hasattr(row, "reversal")
+                else getattr(row, "correction_status", "") or "COMPLETED"
+            ),
             _recorded_renewal_cash(row),
         )
         for row in report.renewals
     )
     return PawnLoanReportDataset(
-        "releases_renewals", "Releases and renewals",
+        "releases_renewals",
+        "Releases and renewals",
         (
-            "Date", "Kind", "Source loan", "Reference",
-            "Settlement / successor", "Status", "Recorded renewal cash / custody",
-        ), tuple(rows),
+            "Date",
+            "Kind",
+            "Source loan",
+            "Reference",
+            "Settlement / successor",
+            "Status",
+            "Recorded renewal cash / custody",
+        ),
+        tuple(rows),
     )
 
 
@@ -265,34 +384,59 @@ def _recorded_renewal_cash(renewal):
     cash = (getattr(renewal, "valuation_snapshot", None) or {}).get("cash_evidence")
     if not cash:
         return ""
-    method = "Full principal repayment / fresh advance" if cash["method"] == "REPAY_REDRAW" else "Principal carry"
+    method = (
+        "Full principal repayment / fresh advance"
+        if cash["method"] == "REPAY_REDRAW"
+        else "Principal carry"
+    )
     custody = "stayed held" if cash["custody"] == "HELD" else "returned and repledged"
-    return (f"{method}; received {cash['cash_received']}; paid {cash['cash_paid']}; "
-            f"old interest offset {cash['interest_offset']}; principal carried {cash['principal_carried']}; "
-            f"gross advance {cash['gross_advance']}; collateral {custody}")
+    return (
+        f"{method}; received {cash['cash_received']}; paid {cash['cash_paid']}; "
+        f"old interest offset {cash['interest_offset']}; principal carried {cash['principal_carried']}; "
+        f"gross advance {cash['gross_advance']}; collateral {custody}"
+    )
 
 
 def _storage(report):
     return PawnLoanReportDataset(
-        "storage", "Collateral storage inventory",
+        "storage",
+        "Collateral storage inventory",
         ("Loan", "Item", "Metal", "Net weight", "Custody", "Storage path", "Placement"),
-        tuple((
-            item.loan.loan_number, item.description, item.metal, item.net_weight,
-            item.custody_state,
-            item.current_storage_location.path_label if item.current_storage_location_id else "",
-            "PLACED" if item.current_storage_location_id else "AWAITING_PLACEMENT",
-        ) for item in report.storage_inventory),
+        tuple(
+            (
+                item.loan.loan_number,
+                item.description,
+                item.metal,
+                item.net_weight,
+                item.custody_state,
+                (
+                    item.current_storage_location.path_label
+                    if item.current_storage_location_id
+                    else ""
+                ),
+                "PLACED" if item.current_storage_location_id else "AWAITING_PLACEMENT",
+            )
+            for item in report.storage_inventory
+        ),
     )
 
 
 def _license_expiry(report):
     return PawnLoanReportDataset(
-        "license_expiry", "Regulatory license expiry",
+        "license_expiry",
+        "Regulatory license expiry",
         ("License", "Number", "Authority", "Expires", "Days remaining", "Status"),
-        tuple((
-            row.license.name, row.license.license_number, row.license.issuing_authority,
-            row.license.expires_on, row.days_remaining, row.status,
-        ) for row in report.license_expiry),
+        tuple(
+            (
+                row.license.name,
+                row.license.license_number,
+                row.license.issuing_authority,
+                row.license.expires_on,
+                row.days_remaining,
+                row.status,
+            )
+            for row in report.license_expiry
+        ),
     )
 
 

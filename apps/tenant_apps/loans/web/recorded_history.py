@@ -1,4 +1,5 @@
 """Paper-first entry within the ordinary New loan route."""
+
 from decimal import Decimal
 from copy import deepcopy
 from django import forms
@@ -11,7 +12,9 @@ from django.urls import reverse
 from apps.tenant_apps.loans import models as m
 from apps.tenant_apps.party.models import Party
 from apps.tenant_apps.loans.services.recorded_history import (
-    new_recording_intent, preview_recorded_history, admit_recorded_history,
+    new_recording_intent,
+    preview_recorded_history,
+    admit_recorded_history,
 )
 
 DAY = {"type": "date"}
@@ -20,18 +23,60 @@ DAY = {"type": "date"}
 class PaperCollateralForm(forms.Form):
     description = forms.CharField(max_length=255, label="Item description")
     quantity = forms.IntegerField(min_value=1, max_value=10000, initial=1)
-    metal = forms.ChoiceField(choices=(("GOLD", "Gold"), ("SILVER", "Silver"), ("BRONZE", "Bronze")), initial="GOLD")
-    gross_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Gross weight (g)")
-    net_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Net weight (g)")
-    purity_percentage = forms.DecimalField(max_digits=7, decimal_places=4, min_value=Decimal("0.0001"), max_value=100, initial=75, label="Purity (%)")
-    allocated_principal = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), label="Principal for this item (INR)")
-    interest_rate_override = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, max_value=100,
-        label="Agreed monthly interest (%)", help_text="Supplied from dated setup. Use Different paper terms to record an actual exception.")
-    photograph = forms.FileField(required=False, label="Item photograph",
+    metal = forms.ChoiceField(
+        choices=(("GOLD", "Gold"), ("SILVER", "Silver"), ("BRONZE", "Bronze")),
+        initial="GOLD",
+    )
+    gross_weight = forms.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        label="Gross weight (g)",
+    )
+    net_weight = forms.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        label="Net weight (g)",
+    )
+    purity_percentage = forms.DecimalField(
+        max_digits=7,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        max_value=100,
+        initial=75,
+        label="Purity (%)",
+    )
+    allocated_principal = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        label="Principal for this item (INR)",
+    )
+    interest_rate_override = forms.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=0,
+        max_value=100,
+        label="Agreed monthly interest (%)",
+        help_text="Supplied from dated setup. Use Different paper terms to record an actual exception.",
+    )
+    photograph = forms.FileField(
+        required=False,
+        label="Item photograph",
         help_text="Optional current capture. This does not claim the photograph existed on the original paper loan date.",
-        widget=forms.FileInput(attrs={"class": "form-control js-collateral-photo-input", "accept": "image/jpeg,image/png", "capture": "environment"}))
+        widget=forms.FileInput(
+            attrs={
+                "class": "form-control js-collateral-photo-input",
+                "accept": "image/jpeg,image/png",
+                "capture": "environment",
+            }
+        ),
+    )
 
-    def __init__(self, *args, exceptions=False, allow_photos=True, default_rate=None, **kwargs):
+    def __init__(
+        self, *args, exceptions=False, allow_photos=True, default_rate=None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         if not self.is_bound and default_rate is not None:
             self.initial.setdefault("interest_rate_override", default_rate)
@@ -43,14 +88,21 @@ class PaperCollateralForm(forms.Form):
 
     def clean(self):
         value = super().clean()
-        if value.get("net_weight") and value.get("gross_weight") and value["net_weight"] > value["gross_weight"]:
+        if (
+            value.get("net_weight")
+            and value.get("gross_weight")
+            and value["net_weight"] > value["gross_weight"]
+        ):
             self.add_error("net_weight", "Net weight cannot exceed gross weight.")
         return value
 
     def clean_photograph(self):
         photo = self.cleaned_data.get("photograph")
         if photo:
-            from apps.tenant_apps.loans.services.collateral_media import validate_collateral_photo
+            from apps.tenant_apps.loans.services.collateral_media import (
+                validate_collateral_photo,
+            )
+
             try:
                 validate_collateral_photo(photo)
             except ValueError as exc:
@@ -58,96 +110,259 @@ class PaperCollateralForm(forms.Form):
         return photo
 
 
-PaperCollateralFormSet = forms.formset_factory(PaperCollateralForm, extra=0, min_num=1,
-    validate_min=True, max_num=100, validate_max=True, absolute_max=100, can_delete=True)
+PaperCollateralFormSet = forms.formset_factory(
+    PaperCollateralForm,
+    extra=0,
+    min_num=1,
+    validate_min=True,
+    max_num=100,
+    validate_max=True,
+    absolute_max=100,
+    can_delete=True,
+)
 
 
 class PaperHistoryForm(forms.Form):
-    routine_entry = forms.BooleanField(required=False, initial=True, widget=forms.HiddenInput)
-    exceptions = forms.BooleanField(required=False, label="Paper agreement differs from standard terms")
-    exception_reason = forms.CharField(required=False, max_length=160, label="Source explanation for different terms")
-    borrower_id = forms.ModelChoiceField(queryset=Party.objects.none(), label="Customer")
-    series_id = forms.ModelChoiceField(queryset=m.LoanSeries.objects.none(), label="Series (license / register)")
-    include_old_series = forms.BooleanField(required=False,
+    routine_entry = forms.BooleanField(
+        required=False, initial=True, widget=forms.HiddenInput
+    )
+    exceptions = forms.BooleanField(
+        required=False, label="Paper agreement differs from standard terms"
+    )
+    exception_reason = forms.CharField(
+        required=False, max_length=160, label="Source explanation for different terms"
+    )
+    borrower_id = forms.ModelChoiceField(
+        queryset=Party.objects.none(), label="Customer"
+    )
+    series_id = forms.ModelChoiceField(
+        queryset=m.LoanSeries.objects.none(), label="Series (license / register)"
+    )
+    include_old_series = forms.BooleanField(
+        required=False,
         label="Record an earlier loan from an old series",
-        help_text="Show stopped, exhausted and old-licence series for an existing paper transaction. This does not reopen them for new lending.")
-    source_license_from_setup = forms.BooleanField(required=False, initial=True,
-        label="Use dated licence evidence from series setup")
-    license_revision_id = forms.ModelChoiceField(queryset=m.LoanLicenseRevision.objects.none(), required=False,
+        help_text="Show stopped, exhausted and old-licence series for an existing paper transaction. This does not reopen them for new lending.",
+    )
+    source_license_from_setup = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Use dated licence evidence from series setup",
+    )
+    license_revision_id = forms.ModelChoiceField(
+        queryset=m.LoanLicenseRevision.objects.none(),
+        required=False,
         label="Source licence evidence (optional)",
-        help_text="Select retained evidence for this series' licence and original date when known. Leave blank if unknown; portable history export requires this mapping. A saved draft keeps its original mapping.")
-    product_version_id = forms.ModelChoiceField(queryset=m.LoanProductVersion.objects.none(), label="Loan product")
+        help_text="Select retained evidence for this series' licence and original date when known. Leave blank if unknown; portable history export requires this mapping. A saved draft keeps its original mapping.",
+    )
+    product_version_id = forms.ModelChoiceField(
+        queryset=m.LoanProductVersion.objects.none(), label="Loan product"
+    )
     number = forms.CharField(max_length=64, label="Original loan number")
     date = forms.DateField(widget=forms.DateInput(attrs=DAY), label="Loan date")
-    source_reference = forms.CharField(max_length=160, label="Paper book / page / loan reference")
-    principal = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), label="Original principal")
-    rate = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, label="Agreed monthly interest (%)")
-    tenure = forms.IntegerField(min_value=1, max_value=600, label="Agreed tenure (months)")
-    advance_months = forms.TypedChoiceField(choices=((0,"No advance interest deducted"),(1,"One month deducted")), coerce=int)
-    document_charge = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False,
-        initial=0, label="Document charge deducted")
-    payout_basis = forms.ChoiceField(initial="PROCEEDS", label="Meaning of the paper amount", choices=(
-        ("PROCEEDS", "Loan proceeds after deductions; physical cash not confirmed"),
-        ("CASH", "Confirmed cash paid to the customer")))
-    cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False,
-        label="Proceeds after interest and document charge", help_text="Leave blank to calculate. A paper renewal may use these proceeds to settle another loan; no predecessor is required.")
+    source_reference = forms.CharField(
+        max_length=160, label="Paper book / page / loan reference"
+    )
+    principal = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        label="Original principal",
+    )
+    rate = forms.DecimalField(
+        max_digits=9, decimal_places=6, min_value=0, label="Agreed monthly interest (%)"
+    )
+    tenure = forms.IntegerField(
+        min_value=1, max_value=600, label="Agreed tenure (months)"
+    )
+    advance_months = forms.TypedChoiceField(
+        choices=((0, "No advance interest deducted"), (1, "One month deducted")),
+        coerce=int,
+    )
+    document_charge = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        initial=0,
+        label="Document charge deducted",
+    )
+    payout_basis = forms.ChoiceField(
+        initial="PROCEEDS",
+        label="Meaning of the paper amount",
+        choices=(
+            ("PROCEEDS", "Loan proceeds after deductions; physical cash not confirmed"),
+            ("CASH", "Confirmed cash paid to the customer"),
+        ),
+    )
+    cash_paid = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+        label="Proceeds after interest and document charge",
+        help_text="Leave blank to calculate. A paper renewal may use these proceeds to settle another loan; no predecessor is required.",
+    )
     description = forms.CharField(max_length=255, label="Collateral description")
-    metal = forms.ChoiceField(choices=(("GOLD","Gold"),("SILVER","Silver"),("BRONZE","Bronze")))
+    metal = forms.ChoiceField(
+        choices=(("GOLD", "Gold"), ("SILVER", "Silver"), ("BRONZE", "Bronze"))
+    )
     quantity = forms.IntegerField(min_value=1, max_value=999)
-    gross_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Gross weight (g)")
-    net_weight = forms.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal("0.0001"), label="Net weight (g)")
-    purity = forms.DecimalField(max_digits=7, decimal_places=4, min_value=Decimal("0.0001"), max_value=100, label="Purity (%)")
-    monitoring_method = forms.ChoiceField(label="Saved valuation fallback", choices=(
-        ("CALCULATED_METAL_VALUE","Current metal price"), ("LATEST_APPRAISAL","Current approved appraisal"),
-        ("LOWER_OF_CALCULATED_AND_APPRAISAL","Lower of current price and appraisal")))
-    monitoring_ltv = forms.DecimalField(max_digits=7, decimal_places=6, min_value=Decimal("0.000001"), max_value=1,
-        label="Saved reference LTV ratio", help_text="For example, 0.80 means 80%. Retained reference only; current monitoring thresholds come from its separate policy. No original approval is claimed.")
-    monitoring_reason = forms.CharField(max_length=255, label="Source of saved valuation/reference")
-    complete_through = forms.DateField(widget=forms.DateInput(attrs=DAY), label="All paper activity entered through")
-    final_state = forms.ChoiceField(label="State after the final transaction", choices=(
-        ("ACTIVE","This loan is outstanding"), ("CLOSED","This loan is closed according to its paper record")))
-    currency_quantum = forms.ChoiceField(label="Agreement interest rounding", initial="0.01",
-        choices=(("0.01", "Paise"), ("1", "Whole rupees")), required=False)
-    confirmed_rule = forms.BooleanField(label="The agreed rule is simple monthly interest: the next month starts the day after the original loan anniversary; principal reductions apply from the next boundary.")
-    confirmed_history = forms.BooleanField(label="I checked this loan's paper record through the stated date and checked for duplicates. No earlier or later loan's renewal history is required.")
+    gross_weight = forms.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        label="Gross weight (g)",
+    )
+    net_weight = forms.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        label="Net weight (g)",
+    )
+    purity = forms.DecimalField(
+        max_digits=7,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        max_value=100,
+        label="Purity (%)",
+    )
+    monitoring_method = forms.ChoiceField(
+        label="Saved valuation fallback",
+        choices=(
+            ("CALCULATED_METAL_VALUE", "Current metal price"),
+            ("LATEST_APPRAISAL", "Current approved appraisal"),
+            (
+                "LOWER_OF_CALCULATED_AND_APPRAISAL",
+                "Lower of current price and appraisal",
+            ),
+        ),
+    )
+    monitoring_ltv = forms.DecimalField(
+        max_digits=7,
+        decimal_places=6,
+        min_value=Decimal("0.000001"),
+        max_value=1,
+        label="Saved reference LTV ratio",
+        help_text="For example, 0.80 means 80%. Retained reference only; current monitoring thresholds come from its separate policy. No original approval is claimed.",
+    )
+    monitoring_reason = forms.CharField(
+        max_length=255, label="Source of saved valuation/reference"
+    )
+    complete_through = forms.DateField(
+        widget=forms.DateInput(attrs=DAY), label="All paper activity entered through"
+    )
+    final_state = forms.ChoiceField(
+        label="State after the final transaction",
+        choices=(
+            ("ACTIVE", "This loan is outstanding"),
+            ("CLOSED", "This loan is closed according to its paper record"),
+        ),
+    )
+    currency_quantum = forms.ChoiceField(
+        label="Agreement interest rounding",
+        initial="0.01",
+        choices=(("0.01", "Paise"), ("1", "Whole rupees")),
+        required=False,
+    )
+    confirmed_rule = forms.BooleanField(
+        label="The agreed rule is simple monthly interest: the next month starts the day after the original loan anniversary; principal reductions apply from the next boundary."
+    )
+    confirmed_history = forms.BooleanField(
+        label="I checked this loan's paper record through the stated date and checked for duplicates. No earlier or later loan's renewal history is required."
+    )
 
-    def __init__(self, *args, workspace, routine=True, itemized_archive=False, auto_source_license=False, filter_series=False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        workspace,
+        routine=True,
+        itemized_archive=False,
+        auto_source_license=False,
+        filter_series=False,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
-        self.routine = routine and (not self.is_bound or self.data.get("routine_entry") in ("on", "true", "True", "1"))
+        self.routine = routine and (
+            not self.is_bound
+            or self.data.get("routine_entry") in ("on", "true", "True", "1")
+        )
         self.terms = None
         self.source_license_resolved = False
         if not auto_source_license:
             self.fields["source_license_from_setup"].widget = forms.HiddenInput()
         item_sources, item_messages = [], []
-        self.itemized = (self.routine or itemized_archive) and (not self.is_bound or "collateral-TOTAL_FORMS" in self.data)
+        self.itemized = (self.routine or itemized_archive) and (
+            not self.is_bound or "collateral-TOTAL_FORMS" in self.data
+        )
         from apps.tenant_apps.loans.forms import PawnDraftForm
+
         for target, source in (("borrower_id", "borrower"), ("series_id", "series")):
             self.fields[target] = deepcopy(PawnDraftForm.base_fields[source])
-        self.fields["borrower_id"].widget.data_url = reverse("workspace_party:party_autocomplete", args=[workspace.slug])
-        self.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, status="ACTIVE")
-        self.fields["series_id"].queryset = m.LoanSeries.objects.filter(workspace=workspace).select_related("license").prefetch_related("number_sequences").order_by("license__license_number", "code")
-        if filter_series and not self.fields["include_old_series"].clean(self["include_old_series"].value()) and not self.data.get("review_token"):
+        self.fields["borrower_id"].widget.data_url = reverse(
+            "workspace_party:party_autocomplete", args=[workspace.slug]
+        )
+        self.fields["borrower_id"].queryset = Party.objects.filter(
+            workspace=workspace, status="ACTIVE"
+        )
+        self.fields["series_id"].queryset = (
+            m.LoanSeries.objects.filter(workspace=workspace)
+            .select_related("license")
+            .prefetch_related("number_sequences")
+            .order_by("license__license_number", "code")
+        )
+        if (
+            filter_series
+            and not self.fields["include_old_series"].clean(
+                self["include_old_series"].value()
+            )
+            and not self.data.get("review_token")
+        ):
             from apps.tenant_apps.loans.selectors.series import running_series
+
             self.fields["series_id"].queryset = running_series(workspace)
         if not filter_series:
             self.fields["include_old_series"].widget = forms.HiddenInput()
         else:
             self.fields["series_id"].show_availability = True
-        self.fields["license_revision_id"].queryset = m.LoanLicenseRevision.objects.filter(workspace=workspace)
-        self.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace,
-            status="ACTIVE", repayment_structure__in=("SINGLE_PAYMENT_BULLET", "FLEXIBLE_PARTIAL_PAYMENT"), amortisation_method="NONE").select_related("product")
+        self.fields["license_revision_id"].queryset = (
+            m.LoanLicenseRevision.objects.filter(workspace=workspace)
+        )
+        self.fields["product_version_id"].queryset = (
+            m.LoanProductVersion.objects.filter(
+                workspace=workspace,
+                status="ACTIVE",
+                repayment_structure__in=(
+                    "SINGLE_PAYMENT_BULLET",
+                    "FLEXIBLE_PARTIAL_PAYMENT",
+                ),
+                amortisation_method="NONE",
+            ).select_related("product")
+        )
         if self.routine:
-            for name, value in dict(date=timezone.localdate(), metal="GOLD", quantity=1, final_state="ACTIVE").items():
+            for name, value in dict(
+                date=timezone.localdate(),
+                metal="GOLD",
+                quantity=1,
+                final_state="ACTIVE",
+            ).items():
                 self.initial.setdefault(name, value)
-            choices = list(self.fields["series_id"].queryset.values_list("pk", flat=True)[:2])
+            choices = list(
+                self.fields["series_id"].queryset.values_list("pk", flat=True)[:2]
+            )
             if len(choices) == 1 and not self.initial.get("series_id"):
                 self.initial["series_id"] = choices[0]
             self.fields["confirmed_history"].required = False
-            self.fields["confirmed_history"].label = "All paper activity for this loan has been checked and entered through the date below (optional)"
+            self.fields["confirmed_history"].label = (
+                "All paper activity for this loan has been checked and entered through the date below (optional)"
+            )
             self.fields["complete_through"].required = False
             self.fields["confirmed_rule"].required = False
             if self.is_bound:
-                from apps.tenant_apps.loans.services.paper_entry_terms import paper_entry_terms, preferred_paper_product
+                from apps.tenant_apps.loans.services.paper_entry_terms import (
+                    paper_entry_terms,
+                    preferred_paper_product,
+                )
+
                 data = self.data.copy()
                 if self.itemized:
                     try:
@@ -157,27 +372,84 @@ class PaperHistoryForm(forms.Form):
                             prefix = f"collateral-{index}-"
                             if data.get(prefix + "DELETE") in ("on", "1", "true"):
                                 continue
-                            item = {name: data.get(prefix + name) for name in ("description", "metal", "quantity", "gross_weight", "net_weight")}
-                            item.update(purity=data.get(prefix + "purity_percentage"), principal=data.get(prefix + "allocated_principal"),
-                                        rate=data.get(prefix + "interest_rate_override"))
-                            if data.get("exceptions") not in ("on", "true", "True", "1"):
-                                series = self.fields["series_id"].clean(data.get("series_id"))
+                            item = {
+                                name: data.get(prefix + name)
+                                for name in (
+                                    "description",
+                                    "metal",
+                                    "quantity",
+                                    "gross_weight",
+                                    "net_weight",
+                                )
+                            }
+                            item.update(
+                                purity=data.get(prefix + "purity_percentage"),
+                                principal=data.get(prefix + "allocated_principal"),
+                                rate=data.get(prefix + "interest_rate_override"),
+                            )
+                            if data.get("exceptions") not in (
+                                "on",
+                                "true",
+                                "True",
+                                "1",
+                            ):
+                                series = self.fields["series_id"].clean(
+                                    data.get("series_id")
+                                )
                                 day = self.fields["date"].clean(data.get("date"))
-                                defaults = paper_entry_terms(workspace=workspace, series=series, day=day, metal=item["metal"])
+                                defaults = paper_entry_terms(
+                                    workspace=workspace,
+                                    series=series,
+                                    day=day,
+                                    metal=item["metal"],
+                                )
                                 item_sources.extend(defaults["sources"])
                                 item_messages.extend(defaults["messages"])
                                 item["rate"] = str(defaults["values"].get("rate", ""))
                                 data[prefix + "interest_rate_override"] = item["rate"]
                             actual.append(item)
                         if actual:
-                            from apps.tenant_apps.loans.services.recorded_items import effective_rate, monthly_interest
-                            data.update({name: actual[0][name] for name in ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")})
-                            data["principal"] = str(sum((Decimal(row["principal"]) for row in actual), Decimal("0")))
+                            from apps.tenant_apps.loans.services.recorded_items import (
+                                effective_rate,
+                                monthly_interest,
+                            )
+
+                            data.update(
+                                {
+                                    name: actual[0][name]
+                                    for name in (
+                                        "description",
+                                        "metal",
+                                        "quantity",
+                                        "gross_weight",
+                                        "net_weight",
+                                        "purity",
+                                    )
+                                }
+                            )
+                            data["principal"] = str(
+                                sum(
+                                    (Decimal(row["principal"]) for row in actual),
+                                    Decimal("0"),
+                                )
+                            )
                             data["rate"] = str(effective_rate(actual))
-                            quantum = (defaults["values"].get("currency_quantum", "0.01")
-                                if data.get("exceptions") not in ("on", "true", "True", "1") else data.get("currency_quantum") or "0.01")
-                            self.item_monthly = monthly_interest(actual, Decimal(str(quantum)))
-                    except (ValidationError, ValueError, TypeError, ArithmeticError, ObjectDoesNotExist):
+                            quantum = (
+                                defaults["values"].get("currency_quantum", "0.01")
+                                if data.get("exceptions")
+                                not in ("on", "true", "True", "1")
+                                else data.get("currency_quantum") or "0.01"
+                            )
+                            self.item_monthly = monthly_interest(
+                                actual, Decimal(str(quantum))
+                            )
+                    except (
+                        ValidationError,
+                        ValueError,
+                        TypeError,
+                        ArithmeticError,
+                        ObjectDoesNotExist,
+                    ):
                         pass
                 self.data = data
                 try:
@@ -185,12 +457,26 @@ class PaperHistoryForm(forms.Form):
                     day = self.fields["date"].clean(data.get("date"))
                     metal = self.fields["metal"].clean(data.get("metal"))
                     try:
-                        principal = self.fields["principal"].clean(data.get("principal")) if data.get("principal") else None
+                        principal = (
+                            self.fields["principal"].clean(data.get("principal"))
+                            if data.get("principal")
+                            else None
+                        )
                     except ValidationError:
                         principal = None
-                    self.terms = paper_entry_terms(workspace=workspace, series=series, day=day, metal=metal, principal=principal)
-                    self.terms["sources"] = list(dict.fromkeys(self.terms["sources"] + item_sources))
-                    self.terms["messages"] = list(dict.fromkeys(self.terms["messages"] + item_messages))
+                    self.terms = paper_entry_terms(
+                        workspace=workspace,
+                        series=series,
+                        day=day,
+                        metal=metal,
+                        principal=principal,
+                    )
+                    self.terms["sources"] = list(
+                        dict.fromkeys(self.terms["sources"] + item_sources)
+                    )
+                    self.terms["messages"] = list(
+                        dict.fromkeys(self.terms["messages"] + item_messages)
+                    )
                     preferred = preferred_paper_product(workspace=workspace, day=day)
                     if not data.get("product_version_id") and preferred:
                         data["product_version_id"] = str(preferred.pk)
@@ -199,25 +485,35 @@ class PaperHistoryForm(forms.Form):
                             if name == "rate" and self.itemized:
                                 continue
                             data[name] = "" if value is None else str(value)
-                        data["document_charge"] = str(self.terms["values"].get("document_charge", ""))
+                        data["document_charge"] = str(
+                            self.terms["values"].get("document_charge", "")
+                        )
                     elif self.itemized:
                         # An actual agreement exception does not replace current
                         # monitoring setup. Legacy non-itemized submissions retain
                         # their original explicit review shape.
-                        for name in ("monitoring_method", "monitoring_ltv", "monitoring_reason"):
+                        for name in (
+                            "monitoring_method",
+                            "monitoring_ltv",
+                            "monitoring_reason",
+                        ):
                             if name in self.terms["values"]:
                                 data[name] = str(self.terms["values"][name])
                         if not data.get("currency_quantum"):
-                            data["currency_quantum"] = str(self.terms["values"].get("currency_quantum", "0.01"))
+                            data["currency_quantum"] = str(
+                                self.terms["values"].get("currency_quantum", "0.01")
+                            )
                             if getattr(self, "item_monthly", None) is not None:
                                 try:
-                                    self.item_monthly = monthly_interest(actual, Decimal(data["currency_quantum"]))
-                                except (ValueError, TypeError, ArithmeticError):
+                                    self.item_monthly = monthly_interest(
+                                        actual, Decimal(data["currency_quantum"])
+                                    )
+                                except ValueError, TypeError, ArithmeticError:
                                     pass
                     data["payout_basis"] = data.get("payout_basis") or "PROCEEDS"
                     data["confirmed_rule"] = "on"
                     self.data = data
-                except (ValidationError, ValueError, ObjectDoesNotExist):
+                except ValidationError, ValueError, ObjectDoesNotExist:
                     pass
             if self.is_bound and self.data.get("action") == "terms":
                 for name, field in self.fields.items():
@@ -231,66 +527,129 @@ class PaperHistoryForm(forms.Form):
                     prefix = f"collateral-{index}-"
                     if data.get(prefix + "DELETE") in ("on", "1", "true"):
                         continue
-                    actual.append({**{name: data.get(prefix + name) for name in ("description", "metal", "quantity", "gross_weight", "net_weight")},
-                        "purity": data.get(prefix + "purity_percentage"), "principal": data.get(prefix + "allocated_principal"),
-                        "rate": data.get(prefix + "interest_rate_override")})
+                    actual.append(
+                        {
+                            **{
+                                name: data.get(prefix + name)
+                                for name in (
+                                    "description",
+                                    "metal",
+                                    "quantity",
+                                    "gross_weight",
+                                    "net_weight",
+                                )
+                            },
+                            "purity": data.get(prefix + "purity_percentage"),
+                            "principal": data.get(prefix + "allocated_principal"),
+                            "rate": data.get(prefix + "interest_rate_override"),
+                        }
+                    )
                 if actual:
-                    from apps.tenant_apps.loans.services.recorded_items import effective_rate, monthly_interest
-                    data.update({name: actual[0][name] for name in ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")})
-                    data["principal"] = str(sum((Decimal(row["principal"]) for row in actual), Decimal(0)))
+                    from apps.tenant_apps.loans.services.recorded_items import (
+                        effective_rate,
+                        monthly_interest,
+                    )
+
+                    data.update(
+                        {
+                            name: actual[0][name]
+                            for name in (
+                                "description",
+                                "metal",
+                                "quantity",
+                                "gross_weight",
+                                "net_weight",
+                                "purity",
+                            )
+                        }
+                    )
+                    data["principal"] = str(
+                        sum((Decimal(row["principal"]) for row in actual), Decimal(0))
+                    )
                     data["rate"] = str(effective_rate(actual))
-                    self.item_monthly = monthly_interest(actual, Decimal(data.get("currency_quantum") or "0.01"))
+                    self.item_monthly = monthly_interest(
+                        actual, Decimal(data.get("currency_quantum") or "0.01")
+                    )
                     self.data = data
-            except (ValueError, TypeError, ArithmeticError):
+            except ValueError, TypeError, ArithmeticError:
                 pass  # Item form errors remain visible; no financial admission.
         if self.itemized:
-            for name in ("description", "metal", "quantity", "gross_weight", "net_weight", "purity"):
+            for name in (
+                "description",
+                "metal",
+                "quantity",
+                "gross_weight",
+                "net_weight",
+                "purity",
+            ):
                 self.fields[name].required = False
             self.fields["principal"].widget.attrs["readonly"] = True
             self.fields["rate"].widget = forms.HiddenInput()
         if self.routine and not self.is_bound and self.initial.get("series_id"):
-            from apps.tenant_apps.loans.services.paper_entry_terms import paper_entry_terms, preferred_paper_product
+            from apps.tenant_apps.loans.services.paper_entry_terms import (
+                paper_entry_terms,
+                preferred_paper_product,
+            )
+
             try:
                 series = self.fields["series_id"].clean(self.initial["series_id"])
                 day = self.fields["date"].clean(self.initial["date"])
-                self.terms = paper_entry_terms(workspace=workspace, series=series, day=day, metal="GOLD")
+                self.terms = paper_entry_terms(
+                    workspace=workspace, series=series, day=day, metal="GOLD"
+                )
                 for name, value in self.terms["values"].items():
                     self.initial.setdefault(name, value)
                 preferred = preferred_paper_product(workspace=workspace, day=day)
                 if preferred:
                     self.initial.setdefault("product_version_id", preferred.pk)
-            except (ValidationError, ValueError, ObjectDoesNotExist):
+            except ValidationError, ValueError, ObjectDoesNotExist:
                 pass
-        if auto_source_license and self.routine and self.itemized and self["source_license_from_setup"].value():
+        if (
+            auto_source_license
+            and self.routine
+            and self.itemized
+            and self["source_license_from_setup"].value()
+        ):
             # Signed confirmations retain the reviewed mapping, including blank.
             # Old submissions without this opt-in retain their original payload.
-            from apps.tenant_apps.loans.services.paper_entry_terms import paper_source_license_revision
+            from apps.tenant_apps.loans.services.paper_entry_terms import (
+                paper_source_license_revision,
+            )
+
             try:
                 series = self.fields["series_id"].clean(self["series_id"].value())
                 day = self.fields["date"].clean(self["date"].value())
-                revision = paper_source_license_revision(workspace=workspace, series=series, day=day)
+                revision = paper_source_license_revision(
+                    workspace=workspace, series=series, day=day
+                )
                 if self.is_bound and not self.data.get("review_token"):
                     data = self.data.copy()
                     data["license_revision_id"] = str(revision.pk) if revision else ""
                     self.data = data
                 elif not self.is_bound:
-                    self.initial["license_revision_id"] = revision.pk if revision else None
+                    self.initial["license_revision_id"] = (
+                        revision.pk if revision else None
+                    )
                 self.source_license_resolved = bool(self["license_revision_id"].value())
-            except (ValidationError, ValueError, ObjectDoesNotExist):
+            except ValidationError, ValueError, ObjectDoesNotExist:
                 pass
         if self.routine:
-            self.fields["tenure"].widget.attrs["readonly"] = not bool(self["exceptions"].value())
+            self.fields["tenure"].widget.attrs["readonly"] = not bool(
+                self["exceptions"].value()
+            )
             tenure = self["tenure"]
             tenure.help_text = self.fields["tenure"].help_text = (
                 "Enter the tenure actually agreed on paper."
-                if self["exceptions"].value() else
-                "Supplied from the selected series and original loan date. Use Enter actual agreed terms to record a different agreement."
-                if tenure.value() else
-                "Choose the series and original date. If setup has no tenure for that date, update standing setup or use Enter actual agreed terms."
+                if self["exceptions"].value()
+                else (
+                    "Supplied from the selected series and original loan date. Use Enter actual agreed terms to record a different agreement."
+                    if tenure.value()
+                    else "Choose the series and original date. If setup has no tenure for that date, update standing setup or use Enter actual agreed terms."
+                )
             )
-            self.fields["tenure"].error_messages["required"] = (
-                "Tenure is missing. Update standing setup, or select Paper agreement differs from standard terms and enter the actual tenure."
-            )
+            self.fields["tenure"].error_messages[
+                "required"
+            ] = "Tenure is missing. Update standing setup, or select Paper agreement differs from standard terms and enter the actual tenure."
         _style(self)
 
     def clean(self):
@@ -299,78 +658,207 @@ class PaperHistoryForm(forms.Form):
         if not self.routine or self.data.get("action") == "terms":
             return data
         if data.get("exceptions") and not data.get("exception_reason", "").strip():
-            self.add_error("exception_reason", "Identify why the actual paper terms differ.")
+            self.add_error(
+                "exception_reason", "Identify why the actual paper terms differ."
+            )
         if data.get("confirmed_history") and not data.get("complete_through"):
-            self.add_error("complete_through", "Enter the actual date through which the paper activity was checked.")
+            self.add_error(
+                "complete_through",
+                "Enter the actual date through which the paper activity was checked.",
+            )
         if not data.get("exceptions") and self.terms:
-            missing = [name for name in ("rate", "tenure", "advance_months", "document_charge")
-                       if self.terms["values"].get(name) is None]
+            missing = [
+                name
+                for name in ("rate", "tenure", "advance_months", "document_charge")
+                if self.terms["values"].get(name) is None
+            ]
             if missing:
-                self.add_error(None, "Complete standing setup or select Paper agreement differs and enter the actual supported terms: " + ", ".join(missing) + ".")
+                self.add_error(
+                    None,
+                    "Complete standing setup or select Paper agreement differs and enter the actual supported terms: "
+                    + ", ".join(missing)
+                    + ".",
+                )
         elif not data.get("exceptions"):
-            self.add_error(None, "Choose a valid series, original date, metal and principal to resolve standing terms.")
+            self.add_error(
+                None,
+                "Choose a valid series, original date, metal and principal to resolve standing terms.",
+            )
         return data
 
     @property
     def deductions(self):
         from decimal import ROUND_HALF_UP, InvalidOperation
+
         try:
-            principal, rate, fee = (Decimal(str(self[name].value())) for name in ("principal", "rate", "document_charge"))
+            principal, rate, fee = (
+                Decimal(str(self[name].value()))
+                for name in ("principal", "rate", "document_charge")
+            )
             months = int(self["advance_months"].value())
-            if not all(value.is_finite() and value >= 0 for value in (principal, rate, fee)) or months not in (0, 1):
+            if not all(
+                value.is_finite() and value >= 0 for value in (principal, rate, fee)
+            ) or months not in (0, 1):
                 return None
-            advance = getattr(self, "item_monthly", (principal * rate / 100).quantize(Decimal(str(self["currency_quantum"].value() or "0.01")), rounding=ROUND_HALF_UP)) * months
+            advance = (
+                getattr(
+                    self,
+                    "item_monthly",
+                    (principal * rate / 100).quantize(
+                        Decimal(str(self["currency_quantum"].value() or "0.01")),
+                        rounding=ROUND_HALF_UP,
+                    ),
+                )
+                * months
+            )
             return dict(advance=advance, proceeds=principal - advance - fee)
-        except (InvalidOperation, TypeError, ValueError):
+        except InvalidOperation, TypeError, ValueError:
             return None
 
 
 class PaperTransactionForm(forms.Form):
-    kind = forms.ChoiceField(choices=(("","Choose transaction"),("PAYMENT","Receipt"),("RENEW","Known linked renewal (optional)"),("CLOSE","Closure")))
+    kind = forms.ChoiceField(
+        choices=(
+            ("", "Choose transaction"),
+            ("PAYMENT", "Receipt"),
+            ("RENEW", "Known linked renewal (optional)"),
+            ("CLOSE", "Closure"),
+        )
+    )
     date = forms.DateField(widget=forms.DateInput(attrs=DAY), label="Actual date")
-    amount = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, label="Receipt total or closing settlement amount")
-    closure_basis = forms.ChoiceField(required=False, initial="PAPER_SETTLEMENT", label="Closure evidence", choices=(
-        ("", "For closure only"), ("PAPER_SETTLEMENT", "Paper says settled; cash method and customer handover not confirmed"),
-        ("RETURNED", "Cash received and collateral returned to the named customer")))
-    reference = forms.CharField(max_length=160, label="Distinct paper receipt / page reference")
-    number = forms.CharField(max_length=64, required=False, label="Successor loan number or release number")
-    rate = forms.DecimalField(max_digits=9, decimal_places=6, min_value=0, required=False, label="Renewal monthly rate (%)")
-    tenure = forms.IntegerField(min_value=1, max_value=600, required=False, label="Renewal tenure (months)")
-    renewal_method = forms.ChoiceField(required=False, label="Renewal funding", choices=(
-        ("", "For renewals only"), ("CARRY", "Carry remaining principal, with reduction or top-up"),
-        ("REPAY_REDRAW", "Old principal fully repaid; new advance paid")))
-    new_principal = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False, label="Renewal: new agreed principal")
-    cash_paid = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False, label="Renewal: actual cash paid out (enter 0 if none)")
-    interest_offset = forms.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False, label="Renewal: old interest deducted from advance (enter 0 if none)")
-    custody = forms.ChoiceField(required=False, label="Renewal collateral handling", choices=(
-        ("", "For renewals only"), ("HELD", "Stayed held throughout"), ("RETURNED_REPLEDGED", "Actually returned and repledged on this date")))
-    recipient = forms.CharField(max_length=255, required=False, label="Who received the collateral (if actually returned)")
+    amount = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+        label="Receipt total or closing settlement amount",
+    )
+    closure_basis = forms.ChoiceField(
+        required=False,
+        initial="PAPER_SETTLEMENT",
+        label="Closure evidence",
+        choices=(
+            ("", "For closure only"),
+            (
+                "PAPER_SETTLEMENT",
+                "Paper says settled; cash method and customer handover not confirmed",
+            ),
+            ("RETURNED", "Cash received and collateral returned to the named customer"),
+        ),
+    )
+    reference = forms.CharField(
+        max_length=160, label="Distinct paper receipt / page reference"
+    )
+    number = forms.CharField(
+        max_length=64, required=False, label="Successor loan number or release number"
+    )
+    rate = forms.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        min_value=0,
+        required=False,
+        label="Renewal monthly rate (%)",
+    )
+    tenure = forms.IntegerField(
+        min_value=1, max_value=600, required=False, label="Renewal tenure (months)"
+    )
+    renewal_method = forms.ChoiceField(
+        required=False,
+        label="Renewal funding",
+        choices=(
+            ("", "For renewals only"),
+            ("CARRY", "Carry remaining principal, with reduction or top-up"),
+            ("REPAY_REDRAW", "Old principal fully repaid; new advance paid"),
+        ),
+    )
+    new_principal = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+        label="Renewal: new agreed principal",
+    )
+    cash_paid = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        label="Renewal: actual cash paid out (enter 0 if none)",
+    )
+    interest_offset = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        label="Renewal: old interest deducted from advance (enter 0 if none)",
+    )
+    custody = forms.ChoiceField(
+        required=False,
+        label="Renewal collateral handling",
+        choices=(
+            ("", "For renewals only"),
+            ("HELD", "Stayed held throughout"),
+            ("RETURNED_REPLEDGED", "Actually returned and repledged on this date"),
+        ),
+    )
+    recipient = forms.CharField(
+        max_length=255,
+        required=False,
+        label="Who received the collateral (if actually returned)",
+    )
 
     def __init__(self, *args, collateral_labels=(), **kwargs):
         super().__init__(*args, **kwargs)
         if len(collateral_labels) > 1:
             for position, label in enumerate(collateral_labels, start=1):
-                self.fields[f"item_principal_{position}"] = forms.DecimalField(required=False,
-                    max_digits=14, decimal_places=2, min_value=0,
+                self.fields[f"item_principal_{position}"] = forms.DecimalField(
+                    required=False,
+                    max_digits=14,
+                    decimal_places=2,
+                    min_value=0,
                     label=f"Principal paid: item {position} — {label}",
-                    help_text="For receipts only. Enter the principal applied to this item after interest; leave blank for interest-only receipts.")
+                    help_text="For receipts only. Enter the principal applied to this item after interest; leave blank for interest-only receipts.",
+                )
         _style(self)
 
     def has_changed(self):
-        if self.is_bound and self.empty_permitted and all(self[name].value() in (
-                (None, "", "PAPER_SETTLEMENT") if name == "closure_basis" else (None, "", False))
-                for name in self.fields):
+        if (
+            self.is_bound
+            and self.empty_permitted
+            and all(
+                self[name].value()
+                in (
+                    (None, "", "PAPER_SETTLEMENT")
+                    if name == "closure_basis"
+                    else (None, "", False)
+                )
+                for name in self.fields
+            )
+        ):
             return False
         return super().has_changed()
 
 
 def _style(form):
     for field in form.fields.values():
-        field.widget.attrs["class"] = "form-check-input" if isinstance(field.widget, forms.CheckboxInput) else (
-            "form-select" if isinstance(field.widget, forms.Select) else "form-control")
+        field.widget.attrs["class"] = (
+            "form-check-input"
+            if isinstance(field.widget, forms.CheckboxInput)
+            else (
+                "form-select"
+                if isinstance(field.widget, forms.Select)
+                else "form-control"
+            )
+        )
 
 
-Transactions = forms.formset_factory(PaperTransactionForm, extra=1, max_num=30, validate_max=True, absolute_max=30, can_delete=True)
+Transactions = forms.formset_factory(
+    PaperTransactionForm,
+    extra=1,
+    max_num=30,
+    validate_max=True,
+    absolute_max=30,
+    can_delete=True,
+)
 
 
 def _data(form, rows, collateral=None):
@@ -383,20 +871,39 @@ def _data(form, rows, collateral=None):
     value["document_charge"] = value["document_charge"] or Decimal("0")
     if value["cash_paid"] is None:
         from decimal import ROUND_HALF_UP
-        advance = getattr(form, "item_monthly", (value["principal"] * value["rate"] / 100).quantize(Decimal(value["currency_quantum"]), rounding=ROUND_HALF_UP)) * value["advance_months"]
+
+        advance = (
+            getattr(
+                form,
+                "item_monthly",
+                (value["principal"] * value["rate"] / 100).quantize(
+                    Decimal(value["currency_quantum"]), rounding=ROUND_HALF_UP
+                ),
+            )
+            * value["advance_months"]
+        )
         value["cash_paid"] = value["principal"] - advance - value["document_charge"]
     for name in ("borrower_id", "series_id", "product_version_id"):
         value[name] = value[name].pk
     revision = value.pop("license_revision_id", None)
     if revision and not getattr(form, "saved_draft", False):
         value["license_revision_id"] = revision.pk
-    value["events"] = [{key: val for key, val in row.cleaned_data.items() if key != "DELETE"}
-                       for row in rows if row.cleaned_data and not row.cleaned_data.get("DELETE")]
+    value["events"] = [
+        {key: val for key, val in row.cleaned_data.items() if key != "DELETE"}
+        for row in rows
+        if row.cleaned_data and not row.cleaned_data.get("DELETE")
+    ]
     # Values crossing the signed review/storage boundary use canonical JSON types.
     for row in value["events"]:
-        split = {name.removeprefix("item_principal_"): row.pop(name) for name in list(row) if name.startswith("item_principal_")}
+        split = {
+            name.removeprefix("item_principal_"): row.pop(name)
+            for name in list(row)
+            if name.startswith("item_principal_")
+        }
         if any(amount is not None for amount in split.values()):
-            row["item_principal_split"] = {key: str(amount or Decimal("0")) for key, amount in split.items()}
+            row["item_principal_split"] = {
+                key: str(amount or Decimal("0")) for key, amount in split.items()
+            }
         if row["kind"] == "CLOSE" and not row["closure_basis"]:
             row["closure_basis"] = "RETURNED"
     if form.routine:
@@ -405,14 +912,36 @@ def _data(form, rows, collateral=None):
         if not value["confirmed_history"]:
             value["complete_through"] = timezone.localdate()
         sources = "; ".join((form.terms or {}).get("sources", []))
-        value["entry_note"] = (("Actual exception: " + reason) if exceptions else ("Standing terms: " + sources))[:255]
+        value["entry_note"] = (
+            ("Actual exception: " + reason)
+            if exceptions
+            else ("Standing terms: " + sources)
+        )[:255]
     if collateral is not None:
-        value["collateral"] = [dict(description=row.cleaned_data["description"], quantity=row.cleaned_data["quantity"],
-            metal=row.cleaned_data["metal"], gross_weight=row.cleaned_data["gross_weight"], net_weight=row.cleaned_data["net_weight"],
-            purity=row.cleaned_data["purity_percentage"], principal=row.cleaned_data["allocated_principal"],
-            rate=row.cleaned_data["interest_rate_override"]) for row in collateral if row.cleaned_data and not row.cleaned_data.get("DELETE")]
+        value["collateral"] = [
+            dict(
+                description=row.cleaned_data["description"],
+                quantity=row.cleaned_data["quantity"],
+                metal=row.cleaned_data["metal"],
+                gross_weight=row.cleaned_data["gross_weight"],
+                net_weight=row.cleaned_data["net_weight"],
+                purity=row.cleaned_data["purity_percentage"],
+                principal=row.cleaned_data["allocated_principal"],
+                rate=row.cleaned_data["interest_rate_override"],
+            )
+            for row in collateral
+            if row.cleaned_data and not row.cleaned_data.get("DELETE")
+        ]
     import json
-    return json.loads(json.dumps(value, default=lambda obj: obj.isoformat() if hasattr(obj, "isoformat") else str(obj)))
+
+    return json.loads(
+        json.dumps(
+            value,
+            default=lambda obj: (
+                obj.isoformat() if hasattr(obj, "isoformat") else str(obj)
+            ),
+        )
+    )
 
 
 def paper_history_entry(request, *, draft=None, origination_correction=False):
@@ -421,102 +950,225 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
     post = request.POST.copy() if request.method == "POST" else None
     if post is not None and "payout_basis" not in post:
         post["payout_basis"] = "PROCEEDS" if post.get("routine_entry") else "CASH"
-    archive_id = post.get("archive_evidence_id") if post is not None else request.GET.get("archive")
+    archive_id = (
+        post.get("archive_evidence_id")
+        if post is not None
+        else request.GET.get("archive")
+    )
     archive, initial, initial_rows, snapshots = None, {}, [], []
     initial_collateral = []
     draft_items = []
     if draft:
-        initial = dict(borrower_id=draft.borrower_id, series_id=draft.series_id,
-            product_version_id=draft.product_version_id, number=draft.loan_number, date=draft.loan_date,
-            principal=draft.principal_amount, rate=draft.monthly_interest_rate, tenure=draft.tenure_months,
-            license_revision_id=draft.license_revision_id)
-        draft_items = list(draft.collateral_items.prefetch_related("photos").order_by("pk"))
-        initial_collateral = [dict(description=item.description, quantity=item.quantity, metal=item.metal,
-            gross_weight=item.gross_weight, net_weight=item.net_weight, purity_percentage=item.purity_percentage,
-            allocated_principal=item.allocated_principal,
-            interest_rate_override=item.monthly_interest_rate if item.monthly_interest_rate is not None else draft.monthly_interest_rate)
-            for item in draft_items]
+        initial = dict(
+            borrower_id=draft.borrower_id,
+            series_id=draft.series_id,
+            product_version_id=draft.product_version_id,
+            number=draft.loan_number,
+            date=draft.loan_date,
+            principal=draft.principal_amount,
+            rate=draft.monthly_interest_rate,
+            tenure=draft.tenure_months,
+            license_revision_id=draft.license_revision_id,
+        )
+        draft_items = list(
+            draft.collateral_items.prefetch_related("photos").order_by("pk")
+        )
+        initial_collateral = [
+            dict(
+                description=item.description,
+                quantity=item.quantity,
+                metal=item.metal,
+                gross_weight=item.gross_weight,
+                net_weight=item.net_weight,
+                purity_percentage=item.purity_percentage,
+                allocated_principal=item.allocated_principal,
+                interest_rate_override=(
+                    item.monthly_interest_rate
+                    if item.monthly_interest_rate is not None
+                    else draft.monthly_interest_rate
+                ),
+            )
+            for item in draft_items
+        ]
         if post is not None:
-            for name in ("borrower_id", "series_id", "product_version_id", "number", "date"):
+            for name in (
+                "borrower_id",
+                "series_id",
+                "product_version_id",
+                "number",
+                "date",
+            ):
                 value = initial[name]
-                post[name] = value.isoformat() if hasattr(value, "isoformat") else str(value)
+                post[name] = (
+                    value.isoformat() if hasattr(value, "isoformat") else str(value)
+                )
     if not draft and request.GET.get("series"):
         initial["series_id"] = request.GET["series"]
-    if presentation and not draft and request.GET.get("include_old_series") in ("on", "true", "True", "1"):
+    if (
+        presentation
+        and not draft
+        and request.GET.get("include_old_series") in ("on", "true", "True", "1")
+    ):
         initial["include_old_series"] = True
     if not draft and request.GET.get("party"):
         initial["borrower_id"] = request.GET["party"]
     if archive_id and draft:
-        raise PermissionDenied("Archive admission and existing draft recording are separate source contexts.")
+        raise PermissionDenied(
+            "Archive admission and existing draft recording are separate source contexts."
+        )
     if archive_id:
         from apps.tenant_apps.loans.services.archive import get_evidence
-        from apps.tenant_apps.loans.services.history_setup import require_history_setup_access
+        from apps.tenant_apps.loans.services.history_setup import (
+            require_history_setup_access,
+        )
+
         require_history_setup_access(workspace.pk, actor)
-        archive = get_evidence(workspace_id=workspace.pk, actor=actor, evidence_id=archive_id)
+        archive = get_evidence(
+            workspace_id=workspace.pk, actor=actor, evidence_id=archive_id
+        )
         from apps.tenant_apps.loans.services.archive_admission import source_snapshots
+
         try:
             snapshots = source_snapshots(archive)
         except ValueError:
             snapshots = [archive]
         facts = archive.document["facts"]
-        initial = dict(number=facts["loan_number"], date=facts["opened_on"], principal=facts["original_principal"],
-            complete_through=facts["closed_on"], final_state="CLOSED",
-            source_reference=f"Archive {archive.source_system} / {archive.source_id}"[:160])
+        initial = dict(
+            number=facts["loan_number"],
+            date=facts["opened_on"],
+            principal=facts["original_principal"],
+            complete_through=facts["closed_on"],
+            final_state="CLOSED",
+            source_reference=f"Archive {archive.source_system} / {archive.source_id}"[
+                :160
+            ],
+        )
         if facts["collateral"] and len(facts["collateral"]) == 1:
             initial.update(facts["collateral"][0])
         elif facts["collateral"]:
             initial_collateral = facts["collateral"]
-        initial_rows = [dict(date=row["date"], amount=row["amount"], reference=row["id"])
-                        for row in facts["payments"] or []]
-    intent = (post.get("intent_token", "") if post is not None else "") or new_recording_intent(
-        workspace=workspace, actor=actor, draft_id=draft.pk if draft else None, correction=origination_correction)
+        initial_rows = [
+            dict(date=row["date"], amount=row["amount"], reference=row["id"])
+            for row in facts["payments"] or []
+        ]
+    intent = (
+        post.get("intent_token", "") if post is not None else ""
+    ) or new_recording_intent(
+        workspace=workspace,
+        actor=actor,
+        draft_id=draft.pk if draft else None,
+        correction=origination_correction,
+    )
     if post is not None and post.get("action") == "add":
         try:
-            post["events-TOTAL_FORMS"] = str(min(30, int(post.get("events-TOTAL_FORMS", "3")) + 1))
+            post["events-TOTAL_FORMS"] = str(
+                min(30, int(post.get("events-TOTAL_FORMS", "3")) + 1)
+            )
         except ValueError:
             pass
     if post is not None and post.get("action") == "add_collateral":
         try:
-            post["collateral-TOTAL_FORMS"] = str(min(100, int(post.get("collateral-TOTAL_FORMS", "1")) + 1))
+            post["collateral-TOTAL_FORMS"] = str(
+                min(100, int(post.get("collateral-TOTAL_FORMS", "1")) + 1)
+            )
         except ValueError:
             pass
-    form = PaperHistoryForm(post, workspace=workspace, initial=initial, routine=not archive,
+    form = PaperHistoryForm(
+        post,
+        workspace=workspace,
+        initial=initial,
+        routine=not archive,
         auto_source_license=not archive and not draft,
         filter_series=bool(presentation) and not archive and not draft,
-        itemized_archive=bool(archive and len(archive.document["facts"]["collateral"] or []) > 1))
+        itemized_archive=bool(
+            archive and len(archive.document["facts"]["collateral"] or []) > 1
+        ),
+    )
     form.saved_draft = draft is not None
     if origination_correction:
-        form.fields["correction_reason"] = forms.CharField(max_length=500,
+        form.fields["correction_reason"] = forms.CharField(
+            max_length=500,
             label="Why are these the actual paper facts rather than the reversed digital payout?",
-            widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}))
+            widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        )
     if draft:
-        form.fields["borrower_id"].queryset = Party.objects.filter(workspace=workspace, pk=draft.borrower_id)
-        form.fields["product_version_id"].queryset = m.LoanProductVersion.objects.filter(workspace=workspace, pk=draft.product_version_id)
-        for name in ("borrower_id", "series_id", "product_version_id", "number", "date", "license_revision_id"):
+        form.fields["borrower_id"].queryset = Party.objects.filter(
+            workspace=workspace, pk=draft.borrower_id
+        )
+        form.fields["product_version_id"].queryset = (
+            m.LoanProductVersion.objects.filter(
+                workspace=workspace, pk=draft.product_version_id
+            )
+        )
+        for name in (
+            "borrower_id",
+            "series_id",
+            "product_version_id",
+            "number",
+            "date",
+            "license_revision_id",
+        ):
             form.fields[name].disabled = True
     routine_editor = form.routine and form.itemized and not archive and not draft
     if routine_editor:
         from .routine_entry import prepare_paper_number_defaults
+
         prepare_paper_number_defaults(form)
-    collateral = PaperCollateralFormSet(form.data if post is not None else None, request.FILES or None, prefix="collateral",
-        initial=initial_collateral,
-        form_kwargs={"exceptions": bool(archive) or bool(form["exceptions"].value()), "allow_photos": routine_editor,
-            "default_rate": (form.terms or {}).get("values", {}).get("rate") if routine_editor else None}) if form.itemized else None
+    collateral = (
+        PaperCollateralFormSet(
+            form.data if post is not None else None,
+            request.FILES or None,
+            prefix="collateral",
+            initial=initial_collateral,
+            form_kwargs={
+                "exceptions": bool(archive) or bool(form["exceptions"].value()),
+                "allow_photos": routine_editor,
+                "default_rate": (
+                    (form.terms or {}).get("values", {}).get("rate")
+                    if routine_editor
+                    else None
+                ),
+            },
+        )
+        if form.itemized
+        else None
+    )
     if draft and collateral is not None:
         for row, item in zip(collateral, draft_items):
             row.existing_collateral_item = item
     if archive:
-        form.fields["final_state"].choices = (("CLOSED", "All debt settled; state the known handover facts below"),)
-        form.fields["reconciliation"] = forms.CharField(max_length=1000, widget=forms.Textarea(attrs={"rows": 3}),
+        form.fields["final_state"].choices = (
+            ("CLOSED", "All debt settled; state the known handover facts below"),
+        )
+        form.fields["reconciliation"] = forms.CharField(
+            max_length=1000,
+            widget=forms.Textarea(attrs={"rows": 3}),
             label="Checked sources for original terms, missing facts and known custody",
-            help_text="Identify supporting records for borrower, complete financial history and known handover facts. Leave handover unconfirmed when the source does not establish it.")
-        form.fields["confirmed_history"].label = "I checked the archive and supporting records. This complete history has not already been admitted as an ordinary loan."
+            help_text="Identify supporting records for borrower, complete financial history and known handover facts. Leave handover unconfirmed when the source does not establish it.",
+        )
+        form.fields["confirmed_history"].label = (
+            "I checked the archive and supporting records. This complete history has not already been admitted as an ordinary loan."
+        )
         form.fields["payout_basis"].initial = "CASH"
         _style(form)
-    labels = [row["description"].value() or "Collateral" for row in collateral if not row["DELETE"].value()] if collateral is not None else []
-    rows = Transactions(post, prefix="events", initial=initial_rows, form_kwargs={"collateral_labels": labels})
+    labels = (
+        [
+            row["description"].value() or "Collateral"
+            for row in collateral
+            if not row["DELETE"].value()
+        ]
+        if collateral is not None
+        else []
+    )
+    rows = Transactions(
+        post,
+        prefix="events",
+        initial=initial_rows,
+        form_kwargs={"collateral_labels": labels},
+    )
     if presentation.get("entry_changing"):
         from .entry_presentation import presentation_errors
+
         presentation_errors(form, collateral)
         for row in rows:
             row._errors = forms.utils.ErrorDict()
@@ -524,62 +1176,232 @@ def paper_history_entry(request, *, draft=None, origination_correction=False):
         rows._non_form_errors = rows.error_class()
     if archive:
         for row in rows:
-            row.fields["kind"].choices = (("", "Choose transaction"), ("PAYMENT", "Receipt"), ("CLOSE", "Full return / closure"))
-            row.fields["number"].label = "Original release number, if recorded (for final closure)"
-            row.fields["closure_basis"].choices = (("", "For receipts only"), ("RETURNED", "Confirmed cash collection and full collateral return"),
-                ("PAPER_SETTLEMENT", "Financially settled; physical cash and customer handover unconfirmed"))
+            row.fields["kind"].choices = (
+                ("", "Choose transaction"),
+                ("PAYMENT", "Receipt"),
+                ("CLOSE", "Full return / closure"),
+            )
+            row.fields["number"].label = (
+                "Original release number, if recorded (for final closure)"
+            )
+            row.fields["closure_basis"].choices = (
+                ("", "For receipts only"),
+                ("RETURNED", "Confirmed cash collection and full collateral return"),
+                (
+                    "PAPER_SETTLEMENT",
+                    "Financially settled; physical cash and customer handover unconfirmed",
+                ),
+            )
             row.fields["closure_basis"].initial = "PAPER_SETTLEMENT"
-            for name in ("rate", "tenure", "renewal_method", "new_principal", "cash_paid", "interest_offset", "custody"):
+            for name in (
+                "rate",
+                "tenure",
+                "renewal_method",
+                "new_principal",
+                "cash_paid",
+                "interest_offset",
+                "custody",
+            ):
                 row.fields[name].widget = forms.HiddenInput()
     review, token, agreement = None, "", None
-    if post is not None and post.get("action") not in ("add", "add_collateral", "terms", "entry_change", "layout_change", "edit") and form.is_valid() and rows.is_valid() and (collateral is None or collateral.is_valid()):
+    if (
+        post is not None
+        and post.get("action")
+        not in (
+            "add",
+            "add_collateral",
+            "terms",
+            "entry_change",
+            "layout_change",
+            "edit",
+        )
+        and form.is_valid()
+        and rows.is_valid()
+        and (collateral is None or collateral.is_valid())
+    ):
         try:
             data = _data(form, rows, collateral)
             correction_reason = data.pop("correction_reason", None)
             reconciliation = data.pop("reconciliation", "")
             if archive:
-                from apps.tenant_apps.loans.services.archive_admission import preview_archive_admission, admit_archive_history
+                from apps.tenant_apps.loans.services.archive_admission import (
+                    preview_archive_admission,
+                    admit_archive_history,
+                )
+
                 preview, admit = preview_archive_admission, admit_archive_history
-                extra = dict(evidence_id=archive.public_id, reconciliation=reconciliation)
+                extra = dict(
+                    evidence_id=archive.public_id, reconciliation=reconciliation
+                )
             else:
                 preview, admit = preview_recorded_history, admit_recorded_history
                 extra = dict(draft_id=draft.pk) if draft else {}
                 if routine_editor and collateral is not None:
-                    from apps.tenant_apps.loans.services.recorded_entry_photos import preview_recorded_entry, admit_recorded_entry
+                    from apps.tenant_apps.loans.services.recorded_entry_photos import (
+                        preview_recorded_entry,
+                        admit_recorded_entry,
+                    )
+
                     preview, admit = preview_recorded_entry, admit_recorded_entry
-                    actual = [row for row in collateral if row.cleaned_data and not row.cleaned_data.get("DELETE")]
-                    extra["photos"] = tuple((index, row.cleaned_data["photograph"]) for index, row in enumerate(actual, start=1)
-                        if row.cleaned_data.get("photograph"))
+                    actual = [
+                        row
+                        for row in collateral
+                        if row.cleaned_data and not row.cleaned_data.get("DELETE")
+                    ]
+                    extra["photos"] = tuple(
+                        (index, row.cleaned_data["photograph"])
+                        for index, row in enumerate(actual, start=1)
+                        if row.cleaned_data.get("photograph")
+                    )
                 if origination_correction:
                     extra["correction_reason"] = correction_reason
             if post.get("action") == "confirm":
-                loan, created = admit(workspace=workspace, actor=actor, data=data, intent_token=intent, **extra,
-                    review_token=post.get("review_token"), confirmed=post.get("confirm_review") == "on")
-                messages.success(request, "Paper history recorded." if created else "This history was already recorded; no duplicate was created.")
-                return redirect("workspace_loans:pawn_loan_detail", workspace_slug=workspace.slug, pk=loan.pk)
-            review, token = preview(workspace=workspace, actor=actor, data=data, intent_token=intent, **extra)
-            from apps.tenant_apps.loans.services.origination_summary import recorded_origination_summary
-            agreement = recorded_origination_summary(data, customer=form.cleaned_data["borrower_id"],
-                series=form.cleaned_data["series_id"], historical_source=bool(archive))
+                loan, created = admit(
+                    workspace=workspace,
+                    actor=actor,
+                    data=data,
+                    intent_token=intent,
+                    **extra,
+                    review_token=post.get("review_token"),
+                    confirmed=post.get("confirm_review") == "on",
+                )
+                messages.success(
+                    request,
+                    (
+                        "Paper history recorded."
+                        if created
+                        else "This history was already recorded; no duplicate was created."
+                    ),
+                )
+                return redirect(
+                    "workspace_loans:pawn_loan_detail",
+                    workspace_slug=workspace.slug,
+                    pk=loan.pk,
+                )
+            review, token = preview(
+                workspace=workspace,
+                actor=actor,
+                data=data,
+                intent_token=intent,
+                **extra,
+            )
+            from apps.tenant_apps.loans.services.origination_summary import (
+                recorded_origination_summary,
+            )
+
+            agreement = recorded_origination_summary(
+                data,
+                customer=form.cleaned_data["borrower_id"],
+                series=form.cleaned_data["series_id"],
+                historical_source=bool(archive),
+            )
         except (ValueError, ValidationError, ObjectDoesNotExist) as exc:
             form.add_error(None, str(exc))
-    sections = [("Original contract", ("borrower_id", "series_id", "license_revision_id", "product_version_id", "number", "date", "source_reference", "principal", "rate", "tenure", "advance_months", "currency_quantum", "document_charge", "payout_basis", "cash_paid")),
-        ("Collateral", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity")),
-        ("Saved valuation/reference evidence", ("monitoring_method", "monitoring_ltv", "monitoring_reason")),
-        ("Completeness and agreed calculation", ("complete_through", "final_state", "confirmed_rule", "confirmed_history"))]
+    sections = [
+        (
+            "Original contract",
+            (
+                "borrower_id",
+                "series_id",
+                "license_revision_id",
+                "product_version_id",
+                "number",
+                "date",
+                "source_reference",
+                "principal",
+                "rate",
+                "tenure",
+                "advance_months",
+                "currency_quantum",
+                "document_charge",
+                "payout_basis",
+                "cash_paid",
+            ),
+        ),
+        (
+            "Collateral",
+            (
+                "description",
+                "metal",
+                "quantity",
+                "gross_weight",
+                "net_weight",
+                "purity",
+            ),
+        ),
+        (
+            "Saved valuation/reference evidence",
+            ("monitoring_method", "monitoring_ltv", "monitoring_reason"),
+        ),
+        (
+            "Completeness and agreed calculation",
+            ("complete_through", "final_state", "confirmed_rule", "confirmed_history"),
+        ),
+    ]
     if archive:
         sections.append(("Archive reconciliation", ("reconciliation",)))
     if form.routine:
-        sections = [("Loan details", ("borrower_id", "series_id", "product_version_id", "number", "date", "source_reference", "principal")),
-            ("Jewellery", ("description", "metal", "quantity", "gross_weight", "net_weight", "purity"))]
+        sections = [
+            (
+                "Loan details",
+                (
+                    "borrower_id",
+                    "series_id",
+                    "product_version_id",
+                    "number",
+                    "date",
+                    "source_reference",
+                    "principal",
+                ),
+            ),
+            (
+                "Jewellery",
+                (
+                    "description",
+                    "metal",
+                    "quantity",
+                    "gross_weight",
+                    "net_weight",
+                    "purity",
+                ),
+            ),
+        ]
     if collateral is not None:
         sections = [section for section in sections if section[0] != "Jewellery"]
     from .routine_entry import routine_entry_context, entry_monitoring_context
+
     if not routine_editor:
         presentation["current_monitoring"] = entry_monitoring_context(form)
-    return render(request, "loans/pawn/routine_entry.html" if routine_editor else "loans/pawn/paper_history.html", dict(form=form, rows=rows, review=review,
-        formset=collateral, entry_purpose="paper",
-        archive=archive, archive_snapshots=snapshots, review_token=token, intent_token=intent, agreement=agreement,
-        completed_draft=draft, origination_correction=origination_correction, loan=draft, form_action=request.path if draft else None,
-        sections=[(title, [form[name] for name in names]) for title, names in sections],
-        **(routine_entry_context(request, form, purpose="paper") if routine_editor else {}), **presentation))
+    return render(
+        request,
+        (
+            "loans/pawn/routine_entry.html"
+            if routine_editor
+            else "loans/pawn/paper_history.html"
+        ),
+        dict(
+            form=form,
+            rows=rows,
+            review=review,
+            formset=collateral,
+            entry_purpose="paper",
+            archive=archive,
+            archive_snapshots=snapshots,
+            review_token=token,
+            intent_token=intent,
+            agreement=agreement,
+            completed_draft=draft,
+            origination_correction=origination_correction,
+            loan=draft,
+            form_action=request.path if draft else None,
+            sections=[
+                (title, [form[name] for name in names]) for title, names in sections
+            ],
+            **(
+                routine_entry_context(request, form, purpose="paper")
+                if routine_editor
+                else {}
+            ),
+            **presentation,
+        ),
+    )

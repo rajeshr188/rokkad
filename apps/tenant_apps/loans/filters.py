@@ -52,22 +52,39 @@ class PawnLoanSearchForm(forms.Form):
         cleaned = super().clean()
         start, end = cleaned.get("loan_date_from"), cleaned.get("loan_date_to")
         if start and end and start > end:
-            self.add_error("loan_date_to", _("End date must be on or after start date."))
+            self.add_error(
+                "loan_date_to", _("End date must be on or after start date.")
+            )
         return cleaned
 
 
 class PawnLoanFilter(django_filters.FilterSet):
     IMPORT_ALIAS_CANDIDATE_LIMIT = 500
-    records = django_filters.ChoiceFilter(method='filter_records',label=_("Records"),
-        choices=[('ordinary',_("Loans")),('historical',_("Source records awaiting admission"))],empty_label=_("Loans and retained source records"),
-        widget=forms.Select(attrs={'class':'form-select'}))
+    records = django_filters.ChoiceFilter(
+        method="filter_records",
+        label=_("Records"),
+        choices=[
+            ("ordinary", _("Loans")),
+            ("historical", _("Source records awaiting admission")),
+        ],
+        empty_label=_("Loans and retained source records"),
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
     borrower = django_filters.ModelChoiceFilter(
-        queryset=Party.objects.none(), label=_("Borrower"),
-        widget=LoanBorrowerAutocompleteWidget(attrs={"data-placeholder": _("Search borrower by name, code or phone"),
-            "data-minimum-input-length": 2, "data-ajax--delay": 300, "data-allow-clear": "true"}),
+        queryset=Party.objects.none(),
+        label=_("Borrower"),
+        widget=LoanBorrowerAutocompleteWidget(
+            attrs={
+                "data-placeholder": _("Search borrower by name, code or phone"),
+                "data-minimum-input-length": 2,
+                "data-ajax--delay": 300,
+                "data-allow-clear": "true",
+            }
+        ),
     )
     borrower_q = django_filters.CharFilter(
-        method="filter_borrower", label=_("Borrower name, code or phone"),
+        method="filter_borrower",
+        label=_("Borrower name, code or phone"),
         widget=forms.HiddenInput(),
     )
     q = django_filters.CharFilter(
@@ -83,7 +100,10 @@ class PawnLoanFilter(django_filters.FilterSet):
         ),
     )
     state = django_filters.ChoiceFilter(
-        choices=[(value, _(label)) for value, label in PawnLoan._meta.get_field("state").choices],
+        choices=[
+            (value, _(label))
+            for value, label in PawnLoan._meta.get_field("state").choices
+        ],
         label=_("Loan status"),
         empty_label=_("All states"),
         widget=forms.Select(attrs={"class": "form-select"}),
@@ -123,26 +143,39 @@ class PawnLoanFilter(django_filters.FilterSet):
         self.workspace = workspace
         # Include inactive borrowers: their outstanding loans still need servicing.
         self.filters["borrower"].queryset = Party.objects.filter(workspace=workspace)
-        self.filters["borrower"].field.widget.data_url = reverse("workspace_loans:loan_borrower_autocomplete", args=[workspace.slug])
+        self.filters["borrower"].field.widget.data_url = reverse(
+            "workspace_loans:loan_borrower_autocomplete", args=[workspace.slug]
+        )
         self.filters["license"].queryset = LoanLicense.objects.filter(
             workspace=workspace
         ).order_by("license_number")
-        self.filters["series"].queryset = LoanSeries.objects.filter(
-            license__workspace=workspace
-        ).select_related("license").prefetch_related("number_sequences").order_by(
-            "license__license_number",
-            "code",
+        self.filters["series"].queryset = (
+            LoanSeries.objects.filter(license__workspace=workspace)
+            .select_related("license")
+            .prefetch_related("number_sequences")
+            .order_by(
+                "license__license_number",
+                "code",
+            )
         )
-        self.filters["series"].field.label_from_instance = lambda obj: f"{obj.license.license_number} / {obj.pawn_display_name}"
+        self.filters["series"].field.label_from_instance = (
+            lambda obj: f"{obj.license.license_number} / {obj.pawn_display_name}"
+        )
 
     def filter_borrower(self, queryset, name, value):
         value = value.strip()
-        return queryset.filter(
-            Q(borrower__display_name__icontains=value)
-            | Q(borrower__party_code__icontains=value)
-            | Q(borrower__primary_phone__icontains=value)
-            | Q(historical_import__archive_evidence__search_borrower_name__icontains=value)
-        ) if value else queryset
+        return (
+            queryset.filter(
+                Q(borrower__display_name__icontains=value)
+                | Q(borrower__party_code__icontains=value)
+                | Q(borrower__primary_phone__icontains=value)
+                | Q(
+                    historical_import__archive_evidence__search_borrower_name__icontains=value
+                )
+            )
+            if value
+            else queryset
+        )
 
     def filter_records(self, queryset, name, value):
         # The directory combines retained evidence with ordinary loans after
@@ -160,18 +193,35 @@ class PawnLoanFilter(django_filters.FilterSet):
             Q(document__loan__number__icontains=value)
             | Q(document__loan__book_reference__icontains=value)
             | Q(document__source_loan__loan_number__icontains=value)
-            | Q(document__review__source__number__icontains=value))
+            | Q(document__review__source__number__icontains=value)
+        )
         # A plain joined flag filter lets the planner evaluate JSON first across
         # every import. CASE keeps legacy JSON evaluation behind that flag even
         # after a large closed-position batch, without changing matching rules.
-        aliases = HistoricalLoanImport.objects.filter(workspace_id=self.workspace.pk,
-            loan__workspace_id=self.workspace.pk, loan__is_imported_closed_position=False).annotate(
-                legacy_alias_match=Case(When(loan__is_imported_closed_position=False, then=alias_predicate),
-                    default=Value(False), output_field=BooleanField())).filter(legacy_alias_match=True).values("loan_id")
+        aliases = (
+            HistoricalLoanImport.objects.filter(
+                workspace_id=self.workspace.pk,
+                loan__workspace_id=self.workspace.pk,
+                loan__is_imported_closed_position=False,
+            )
+            .annotate(
+                legacy_alias_match=Case(
+                    When(loan__is_imported_closed_position=False, then=alias_predicate),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                )
+            )
+            .filter(legacy_alias_match=True)
+            .values("loan_id")
+        )
         # A small alias set avoids embedding expensive legacy JSON scans in both
         # directory count and page queries. Broad matches retain the complete
         # subquery; the limit is an optimization, never a result cap.
-        alias_ids = list(aliases.order_by().values_list("loan_id", flat=True)[:self.IMPORT_ALIAS_CANDIDATE_LIMIT + 1])
+        alias_ids = list(
+            aliases.order_by().values_list("loan_id", flat=True)[
+                : self.IMPORT_ALIAS_CANDIDATE_LIMIT + 1
+            ]
+        )
         if len(alias_ids) <= self.IMPORT_ALIAS_CANDIDATE_LIMIT:
             aliases = alias_ids
         return queryset.filter(
@@ -184,8 +234,12 @@ class PawnLoanFilter(django_filters.FilterSet):
             | Q(pk__in=aliases)
             | Q(historical_import__source_id__icontains=value)
             | Q(historical_import__archive_evidence__source_id__icontains=value)
-            | Q(historical_import__archive_evidence__search_loan_number__icontains=value)
-            | Q(historical_import__archive_evidence__search_borrower_name__icontains=value)
+            | Q(
+                historical_import__archive_evidence__search_loan_number__icontains=value
+            )
+            | Q(
+                historical_import__archive_evidence__search_borrower_name__icontains=value
+            )
         )
 
 
@@ -387,16 +441,14 @@ class PawnPhysicalVerificationSessionFilter(django_filters.FilterSet):
         )
         try:
             public_id = UUID(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             public_id = None
         if public_id is not None:
             query |= Q(public_id=public_id)
         return queryset.filter(query)
 
     def filter_within(self, queryset, name, value):
-        return queryset.filter(
-            _within_storage_hierarchy("scope_location__", value)
-        )
+        return queryset.filter(_within_storage_hierarchy("scope_location__", value))
 
 
 _NOTICE_DELIVERY_CHOICES = (

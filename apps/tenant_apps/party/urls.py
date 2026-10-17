@@ -6,23 +6,45 @@ app_name = "party"
 
 urlpatterns = [
     path("<int:pk>/photo/view/", views.party_profile_photo, name="party_photo"),
-    path("<int:pk>/documents/<int:document_pk>/download/", views.party_document_download, name="party_document_download"),
+    path(
+        "<int:pk>/documents/<int:document_pk>/download/",
+        views.party_document_download,
+        name="party_document_download",
+    ),
     path("autocomplete/", views.party_autocomplete, name="party_autocomplete"),
     path("", views.party_list, name="party_list"),
     path("create/", views.party_create, name="party_create"),
     path("<int:pk>/", views.party_detail, name="party_detail"),
     path("<int:pk>/edit/", views.party_update, name="party_update"),
-    path("<int:pk>/merge/autocomplete/", views.party_merge_autocomplete, name="party_merge_autocomplete"),
+    path(
+        "<int:pk>/merge/autocomplete/",
+        views.party_merge_autocomplete,
+        name="party_merge_autocomplete",
+    ),
     path("<int:pk>/merge/", views.party_merge, name="party_merge"),
-    path("<int:pk>/photo/", views.party_profile_photo_update, name="party_photo_update"),
+    path(
+        "<int:pk>/photo/", views.party_profile_photo_update, name="party_photo_update"
+    ),
     path(
         "<int:pk>/photo/remove/",
         views.party_profile_photo_remove,
         name="party_photo_remove",
     ),
-    path("<int:pk>/photos/<int:photo_pk>/", views.party_gallery_photo, name="party_gallery_photo"),
-    path("<int:pk>/photos/<int:photo_pk>/default/", views.party_photo_default, name="party_photo_default"),
-    path("<int:pk>/photos/<int:photo_pk>/remove/", views.party_gallery_photo_remove, name="party_gallery_photo_remove"),
+    path(
+        "<int:pk>/photos/<int:photo_pk>/",
+        views.party_gallery_photo,
+        name="party_gallery_photo",
+    ),
+    path(
+        "<int:pk>/photos/<int:photo_pk>/default/",
+        views.party_photo_default,
+        name="party_photo_default",
+    ),
+    path(
+        "<int:pk>/photos/<int:photo_pk>/remove/",
+        views.party_gallery_photo_remove,
+        name="party_gallery_photo_remove",
+    ),
     path("<int:pk>/roles/add/", views.party_role_add, name="party_role_add"),
     path(
         "<int:pk>/roles/<int:role_pk>/end/",
@@ -40,7 +62,9 @@ urlpatterns = [
         views.party_contact_delete,
         name="party_contact_delete",
     ),
-    path("<int:pk>/addresses/save/", views.party_address_save, name="party_address_add"),
+    path(
+        "<int:pk>/addresses/save/", views.party_address_save, name="party_address_add"
+    ),
     path(
         "<int:pk>/addresses/<int:address_pk>/save/",
         views.party_address_save,

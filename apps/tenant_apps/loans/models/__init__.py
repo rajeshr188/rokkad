@@ -154,7 +154,11 @@ from .risk import LoanRiskAlert, LoanRiskEvent, LoanRiskSnapshot
 __all__.append("PawnLoanCommunicationConsent")
 __all__.append("PawnLoanCommunicationPolicy")
 
-from .release_batch import PawnReleaseBatch, PawnReleaseBatchLine, PaperClosureTransition
+from .release_batch import (
+    PawnReleaseBatch,
+    PawnReleaseBatchLine,
+    PaperClosureTransition,
+)
 from .origination import LoanOriginationSettings
 
 __all__ += ["PawnReleaseBatch", "PawnReleaseBatchLine"]
@@ -164,21 +168,44 @@ from .pledge_book import PledgeBook, PledgeBookReview, PledgeBookBatch, PledgeBo
 from .auctioneer_handover import AuctioneerHandover, AuctioneerHandoverRevision
 from .khata import KhataSeries, KhataAccount, KhataAgreementRevision
 from .khata import KhataSeriesStatusChange
+
 __all__.append("KhataSeriesStatusChange")
 from .khata import KhataInterestPeriod, KhataInterestSegment, KhataInterestAllocation
 from .khata import KhataCollateralSelection
+
 __all__.append("KhataCollateralSelection")
-__all__.extend(["KhataInterestPeriod", "KhataInterestSegment", "KhataInterestAllocation"])
-from .khata import KhataPolicyRevision, KhataOperation, KhataCollateralItem, KhataCollateralValuation, KhataCollateralPhoto
-__all__.extend(["KhataPolicyRevision", "KhataOperation", "KhataCollateralItem", "KhataCollateralValuation", "KhataCollateralPhoto"])
+__all__.extend(
+    ["KhataInterestPeriod", "KhataInterestSegment", "KhataInterestAllocation"]
+)
+from .khata import (
+    KhataPolicyRevision,
+    KhataOperation,
+    KhataCollateralItem,
+    KhataCollateralValuation,
+    KhataCollateralPhoto,
+)
+
+__all__.extend(
+    [
+        "KhataPolicyRevision",
+        "KhataOperation",
+        "KhataCollateralItem",
+        "KhataCollateralValuation",
+        "KhataCollateralPhoto",
+    ]
+)
 __all__.extend(["KhataSeries", "KhataAccount", "KhataAgreementRevision"])
 __all__.append("HistoricalLoanImport")
 from .archive import HistoricalLoanEvidence, HistoricalLoanAttachment
+
 __all__.extend(["HistoricalLoanEvidence", "HistoricalLoanAttachment"])
 
 from .khata import KhataDocumentIssue
+
 __all__.append("KhataDocumentIssue")
 from .transaction_review import LoanTransactionReview
+
 __all__.append("LoanTransactionReview")
 from .paper_backlog import PaperBacklogCheckpoint
+
 __all__.append("PaperBacklogCheckpoint")

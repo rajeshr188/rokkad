@@ -38,9 +38,18 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
     def get_queryset(self):
         parties = active_parties() if self.active_only else Party.objects.all()
         return parties.prefetch_related(
-            Prefetch("addresses", queryset=PartyAddress.objects.filter(is_default=True).order_by("pk"), to_attr="search_default_addresses"),
-            Prefetch("contact_methods", queryset=PartyContactMethod.objects.filter(is_primary=True,
-                contact_type__in=["PHONE", "MOBILE", "WHATSAPP"]).order_by("pk"), to_attr="search_default_contacts"),
+            Prefetch(
+                "addresses",
+                queryset=PartyAddress.objects.filter(is_default=True).order_by("pk"),
+                to_attr="search_default_addresses",
+            ),
+            Prefetch(
+                "contact_methods",
+                queryset=PartyContactMethod.objects.filter(
+                    is_primary=True, contact_type__in=["PHONE", "MOBILE", "WHATSAPP"]
+                ).order_by("pk"),
+                to_attr="search_default_contacts",
+            ),
         ).order_by("display_name", "party_code")
 
     def label_from_instance(self, obj):
@@ -51,15 +60,22 @@ class PartyAutocompleteWidget(s2forms.ModelSelect2Widget):
         if not phone:
             contacts = getattr(obj, "search_default_contacts", None)
             if contacts is None:
-                contacts = list(obj.contact_methods.filter(is_primary=True,
-                    contact_type__in=["PHONE", "MOBILE", "WHATSAPP"]).order_by("pk"))
+                contacts = list(
+                    obj.contact_methods.filter(
+                        is_primary=True,
+                        contact_type__in=["PHONE", "MOBILE", "WHATSAPP"],
+                    ).order_by("pk")
+                )
             phone = contacts[0].value if contacts else ""
         if phone:
             parts.append(phone)
         addresses = getattr(obj, "search_default_addresses", None)
         if addresses is None:
             addresses = list(obj.addresses.filter(is_default=True).order_by("pk"))
-        address = next((a for a in addresses if a.address_type == "HOME"), addresses[0] if addresses else None)
+        address = next(
+            (a for a in addresses if a.address_type == "HOME"),
+            addresses[0] if addresses else None,
+        )
         if address:
             parts.append(str(address))
         if obj.party_code:
@@ -77,11 +93,13 @@ class PartyMergeAutocompleteWidget(PartyAutocompleteWidget):
         super().__init__(*args, **kwargs)
 
     def get_queryset(self):
-        return super().get_queryset().filter(
-            workspace_id=self.target_party.workspace_id
-        ).exclude(
-            pk=self.target_party.pk
-        ).exclude(status=Party.PartyStatus.ARCHIVED)
+        return (
+            super()
+            .get_queryset()
+            .filter(workspace_id=self.target_party.workspace_id)
+            .exclude(pk=self.target_party.pk)
+            .exclude(status=Party.PartyStatus.ARCHIVED)
+        )
 
 
 class PrivateFileInput(forms.ClearableFileInput):

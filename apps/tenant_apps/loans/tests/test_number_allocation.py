@@ -55,7 +55,9 @@ class NumberAllocationTests(WorkspaceTestCase):
             email=f"number-user-{uuid.uuid4().hex[:8]}@example.com",
         )
         role, _ = Role.objects.get_or_create(name="Admin")
-        Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
+        Membership.objects.get_or_create(
+            user=self.user, company=self.tenant, defaults={"role": role}
+        )
         license = create_license(
             workspace=self.tenant,
             name="Pawn Broker License",
@@ -64,7 +66,9 @@ class NumberAllocationTests(WorkspaceTestCase):
             expires_on=date(2027, 1, 1),
             actor=self.user,
         )
-        self.series = create_series(license=license, name="Main", code="A", actor=self.user)
+        self.series = create_series(
+            license=license, name="Main", code="A", actor=self.user
+        )
         configure_sequence(
             series=self.series,
             document_kind=LoanDocumentKind.PAWN_LOAN,
@@ -93,70 +97,178 @@ class NumberAllocationTests(WorkspaceTestCase):
         self.assertEqual(first.value, "PL-A-0001")
         self.assertEqual(second, first)
 
-    def test_unprefixed_historical_continuation_survives_validation_and_never_rewinds(self):
-        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through
+    def test_unprefixed_historical_continuation_survives_validation_and_never_rewinds(
+        self,
+    ):
+        from apps.tenant_apps.loans.services.license_series import (
+            reserve_sequence_through,
+        )
         from apps.tenant_apps.loans.web.license_forms import LoanSeriesSetupForm
 
-        form = LoanSeriesSetupForm(data={"name": "Unnamed", "code": "NUM",
-            "is_active": True, "pawn_loan_prefix": "", "release_prefix": "",
-            "number_width": 5, "maximum_number": 10000})
+        form = LoanSeriesSetupForm(
+            data={
+                "name": "Unnamed",
+                "code": "NUM",
+                "is_active": True,
+                "pawn_loan_prefix": "",
+                "release_prefix": "",
+                "number_width": 5,
+                "maximum_number": 10000,
+            }
+        )
         self.assertTrue(form.is_valid(), form.errors)
-        sequence = configure_sequence(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
-            prefix="", width=5, maximum_number=10000, actor=self.user)
+        sequence = configure_sequence(
+            series=self.series,
+            document_kind=LoanDocumentKind.PAWN_LOAN,
+            prefix="",
+            width=5,
+            maximum_number=10000,
+            actor=self.user,
+        )
         sequence.full_clean()
-        kwargs = dict(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
-            last_used_number=6702, evidence_reference="Complete reviewed source register", actor=self.user)
+        kwargs = dict(
+            series=self.series,
+            document_kind=LoanDocumentKind.PAWN_LOAN,
+            last_used_number=6702,
+            evidence_reference="Complete reviewed source register",
+            actor=self.user,
+        )
         reserve_sequence_through(**kwargs)
         for _ in range(2):
-            self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).value, "06703")
-        self.assertEqual(allocate_pawn_loan_number(series=self.series, actor=self.user).value, "06703")
+            self.assertEqual(
+                preview_number(
+                    series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN
+                ).value,
+                "06703",
+            )
+        self.assertEqual(
+            allocate_pawn_loan_number(series=self.series, actor=self.user).value,
+            "06703",
+        )
         reserve_sequence_through(**kwargs)
-        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).value, "06704")
-        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE).value, "RL-A-0001")
+        self.assertEqual(
+            preview_number(
+                series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN
+            ).value,
+            "06704",
+        )
+        self.assertEqual(
+            preview_number(
+                series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE
+            ).value,
+            "RL-A-0001",
+        )
 
     def test_historical_reservation_continues_without_consuming_or_rewinding(self):
         from apps.orgs.audit import AuditLog
-        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through
-        kwargs = dict(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
-                      last_used_number=2, evidence_reference="Reviewed source register", actor=self.user)
+        from apps.tenant_apps.loans.services.license_series import (
+            reserve_sequence_through,
+        )
+
+        kwargs = dict(
+            series=self.series,
+            document_kind=LoanDocumentKind.PAWN_LOAN,
+            last_used_number=2,
+            evidence_reference="Reviewed source register",
+            actor=self.user,
+        )
         reserve_sequence_through(**kwargs)
-        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).value, "PL-A-0003")
+        self.assertEqual(
+            preview_number(
+                series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN
+            ).value,
+            "PL-A-0003",
+        )
         reserve_sequence_through(**kwargs)
-        self.assertEqual(allocate_pawn_loan_number(series=self.series, actor=self.user).value, "PL-A-0003")
+        self.assertEqual(
+            allocate_pawn_loan_number(series=self.series, actor=self.user).value,
+            "PL-A-0003",
+        )
         reserve_sequence_through(**kwargs)
         with self.assertRaises(SequenceExhaustedError):
             allocate_pawn_loan_number(series=self.series, actor=self.user)
-        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE).value, "RL-A-0001")
-        self.assertEqual(AuditLog.objects.filter(company=self.tenant,
-            data__entity="loan_number_sequence_reservation").count(), 1)
+        self.assertEqual(
+            preview_number(
+                series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN_RELEASE
+            ).value,
+            "RL-A-0001",
+        )
+        self.assertEqual(
+            AuditLog.objects.filter(
+                company=self.tenant, data__entity="loan_number_sequence_reservation"
+            ).count(),
+            1,
+        )
 
     def test_historical_reservation_can_mark_series_exhausted(self):
-        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through
-        reserve_sequence_through(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
-            last_used_number=3, evidence_reference="Reviewed source register", actor=self.user)
+        from apps.tenant_apps.loans.services.license_series import (
+            reserve_sequence_through,
+        )
+
+        reserve_sequence_through(
+            series=self.series,
+            document_kind=LoanDocumentKind.PAWN_LOAN,
+            last_used_number=3,
+            evidence_reference="Reviewed source register",
+            actor=self.user,
+        )
         with self.assertRaises(SequenceExhaustedError):
             allocate_pawn_loan_number(series=self.series, actor=self.user)
 
     def test_historical_reservation_rejects_invalid_evidence_and_range(self):
-        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through, LicenseSeriesError
-        for last, reference in ((True, "review"), (-1, "review"), (4, "review"), (2, ""), (2, "bad\nreference")):
-            with self.subTest(last=last, reference=reference), self.assertRaises(LicenseSeriesError):
-                reserve_sequence_through(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
-                    last_used_number=last, evidence_reference=reference, actor=self.user)
-        self.assertEqual(preview_number(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN).counter, 1)
+        from apps.tenant_apps.loans.services.license_series import (
+            reserve_sequence_through,
+            LicenseSeriesError,
+        )
+
+        for last, reference in (
+            (True, "review"),
+            (-1, "review"),
+            (4, "review"),
+            (2, ""),
+            (2, "bad\nreference"),
+        ):
+            with (
+                self.subTest(last=last, reference=reference),
+                self.assertRaises(LicenseSeriesError),
+            ):
+                reserve_sequence_through(
+                    series=self.series,
+                    document_kind=LoanDocumentKind.PAWN_LOAN,
+                    last_used_number=last,
+                    evidence_reference=reference,
+                    actor=self.user,
+                )
+        self.assertEqual(
+            preview_number(
+                series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN
+            ).counter,
+            1,
+        )
 
     def test_historical_reservation_requires_actor_and_matching_workspace(self):
         from django.core.exceptions import PermissionDenied
-        from apps.tenant_apps.loans.services.license_series import reserve_sequence_through, LicenseSeriesError
-        kwargs = dict(series=self.series, document_kind=LoanDocumentKind.PAWN_LOAN,
-                      last_used_number=2, evidence_reference="review")
+        from apps.tenant_apps.loans.services.license_series import (
+            reserve_sequence_through,
+            LicenseSeriesError,
+        )
+
+        kwargs = dict(
+            series=self.series,
+            document_kind=LoanDocumentKind.PAWN_LOAN,
+            last_used_number=2,
+            evidence_reference="review",
+        )
         with self.assertRaises(PermissionDenied):
             reserve_sequence_through(**kwargs, actor=None)
         from copy import copy
+
         other_series = copy(self.series)
         other_series.workspace_id = self.tenant.pk + 999999
         with self.assertRaises(LicenseSeriesError):
-            reserve_sequence_through(**{**kwargs, "series": other_series}, actor=self.user)
+            reserve_sequence_through(
+                **{**kwargs, "series": other_series}, actor=self.user
+            )
 
     def test_allocations_are_unique_and_a_committed_gap_is_not_reused(self):
         abandoned = allocate_pawn_loan_number(series=self.series, actor=self.user)
@@ -192,26 +304,48 @@ class NumberAllocationTests(WorkspaceTestCase):
 class NumberAllocationConcurrencyTests(TransactionTestCase):
     def test_two_reviewed_register_confirmations_reserve_once(self):
         from threading import Barrier
-        from apps.tenant_apps.loans.services.series_reservations import preview_register_reservation, confirm_register_reservation
-        values = dict(actor=self.user, kind='PAWN_LOAN', last_used=5000, reference='Existing signed AA register')
+        from apps.tenant_apps.loans.services.series_reservations import (
+            preview_register_reservation,
+            confirm_register_reservation,
+        )
+
+        values = dict(
+            actor=self.user,
+            kind="PAWN_LOAN",
+            last_used=5000,
+            reference="Existing signed AA register",
+        )
         with workspace_context(self.tenant.pk):
-            configure_sequence(series=self.series, document_kind='PAWN_LOAN', prefix='AA', width=5,
-                maximum_number=10000, actor=self.user)
+            configure_sequence(
+                series=self.series,
+                document_kind="PAWN_LOAN",
+                prefix="AA",
+                width=5,
+                maximum_number=10000,
+                actor=self.user,
+            )
             _, token = preview_register_reservation(self.series.pk, **values)
         ready = Barrier(2)
+
         def confirm(_):
             close_old_connections()
             try:
                 with workspace_context(self.tenant.pk):
                     ready.wait(timeout=10)
-                    return confirm_register_reservation(self.series.pk, **values, review_token=token, confirmed=True)
+                    return confirm_register_reservation(
+                        self.series.pk, **values, review_token=token, confirmed=True
+                    )
             finally:
                 close_old_connections()
+
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(confirm, range(2)))
         self.assertEqual(sorted(results), [False, True])
         with workspace_context(self.tenant.pk):
-            self.assertEqual(self.series.number_sequences.get(document_kind='PAWN_LOAN').next_number,5001)
+            self.assertEqual(
+                self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number,
+                5001,
+            )
 
     @classmethod
     def setUpClass(cls):
@@ -262,7 +396,9 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
                 email=f"concurrency-user-{uuid.uuid4().hex[:8]}@example.com",
             )
             role, _ = Role.objects.get_or_create(name="Admin")
-            Membership.objects.get_or_create(user=self.user, company=self.tenant, defaults={"role": role})
+            Membership.objects.get_or_create(
+                user=self.user, company=self.tenant, defaults={"role": role}
+            )
             license = create_license(
                 workspace=self.tenant,
                 name="Concurrent License",
@@ -271,7 +407,9 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
                 expires_on=date(2027, 1, 1),
                 actor=self.user,
             )
-            self.series = create_series(license=license, name="Concurrent", code="C", actor=self.user)
+            self.series = create_series(
+                license=license, name="Concurrent", code="C", actor=self.user
+            )
             configure_sequence(
                 series=self.series,
                 document_kind=LoanDocumentKind.PAWN_LOAN,
@@ -302,7 +440,11 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
 
     def test_owner_stop_serializes_with_allocation_from_a_stale_series(self):
         from threading import Event
-        from apps.tenant_apps.loans.services.license_series import set_series_active, LicenseSeriesError
+        from apps.tenant_apps.loans.services.license_series import (
+            set_series_active,
+            LicenseSeriesError,
+        )
+
         stopped, loaded, commit_stop = Event(), Event(), Event()
 
         def stop():
@@ -341,62 +483,125 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
             stop_future.result(timeout=15)
             self.assertIn("stopped for new loans", issue_future.result(timeout=15))
         with workspace_context(self.tenant.pk):
-            self.assertEqual(self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 1)
+            self.assertEqual(
+                self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number,
+                1,
+            )
 
     def test_concurrent_batch_split_confirmations_return_the_same_drafts(self):
         from threading import Barrier
         from decimal import Decimal
         from apps.tenancy.testing import start_workspace_trial
         from apps.tenant_apps.party.models import Party
-        from apps.tenant_apps.loans.models import PawnLoan, PawnLoanEconomicPolicy, PawnMetalInterestRatePolicy
-        from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_products
-        from apps.tenant_apps.loans.services.pawn_drafts import create_pawn_draft, CreatePawnDraftCommand, CollateralDraftInput
-        from apps.tenant_apps.loans.services.pawn_draft_split import preview_pawn_draft_split, split_pawn_draft
+        from apps.tenant_apps.loans.models import (
+            PawnLoan,
+            PawnLoanEconomicPolicy,
+            PawnMetalInterestRatePolicy,
+        )
+        from apps.tenant_apps.loans.services.product_catalog import (
+            _seed_default_loan_products,
+        )
+        from apps.tenant_apps.loans.services.pawn_drafts import (
+            create_pawn_draft,
+            CreatePawnDraftCommand,
+            CollateralDraftInput,
+        )
+        from apps.tenant_apps.loans.services.pawn_draft_split import (
+            preview_pawn_draft_split,
+            split_pawn_draft,
+        )
+
         with workspace_context(self.tenant.pk):
             start_workspace_trial(self.tenant)
             borrower = Party.objects.create(display_name="Concurrent split borrower")
             product = _seed_default_loan_products()[0]
             type(product).objects.filter(pk=product.pk).update(status="ACTIVE")
-            PawnLoanEconomicPolicy.objects.create(workspace=self.tenant, license=self.series.license,
-                valuation_method="LATEST_APPRAISAL", maximum_ltv_ratio=Decimal("0.8"),
-                advance_interest_periods=1, effective_from=date(2026, 1, 1))
-            PawnMetalInterestRatePolicy.objects.create(workspace=self.tenant, license=self.series.license,
-                metal="GOLD", monthly_interest_rate=2, effective_from=date(2026, 1, 1))
-            source = create_pawn_draft(CreatePawnDraftCommand(
-                workspace_id=self.tenant.pk, borrower_id=borrower.pk, license_id=self.series.license_id,
-                series_id=self.series.pk, product_version_id=product.pk,
-                principal_amount=Decimal("3000"), monthly_interest_rate=Decimal("2"),
-                loan_date=date(2026, 7, 18), tenure_months=3,
-                collateral=tuple(CollateralDraftInput(description=f"Ring {index}", metal="GOLD",
-                    gross_weight=Decimal("10"), net_weight=Decimal("9"), purity_percentage=Decimal("91.6"),
-                    latest_appraised_value=Decimal("50000"), allocated_principal=Decimal("1000"))
-                    for index in range(3)),
-            ), actor=self.user)
-            arguments = dict(collateral_item_ids=tuple(source.collateral_items.order_by("pk").values_list("pk", flat=True))[1:],
-                series=self.series, product_version=product, loan_date=source.loan_date,
-                tenure_months=3, split_each=True)
+            PawnLoanEconomicPolicy.objects.create(
+                workspace=self.tenant,
+                license=self.series.license,
+                valuation_method="LATEST_APPRAISAL",
+                maximum_ltv_ratio=Decimal("0.8"),
+                advance_interest_periods=1,
+                effective_from=date(2026, 1, 1),
+            )
+            PawnMetalInterestRatePolicy.objects.create(
+                workspace=self.tenant,
+                license=self.series.license,
+                metal="GOLD",
+                monthly_interest_rate=2,
+                effective_from=date(2026, 1, 1),
+            )
+            source = create_pawn_draft(
+                CreatePawnDraftCommand(
+                    workspace_id=self.tenant.pk,
+                    borrower_id=borrower.pk,
+                    license_id=self.series.license_id,
+                    series_id=self.series.pk,
+                    product_version_id=product.pk,
+                    principal_amount=Decimal("3000"),
+                    monthly_interest_rate=Decimal("2"),
+                    loan_date=date(2026, 7, 18),
+                    tenure_months=3,
+                    collateral=tuple(
+                        CollateralDraftInput(
+                            description=f"Ring {index}",
+                            metal="GOLD",
+                            gross_weight=Decimal("10"),
+                            net_weight=Decimal("9"),
+                            purity_percentage=Decimal("91.6"),
+                            latest_appraised_value=Decimal("50000"),
+                            allocated_principal=Decimal("1000"),
+                        )
+                        for index in range(3)
+                    ),
+                ),
+                actor=self.user,
+            )
+            arguments = dict(
+                collateral_item_ids=tuple(
+                    source.collateral_items.order_by("pk").values_list("pk", flat=True)
+                )[1:],
+                series=self.series,
+                product_version=product,
+                loan_date=source.loan_date,
+                tenure_months=3,
+                split_each=True,
+            )
             preview = preview_pawn_draft_split(source.pk, **arguments)
         ready = Barrier(2)
+
         def confirm(_):
             close_old_connections()
             try:
                 with workspace_context(self.tenant.pk):
                     ready.wait(timeout=10)
-                    return tuple(loan.pk for loan in split_pawn_draft(source.pk, **arguments,
-                        expected_fingerprint=preview.fingerprint, actor=self.user))
+                    return tuple(
+                        loan.pk
+                        for loan in split_pawn_draft(
+                            source.pk,
+                            **arguments,
+                            expected_fingerprint=preview.fingerprint,
+                            actor=self.user,
+                        )
+                    )
             finally:
                 close_old_connections()
+
         with ThreadPoolExecutor(max_workers=2) as executor:
             futures = [executor.submit(confirm, index) for index in range(2)]
             results = [future.result(timeout=25) for future in futures]
         self.assertEqual(results[0], results[1])
         with workspace_context(self.tenant.pk):
             self.assertEqual(PawnLoan.objects.filter(borrower=borrower).count(), 3)
-            self.assertEqual(self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 4)
+            self.assertEqual(
+                self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number,
+                4,
+            )
             # This class intentionally skips database flush. Remove only this
             # test's unpaid fixture graph so --keepdb cannot leak draft rows
             # into owner-backed tests whose assertions count all loans.
             from apps.tenant_apps.loans.models import LoanChangeLog, PawnCollateralItem
+
             fixture_ids = (source.pk, *results[0])
             LoanChangeLog.objects.filter(loan_id__in=fixture_ids).delete()
             PawnCollateralItem.objects.filter(loan_id__in=fixture_ids).delete()

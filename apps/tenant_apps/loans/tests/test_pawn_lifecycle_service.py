@@ -10,8 +10,19 @@ from apps.tenant_apps.loans.services.product_catalog import _seed_default_loan_p
 from apps.tenancy.testing import WorkspaceTestCase
 from apps.orgs.models import Membership, Role
 
-from apps.tenant_apps.loans.domain import CollateralMetal, LoanDocumentKind, PawnLoanEventKind, PawnLoanState
-from apps.tenant_apps.loans.models import CollateralAppraisal, LoanLicense, LoanNumberSequence, LoanSeries, PawnLoanApprovalSnapshot
+from apps.tenant_apps.loans.domain import (
+    CollateralMetal,
+    LoanDocumentKind,
+    PawnLoanEventKind,
+    PawnLoanState,
+)
+from apps.tenant_apps.loans.models import (
+    CollateralAppraisal,
+    LoanLicense,
+    LoanNumberSequence,
+    LoanSeries,
+    PawnLoanApprovalSnapshot,
+)
 from apps.tenant_apps.loans.services import (
     CollateralDraftInput,
     CreatePawnDraftCommand,
@@ -57,12 +68,17 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
         role, _ = Role.objects.get_or_create(name="Admin")
         Membership.objects.create(user=self.actor, company=self.tenant, role=role)
         from apps.tenant_apps.rates.models import Rate, RateSource
+
         quote_source = RateSource.objects.create(name="Origination", location="Local")
-        Rate.objects.create(rate_source=quote_source, buying_rate=10000, selling_rate=10100)
+        Rate.objects.create(
+            rate_source=quote_source, buying_rate=10000, selling_rate=10100
+        )
         self.borrower = Party.objects.create(display_name="Lifecycle Borrower")
         self.license, self.series = self._setup("A", "PL-A-")
         product_version = _seed_default_loan_products()[0]
-        type(product_version).objects.filter(pk=product_version.pk).update(status="ACTIVE")
+        type(product_version).objects.filter(pk=product_version.pk).update(
+            status="ACTIVE"
+        )
         self.loan = create_pawn_draft(
             CreatePawnDraftCommand(
                 workspace_id=self.tenant.pk,
@@ -74,14 +90,16 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
                 monthly_interest_rate=Decimal("2.000000"),
                 loan_date=timezone.localdate(),
                 tenure_months=3,
-                collateral=(CollateralDraftInput(
-                    description="Gold bangles",
-                    metal=CollateralMetal.GOLD,
-                    gross_weight=Decimal("20.0000"),
-                    net_weight=Decimal("18.0000"),
-                    purity_percentage=Decimal("91.6000"),
-                    latest_appraised_value=Decimal("120000.00"),
-                ),),
+                collateral=(
+                    CollateralDraftInput(
+                        description="Gold bangles",
+                        metal=CollateralMetal.GOLD,
+                        gross_weight=Decimal("20.0000"),
+                        net_weight=Decimal("18.0000"),
+                        purity_percentage=Decimal("91.6000"),
+                        latest_appraised_value=Decimal("120000.00"),
+                    ),
+                ),
             ),
             actor=self.actor,
         )
@@ -100,10 +118,14 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
         self.assertEqual(self.loan.state, PawnLoanState.APPROVED.value)
         self.assertEqual(snapshot.version, 1)
         self.assertEqual(snapshot.payload["principal_amount"], "50000.00")
-        self.assertEqual(snapshot.payload["collateral"][0]["purity_percentage"], "91.6000")
+        self.assertEqual(
+            snapshot.payload["collateral"][0]["purity_percentage"], "91.6000"
+        )
         appraisal = CollateralAppraisal.objects.get(collateral_item__loan=self.loan)
         self.assertEqual(appraisal.method, "ORIGINATION_APPROVAL")
-        self.assertEqual(timezone.localdate(appraisal.effective_at), self.loan.loan_date)
+        self.assertEqual(
+            timezone.localdate(appraisal.effective_at), self.loan.loan_date
+        )
         self.assertEqual(
             snapshot.payload["collateral"][0]["approved_appraisal_id"], appraisal.pk
         )
@@ -124,14 +146,19 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
         second = approve_pawn_loan(self.loan.pk, actor=self.actor)
 
         self.assertEqual((first.version, second.version), (1, 2))
-        self.assertEqual(PawnLoanApprovalSnapshot.objects.filter(loan=self.loan).count(), 2)
+        self.assertEqual(
+            PawnLoanApprovalSnapshot.objects.filter(loan=self.loan).count(), 2
+        )
         appraisals = list(
-            CollateralAppraisal.objects.filter(collateral_item__loan=self.loan)
-            .order_by("version")
+            CollateralAppraisal.objects.filter(
+                collateral_item__loan=self.loan
+            ).order_by("version")
         )
         self.assertEqual([value.version for value in appraisals], [1, 2])
         self.assertEqual(appraisals[1].supersedes, appraisals[0])
-        event = self.loan.change_log.get(event_kind=PawnLoanEventKind.RETURNED_TO_DRAFT.value)
+        event = self.loan.change_log.get(
+            event_kind=PawnLoanEventKind.RETURNED_TO_DRAFT.value
+        )
         self.assertEqual(event.reason, "Correct valuation")
 
     def test_cancel_draft_or_approved_requires_reason(self):
@@ -141,7 +168,12 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
         cancel_pawn_loan(self.loan.pk, reason="Borrower withdrew", actor=self.actor)
         self.loan.refresh_from_db()
         self.assertEqual(self.loan.state, PawnLoanState.CANCELLED.value)
-        self.assertEqual(self.loan.change_log.get(event_kind=PawnLoanEventKind.CANCELLED.value).reason, "Borrower withdrew")
+        self.assertEqual(
+            self.loan.change_log.get(
+                event_kind=PawnLoanEventKind.CANCELLED.value
+            ).reason,
+            "Borrower withdrew",
+        )
 
     def test_invalid_transitions_fail_without_extra_audit(self):
         approve_pawn_loan(self.loan.pk, actor=self.actor)
@@ -181,7 +213,9 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
             issued_on=date(2026, 1, 1),
             expires_on=date(2027, 1, 1),
         )
-        series = LoanSeries.objects.create(license=license, name=f"Series {code}", code=code)
+        series = LoanSeries.objects.create(
+            license=license, name=f"Series {code}", code=code
+        )
         LoanNumberSequence.objects.create(
             series=series,
             document_kind=LoanDocumentKind.PAWN_LOAN.value,

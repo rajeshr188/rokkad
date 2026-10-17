@@ -37,7 +37,11 @@ class PartyPawnLoanRow:
 
 
 def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
-    summary = get_loan_summary(loan, as_of_date=as_of_date) if loan.state == PawnLoanState.ACTIVE.value else None
+    summary = (
+        get_loan_summary(loan, as_of_date=as_of_date)
+        if loan.state == PawnLoanState.ACTIVE.value
+        else None
+    )
     balance = summary.balance if summary else None
 
     return PartyPawnLoanRow(
@@ -55,8 +59,14 @@ def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
         notice_count=0,
         collateral_items_count=loan.collateral_items_count,
         collateral_loan_amount=None,
-        detail_url=reverse("workspace_loans:pawn_loan_detail", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
-        repayment_url=reverse("workspace_loans:pawn_loan_repay", kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk}),
+        detail_url=reverse(
+            "workspace_loans:pawn_loan_detail",
+            kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk},
+        ),
+        repayment_url=reverse(
+            "workspace_loans:pawn_loan_repay",
+            kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk},
+        ),
         document_links=(),
         account_state=loan.state,
         fees_due=getattr(balance, "fees_outstanding", None),
@@ -64,14 +74,21 @@ def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
 
 
 def get_party_pawn_loan_history_summary(
-    party, *, limit=20, page_size=None, active_page=1, closed_page=1, sort="newest",
+    party,
+    *,
+    limit=20,
+    page_size=None,
+    active_page=1,
+    closed_page=1,
+    sort="newest",
 ):
     """Return Party-owned Loans history without consulting retired Girvi."""
     as_of_date = timezone.localdate()
     sort = sort if sort in {"oldest", "newest"} else "newest"
     ordering = ("loan_date", "pk") if sort == "oldest" else ("-loan_date", "-pk")
     loans = list(
-        PawnLoan.objects.filter(borrower=party).select_related("workspace")
+        PawnLoan.objects.filter(borrower=party)
+        .select_related("workspace")
         .annotate(collateral_items_count=Count("collateral_items", distinct=True))
         .order_by(*ordering)
     )
@@ -85,10 +102,17 @@ def get_party_pawn_loan_history_summary(
     # The display limit must never truncate the borrower's outstanding balance.
     active_rows = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in active)
     outstanding = sum(
-        (row.total_outstanding for row in active_rows if row.total_outstanding is not None),
+        (
+            row.total_outstanding
+            for row in active_rows
+            if row.total_outstanding is not None
+        ),
         Decimal("0"),
     )
-    if any(row.account_state == "ACTIVE" and row.total_outstanding is None for row in active_rows):
+    if any(
+        row.account_state == "ACTIVE" and row.total_outstanding is None
+        for row in active_rows
+    ):
         outstanding = None
     pages = {}
     if page_size is not None:
@@ -102,7 +126,9 @@ def get_party_pawn_loan_history_summary(
         pages = {"active_page": active_page, "closed_page": closed_page}
     else:
         displayed_active = active_rows[:limit]
-        displayed_closed = tuple(_loan_row(loan, as_of_date=as_of_date) for loan in closed[:limit])
+        displayed_closed = tuple(
+            _loan_row(loan, as_of_date=as_of_date) for loan in closed[:limit]
+        )
     return {
         **pages,
         "sort": sort,
