@@ -4389,3 +4389,6 @@ msgstr "आपका नया पासवर्ड तैयार है। �
 
 msgid "Sign in"
 msgstr "प्रवेश करें"
+
+msgid "Business lending terms"
+msgstr "व्यवसाय की ऋण शर्तें"

@@ -3,7 +3,7 @@
 {% block title %}Review paper history correction{% endblock %}
 {% block workspace_content %}
 <div class="container py-3" style="max-width:1100px">
-  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to {{ loan.loan_number }}</a>
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to {{ loan.display_reference }}</a>
   <h1 class="h3 my-3">Review paper history correction</h1>
   <p>Add a missing receipt, correct a mistaken entry or void an entry that did not happen. Existing receipts and interest calculations stay visible with linked corrections. Recalculated allocations preserve the actual dates and totals of other receipts.</p>
   <p>A void removes a mistaken recorded receipt; it does not record money refunded. For a later renewal or full closure, check the settlement amount and retain its recorded meaning. A paper settlement with unconfirmed cash or customer handover keeps that uncertainty. The agreement and known collateral facts must remain correct. Changes to agreed terms, settlement dates or physical custody require separate reconciliation.</p>

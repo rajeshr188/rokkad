@@ -32,6 +32,7 @@ RLS_MIGRATION_BY_APP = {
 }
 # Models introduced after their app's original RLS rollout have their own gate.
 RLS_MIGRATION_BY_MODEL = {
+    "loans.loanentrypreference": "0093_loan_entry_preference",
     "platform_whatsapp.trialreminder": "0004_release_controls",
     "platform_whatsapp.announcementtarget": "0004_release_controls",
     "platform_whatsapp.reservation": "0004_release_controls",

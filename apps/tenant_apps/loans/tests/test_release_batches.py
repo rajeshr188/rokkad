@@ -88,6 +88,7 @@ class ReleaseBatchTests(WorkspaceTestCase):
             disburse_pawn_loan(
                 loan.pk, effective_date=date(2026, 7, 18), actor=self.owner
             )
+            loan.refresh_from_db()
             self.loans.append(loan)
 
     def preview(self):

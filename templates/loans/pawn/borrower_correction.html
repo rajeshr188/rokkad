@@ -3,7 +3,7 @@
 {% block extra_css %}{{ block.super }}{{ form.media.css }}{% endblock %}
 {% block workspace_content %}
 <div class="container py-3" style="max-width:900px">
-  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.loan_number }}</a>
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.display_reference }}</a>
   <h1 class="h3 mt-3">Correct loan customer</h1>
   <p>Correct a customer selected by mistake when entering the loan agreement.</p>
   <p>Current borrower: <strong>{{ loan.borrower.display_name }} ({{ loan.borrower.party_code }})</strong>.</p>

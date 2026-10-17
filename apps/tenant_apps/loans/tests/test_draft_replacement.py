@@ -53,6 +53,14 @@ class DraftReplacementTests(fixtures.OriginationReviewTests):
 
     def replacement(self):
         loan, _, _, _ = self.start_review()
+        from apps.tenant_apps.loans.services.number_allocation import (
+            allocate_pawn_loan_number,
+        )
+
+        loan.loan_number = allocate_pawn_loan_number(
+            series=loan.series, actor=self.owner
+        ).value
+        loan.save(update_fields=["loan_number"])
         _, target = self._configured_setup()
         for sequence in target.number_sequences.all():
             sequence.prefix = "R-" + sequence.prefix
@@ -86,7 +94,7 @@ class DraftReplacementTests(fixtures.OriginationReviewTests):
         self.assertEqual((loan.state, loan.loan_number), ("CANCELLED", old_number))
         self.assertEqual(
             (replacement.state, replacement.series_id, replacement.loan_number),
-            ("DRAFT", target.pk, preview["number"]),
+            ("DRAFT", target.pk, None),
         )
         self.assertEqual(replacement.collateral_items.get().pk, item_id)
         self.assertFalse(loan.collateral_items.exists())
@@ -106,11 +114,26 @@ class DraftReplacementTests(fixtures.OriginationReviewTests):
         self.assertFalse(m.PawnLoanEvent.objects.exists())
         self.assertFalse(m.PawnLoanDisbursalSnapshot.objects.exists())
 
-    def test_changed_number_or_source_requires_review_and_no_cancellation(self):
+    def test_other_number_allocation_does_not_invalidate_unnumbered_replacement(self):
         loan, target, values = self.replacement()
         _, token = preview_draft_replacement(loan.pk, actor=self.owner, values=values)
         allocate_pawn_loan_number(series=target, actor=self.owner)
-        with self.assertRaisesMessage(ValueError, "expected number changed"):
+        replacement, created = replace_draft(
+            loan.pk, actor=self.owner, values=values, token=token, confirmed=True
+        )
+        self.assertTrue(created)
+        self.assertIsNone(replacement.loan_number)
+        loan.refresh_from_db()
+        self.assertEqual(loan.state, "CANCELLED")
+        self.assertEqual(m.PawnLoan.objects.count(), 2)
+
+    def test_changed_source_requires_review_without_cancelling_original(self):
+        loan, _, values = self.replacement()
+        _, token = preview_draft_replacement(loan.pk, actor=self.owner, values=values)
+        loan.collateral_items.update(description="Corrected description")
+        with self.assertRaisesMessage(
+            ValueError, "Draft, photographs or setup changed"
+        ):
             replace_draft(
                 loan.pk, actor=self.owner, values=values, token=token, confirmed=True
             )
@@ -270,7 +293,7 @@ class DraftReplacementTests(fixtures.OriginationReviewTests):
             action="preview",
         )
         review = self.client.post(path, payload)
-        self.assertContains(review, "Expected replacement number")
+        self.assertContains(review, "Replacement numbering")
         payload.update(
             action="confirm",
             confirmed="on",
@@ -288,7 +311,7 @@ class DraftReplacementTests(fixtures.OriginationReviewTests):
                 )
             )
             self.assertEqual(page.status_code, 200)
-            self.assertContains(page, other.loan_number)
+            self.assertContains(page, other.display_reference)
 
     def test_replacement_review_expires_and_rejects_changed_product(self):
         from django.core import signing

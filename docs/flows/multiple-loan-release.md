@@ -10,8 +10,11 @@ tags: [loans, releases, operator-guide]
 Open **Loans → Close / release loans**, or **Close / release loan** on an active
 loan to start with that loan selected. Explicitly choose **Collect payment and
 return collateral now** or **Record a settlement already completed**. Origination
-source and entry defaults do not choose for you. Search official loan numbers,
-borrower names or phone numbers. Select up to 20 active loans with outstanding
+source and entry defaults do not choose for you. The same action is prominent in
+**Releases**, the single sidebar destination for closing and release history.
+Search official loan numbers, borrower names, Party codes or primary phone numbers
+in **Search and select loans**, then select a result. Keep typing to add more or
+remove a selected loan before review. Select up to 20 active loans with outstanding
 collateral in the current business. Different borrowers and licenses are supported.
 Selection uses Select2 with a paginated authorized endpoint; no Redis widget cache is
 needed. Choose **Continue to review** after selecting or changing loans/mode.
@@ -44,7 +47,13 @@ or expired quote requires reviewing the refreshed amounts and confirming again.
 Repeated identical submissions return the original batch. No separate repayment is
 created for money already included in the release settlements.
 
-Batch history shows the original recorded amount, payer and collector for each loan,
+**All releases** includes standalone and grouped releases, including partial and
+reversed records. **Grouped submissions** shows only submissions saved as a group;
+a standalone current release does not create a synthetic group. **Help with closing**
+opens the staff guide, with owner-only completed-recording controls linked there.
+Existing history URLs continue to work.
+
+Grouped history shows the original recorded amount, payer and collector for each loan,
 with links to individual release details and receipt PDFs. Receipts include only the
 collector for their own release. Existing custom layouts can use `release.batch_id`,
 `release.paid_by`, `release.collector_name`, `release.collector_relationship` and

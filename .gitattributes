@@ -9,3 +9,6 @@ docs/archive/implementation/whatsapp-notifications-architecture-audit.md -text
 docs/archive/roadmaps/dea_commodity_accounting_refactor_plan.md -text
 scripts/fixtures/bootstrap-5.3.8/*.css -text
 scripts/fixtures/bootstrap-5.3.8/*.js -text
+# Frozen export bytes must survive Windows checkout unchanged.
+apps/tenant_apps/loans/tests/fixtures/opening-export-v1-active.jsonl -text
+apps/tenant_apps/loans/tests/fixtures/opening-export-v1-servicing.jsonl -text

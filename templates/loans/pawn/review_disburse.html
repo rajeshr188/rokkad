@@ -1,9 +1,9 @@
 {% extends "base_tenant.html" %}
 {% load static i18n %}
-{% block title %}{% translate "Review and disburse" %} &middot; {{ loan.loan_number }}{% endblock %}
+{% block title %}{% translate "Review and disburse" %} &middot; {{ loan.display_reference }}{% endblock %}
 {% block workspace_content %}
 <div hx-history="false">
-<div class="mb-4"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
+<div class="mb-4"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.display_reference }}</a>
 <h1 class="h3 mt-2">{% translate "Review and disburse" %}</h1>
 <p>{% translate "Confirm only after paying the customer. This records payment and activates the loan; it does not send a bank transfer." %}</p></div>
 <div class="loan-workflow-grid"><div class="loan-workflow-main">

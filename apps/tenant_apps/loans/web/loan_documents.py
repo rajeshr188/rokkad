@@ -145,6 +145,12 @@ def pawn_loan_ticket_pdf(request, pk):
             pk=loan.pk,
             workspace=request.loans_workspace,
         )
+        if loan.state == "DRAFT":
+            return HttpResponse(
+                "Loan ticket is unavailable while the loan is an editable draft.",
+                status=409,
+                content_type="text/plain",
+            )
         from apps.tenant_apps.loans.services.borrower_corrections import (
             borrower_document_fingerprint,
         )

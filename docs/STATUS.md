@@ -7,11 +7,103 @@ tags: [status, architecture]
 
 # Status
 
+## In progress: authorized origination and numbering release
+
+The owner requested commit, push and production release of the reviewed local
+origination/setup/numbering and navigation/search changes. Formatting-only
+baselines remain separate from behavior. Exact-source CI, migration/recovery
+rehearsal, the existing approved encrypted backup job and a coordinated reader
+switch are release gates. See the
+[release record](implementation/origination-numbering-release-20261017.md).
+Unrelated source work and production customer agreements remain preserved.
+
+## Local implementation: approval numbering and remaining origination simplification
+
+The owner approved the explained delayed-numbering design and remaining review
+recommendations. Local verification covers draft scope edits, approval/payout
+atomicity, concurrent numbering, printing, historical reservations, recovery and
+closing. Existing issued numbers remain unchanged. The broad initial snapshot
+ran 2,806 tests with failures; all 45 distinct failing cases pass together on
+final-code reruns. Final print/document checks pass 38 tests plus 12 page checks,
+and number-allocation/concurrency checks pass 17 tests. See the
+[implementation and verification record](implementation/approval-numbering-20261017.md)
+for the separate runs and coordinated migration/recovery release boundary.
+The owner clarified that drafts must not print loan tickets or draft PDF previews.
+Approval enables ticket printing with the permanent number; reopening disables it
+until reapproval. The preview route/action has been removed locally.
+See the [numbering decision](adr/2026-10-17-loan-number-at-approval.md).
+No production deployment or customer-record change has occurred.
+
+An interactive local review is running on `http://127.0.0.1:8127/` in Workspace
+`local-origination-review`, with a fictional unnumbered draft and approved
+`AA05001` example. It uses an isolated copy of the fictional test database,
+matching migrations, the restricted runtime role, local media/cache and in-memory
+email. The banner identifies fictional data; the lending-terms and New loan
+screens were opened through ordinary authentication. Review helper/PID/logs live
+under ignored `.tmp/local-origination-review/`; no production data was copied.
+
 Current delivery and open work only. The full prior chronology, including old
 release gates, test counts, migration/import approvals and source/customer-specific
 limits, is preserved in the [17 October context snapshot](archive/context/2026-10-17/INDEX.md).
 See [memory](AGENT_MEMORY.md) for durable rules and [completed work](plans/completed.md)
 for delivery history.
+
+## Local implementation: business lending terms and entry preference separation
+
+The owner requested comparison of automatic numbering with agreement/policy setup.
+The [complexity review](implementation/origination-complexity-review-20261017.md)
+finds implicit policy composition and operational entry preference coupled to
+financial revisions to be the primary simplification opportunities. Permanent
+number allocation before final review is a separate draft-recovery tradeoff;
+automatic counters and historical range reservations remain necessary. Product
+versions, frozen agreements and current monitoring have distinct responsibilities.
+The owner approved the order. Local implementation presents the effective
+business lending terms and scoped narrow rate/tenure/upfront-interest actions,
+with an independent RLS-owned entry preference rather than financial revisions.
+It adds Loans 0093 and setup/package profile 5 (`data_portability` 0032), preserving
+old profiles and exact native recovery. See the
+[implementation](implementation/business-lending-terms-20261017.md).
+Validation passes: 173 combined tests, including concurrent/restricted-role checks,
+native recovery, setup/package round trips, onboarding and 30 desktop/mobile page
+checks. A separate 31-test run verifies repayment compatibility and the final UI.
+Quality, migration-drift, documentation/archive, boundaries and hygiene checks pass.
+The work is local and uncommitted; no production deployment or setup change has occurred.
+
+The owner confirms official numbers are used only after payout confirmation.
+The [numbering proposal](implementation/loan-numbering-stage-proposal-20261017.md)
+was subsequently approved. Its local implementation and verification are tracked
+in the [approval numbering checkpoint](implementation/approval-numbering-20261017.md)
+and the in-progress section above; production still uses the released boundary.
+
+## Local implementation: release navigation and searchable selectors
+
+The owner reported Releases, Completed closures and Release batches in production.
+The [navigation review](implementation/closing-navigation-review-20261017.md)
+confirms all three on the deployed image across three Workspaces. Completed
+closures opens a help guide; Release batches is batch-only despite its general
+Closure history heading, so standalone current releases are absent from that view.
+The local correction uses one Releases destination with the shared closing action,
+All releases, secondary Grouped submissions and contextual Help with closing.
+Standalone releases remain in the complete per-loan history; grouped history does
+not pretend to include them. Legacy routes, records and receipts remain available.
+
+Closing has a searchable multi-loan selector for active loans with outstanding
+collateral, matching loan number, borrower name, Party code or primary phone.
+Party relationship add/edit now uses the existing stateless Party search pattern,
+with a source/Workspace-bound token, edit permission, pagination and selected-only
+rendering. Relationship status eligibility, self/duplicate validation and loan
+servicing rules are preserved. An open-dropdown width overflow found by browser
+interaction checks is fixed in the shared Select2 CSS rule.
+
+Validation passes: 121 Party/relationship/isolation/closing/release-batch regression
+tests in 143 seconds, including two browser tests covering 38 desktop/mobile page
+checks. Typed loan/Party search, multi-selection/removal, mode-change review
+invalidation, relationship editing, active navigation and open-dropdown overflow
+checks pass. Ruff, changed-file Black, documentation/archive checks, app boundaries,
+repository hygiene and diff whitespace pass. See the linked review for artifacts.
+The changes remain local and uncommitted; no production deployment, schema or
+customer-data change is part of this checkpoint. Independent worktrees and root
+WhatsApp edits remain untouched.
 
 ## Production baseline: origination and closing
 

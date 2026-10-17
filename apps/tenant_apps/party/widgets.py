@@ -102,6 +102,24 @@ class PartyMergeAutocompleteWidget(PartyAutocompleteWidget):
         )
 
 
+class PartyRelationshipAutocompleteWidget(PartyAutocompleteWidget):
+    """Search relationship targets, retaining the form's existing status rules."""
+
+    active_only = False
+
+    def __init__(self, *args, from_party, **kwargs):
+        self.from_party = from_party
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(workspace_id=self.from_party.workspace_id)
+            .exclude(pk=self.from_party.pk)
+        )
+
+
 class PrivateFileInput(forms.ClearableFileInput):
     """Keep replacement/clear controls without publishing a storage URL."""
 

@@ -4,7 +4,11 @@ from django.utils.translation import gettext_lazy as _
 from .phone_numbers import PHONE_CONTACT_TYPES, PartyPhoneNumberField
 
 from django.urls import reverse
-from .widgets import PartyMergeAutocompleteWidget, PrivateFileInput
+from .widgets import (
+    PartyMergeAutocompleteWidget,
+    PartyRelationshipAutocompleteWidget,
+    PrivateFileInput,
+)
 from .models import (
     Party,
     PartyAddress,
@@ -343,7 +347,24 @@ class PartyRelationshipForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         queryset = Party.objects.order_by("display_name", "party_code")
         if self.from_party is not None:
-            queryset = queryset.exclude(pk=self.from_party.pk)
+            widget = PartyRelationshipAutocompleteWidget(
+                from_party=self.from_party,
+                data_url=reverse(
+                    "workspace_party:party_relationship_autocomplete",
+                    kwargs={
+                        "workspace_slug": self.from_party.workspace.slug,
+                        "pk": self.from_party.pk,
+                    },
+                ),
+                attrs={
+                    "data-placeholder": _(
+                        "Search name, party code, phone, relation or email"
+                    )
+                },
+                select2_options={"width": "100%"},
+            )
+            self.fields["to_party"].widget = widget
+            queryset = widget.get_queryset()
         self.fields["to_party"].queryset = queryset
 
     def clean(self):

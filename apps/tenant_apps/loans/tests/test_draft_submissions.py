@@ -125,7 +125,7 @@ class DraftSubmissionTests(WorkspaceTestCase):
             LoanNumberSequence.objects.get(
                 series=self.series, document_kind="PAWN_LOAN"
             ).next_number,
-            2,
+            1,
         )
         self.assertEqual(loan.created_by, self.owner)
         self.assertFalse(loan.loan_events.exists())
@@ -190,7 +190,7 @@ class DraftSubmissionTests(WorkspaceTestCase):
         )
         loan, created = self.submit(photos=(photo(), photo()))
         self.assertTrue(created)
-        self.assertTrue(loan.loan_number.endswith("00001"))
+        self.assertIsNone(loan.loan_number)
 
     def test_actor_workspace_signature_and_current_permission_are_required_on_replay(
         self,
@@ -313,7 +313,7 @@ class DraftSubmissionTests(WorkspaceTestCase):
             self.assertEqual(edit.context["loan"].pk, loan.pk)
             self.assertContains(edit, f'action="{update_url}"')
             self.assertContains(edit, "Save changes")
-            self.assertContains(edit, "keeps the same loan number")
+            self.assertContains(edit, "Its reference stays unchanged")
             self.assertNotContains(edit, "Saving creates")
         for amount in ("11000", "12000"):
             payload = self._payload(self.license, self.series)
@@ -334,7 +334,7 @@ class DraftSubmissionTests(WorkspaceTestCase):
             LoanNumberSequence.objects.get(
                 series=self.series, document_kind="PAWN_LOAN"
             ).next_number,
-            2,
+            1,
         )
 
     def test_restricted_database_role_enforces_unique_and_immutable_submission(self):
@@ -362,7 +362,7 @@ class DraftSubmissionTests(WorkspaceTestCase):
             with self.assertRaises(DatabaseError), transaction.atomic():
                 copy = PawnLoan.objects.get(pk=loan.pk)
                 copy.pk = None
-                copy.loan_number += "-duplicate"
+                copy.loan_number = None
                 copy.save(force_insert=True)
             self.assertEqual(self.submit()[0].pk, loan.pk)
         finally:
@@ -406,6 +406,15 @@ class DraftSubmissionConcurrencyTests(TransactionTestCase):
             ).update(status="ACTIVE")
             self.license, self.series = self._configured_setup()
             loan = create_pawn_draft(command(self), actor=self.owner)
+            # This historical migration fixture represents a previously numbered draft.
+            from apps.tenant_apps.loans.services.number_allocation import (
+                allocate_pawn_loan_number,
+            )
+
+            loan.loan_number = allocate_pawn_loan_number(
+                series=self.series, actor=self.owner
+            ).value
+            loan.save(update_fields=["loan_number"])
             before = PawnLoan.objects.values().get()
             numbers = list(LoanNumberSequence.objects.order_by("pk").values())
             sequences = list(LoanNumberSequence.objects.all())
@@ -501,5 +510,5 @@ class DraftSubmissionConcurrencyTests(TransactionTestCase):
                     LoanNumberSequence.objects.get(
                         series=self.series, document_kind="PAWN_LOAN"
                     ).next_number,
-                    2,
+                    1,
                 )

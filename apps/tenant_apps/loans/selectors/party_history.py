@@ -46,7 +46,7 @@ def _loan_row(loan: PawnLoan, *, as_of_date) -> PartyPawnLoanRow:
 
     return PartyPawnLoanRow(
         pk=loan.pk,
-        loan_id=loan.loan_number,
+        loan_id=loan.loan_number or loan.display_reference,
         loan_type="PawnLoan",
         loan_date=loan.loan_date,
         status=loan.get_state_display(),

@@ -1,7 +1,11 @@
 {% extends "base_tenant.html" %}
-{% block title %}Closing loans: staff guide{% endblock %}
+{% load orgs_tags %}
+{% block title %}Help with closing{% endblock %}
 {% block workspace_content %}
 <h1 class="h3">Closing one or several loans</h1>
+{% include 'loans/closing/_navigation.html' %}
+{% navigation_actions as actions %}
+{% if 'workspace.transfer' in actions %}<p><a href="{% url 'workspace_loans:paper_closure_settings' request.workspace.slug %}">Completed-recording controls</a></p>{% endif %}
 <p>Open any supported ordinary loan and choose <strong>Close / release loan</strong>. Choose current collection and return, or recording a settlement already completed. The loan's origination source does not determine this choice.</p>
 <h2 class="h5">Collecting payment now</h2><p>Open <a href="{% url 'workspace_loans:loan_closing_create' request.workspace.slug %}">Close / release loans</a>, select one or several loans and explicitly choose current collection and return. Review the settlement and collateral, collect the agreed amount, then confirm full customer handover. Several loans use one combined payment.</p>
 <h2 class="h5">Recording completed settlements</h2><p>Use the actual settlement date and amount. Select confirmed cash collection and return only when the source establishes them; otherwise retain the unspecified cash/handover basis. Later evidence can confirm handover without collecting again.</p>

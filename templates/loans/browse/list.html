@@ -2,7 +2,10 @@
 {% block title %}{{ title }}{% endblock %}
 {% block workspace_content %}
 {% load orgs_tags %}{% navigation_actions as batch_actions %}
-<div class="d-flex gap-3 mb-3">{% if 'loan.release' in batch_actions %}<a href="{% url 'workspace_loans:loan_closing_create' request.workspace.slug %}">Close / release loans</a>{% endif %}<a href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}">Closing history</a></div>
+{% if request.resolver_match.url_name == 'pawn_release_list' %}
+{% if 'loan.release' in batch_actions and workspace_can_write %}<p><a class="btn btn-primary" href="{% url 'workspace_loans:loan_closing_create' request.workspace.slug %}">Close / release loans</a></p>{% endif %}
+{% include 'loans/closing/_navigation.html' %}
+{% endif %}
 <h1 class="h3">{{ title }}</h1><p class="text-muted">{{ description }}</p>
 {% include "loans/browse/_content.html" %}
 {% endblock %}

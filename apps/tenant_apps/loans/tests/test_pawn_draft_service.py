@@ -247,7 +247,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         with self.assertRaises(PermissionDenied):
             create_pawn_draft(self.command(), actor=self.actor)
         self.sequence.refresh_from_db()
-        self.assertEqual(self.sequence.next_number, 2)
+        self.assertEqual(self.sequence.next_number, 1)
 
     def test_draft_direct_commands_deny_missing_and_removed_actor_without_writes(self):
         from django.core.exceptions import PermissionDenied
@@ -307,18 +307,18 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.assertEqual(PawnLoan.objects.count(), 1)
         self.assertEqual(item.photos.count(), 0)
         self.sequence.refresh_from_db()
-        self.assertEqual(self.sequence.next_number, 2)
+        self.assertEqual(self.sequence.next_number, 1)
 
-    def test_create_is_atomic_and_allocates_official_number_with_audit(self):
+    def test_create_is_atomic_and_retains_unnumbered_identity_with_audit(self):
         loan = create_pawn_draft(self.command(), actor=self.actor)
 
-        self.assertEqual(loan.loan_number, "PL-A-00001")
+        self.assertIsNone(loan.loan_number)
         self.assertEqual(loan.state, PawnLoanState.DRAFT.value)
         self.assertEqual(loan.borrower, self.borrower)
         self.assertEqual(loan.product_version, self.product_version)
         self.assertEqual(loan.collateral_items.count(), 1)
         self.sequence.refresh_from_db()
-        self.assertEqual(self.sequence.next_number, 2)
+        self.assertEqual(self.sequence.next_number, 1)
         event = LoanChangeLog.objects.get(loan=loan)
         self.assertEqual(event.event_kind, PawnLoanEventKind.DRAFT_CREATED.value)
         self.assertEqual(event.actor, self.actor)
@@ -440,16 +440,14 @@ class PawnDraftServiceTests(WorkspaceTestCase):
                 self.sequence.refresh_from_db()
                 self.assertEqual(self.sequence.next_number, 1)
 
-    def test_multiple_drafts_receive_distinct_official_numbers(self):
+    def test_multiple_drafts_have_distinct_references_without_consuming_numbers(self):
         first = create_pawn_draft(self.command(), actor=self.actor)
         second = create_pawn_draft(self.command(), actor=self.actor)
-
-        self.assertEqual(first.loan_number, "PL-A-00001")
-        self.assertEqual(second.loan_number, "PL-A-00002")
-        self.assertEqual(
-            PawnLoan.objects.values_list("loan_number", flat=True).distinct().count(),
-            2,
-        )
+        self.assertIsNone(first.loan_number)
+        self.assertIsNone(second.loan_number)
+        self.assertNotEqual(first.display_reference, second.display_reference)
+        self.sequence.refresh_from_db()
+        self.assertEqual(self.sequence.next_number, 1)
 
     def test_invalid_collateral_fails_atomically(self):
         cases = (
@@ -520,7 +518,7 @@ class PawnDraftServiceTests(WorkspaceTestCase):
         self.assertEqual(
             events[-1].metadata["after"]["collateral"][0]["description"], "Gold chain"
         )
-        self.assertEqual(updated.loan_number, "PL-A-00001")
+        self.assertIsNone(updated.loan_number)
 
     def test_update_with_photos_maps_existing_and_new_collateral(self):
         loan = create_pawn_draft(self.command(), actor=self.actor)
@@ -591,7 +589,10 @@ class PawnDraftServiceTests(WorkspaceTestCase):
 
     def test_non_draft_cannot_be_edited(self):
         loan = create_pawn_draft(self.command(), actor=self.actor)
-        PawnLoan.objects.filter(pk=loan.pk).update(state=PawnLoanState.APPROVED.value)
+        # Legacy numbered state fixture; this test exercises the edit boundary.
+        PawnLoan.objects.filter(pk=loan.pk).update(
+            loan_number="LEGACY-NONDRAFT", state="APPROVED"
+        )
         command = UpdatePawnDraftCommand(
             borrower_id=self.borrower.pk,
             principal_amount=Decimal("60000"),

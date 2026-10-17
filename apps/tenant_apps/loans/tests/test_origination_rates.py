@@ -311,8 +311,15 @@ class OriginationRateTests(WorkspaceTestCase):
         self.assertFalse(after[0]["fresh"])
 
     def test_missing_legacy_evidence_requires_reapproval(self):
+        from apps.tenant_apps.loans.services.number_allocation import (
+            allocate_pawn_loan_number,
+        )
+
+        self.loan.loan_number = allocate_pawn_loan_number(
+            series=self.loan.series, actor=self.actor
+        ).value
         self.loan.state = "APPROVED"
-        self.loan.save(update_fields=["state"])
+        self.loan.save(update_fields=["loan_number", "state"])
         PawnLoanApprovalSnapshot.objects.create(
             loan=self.loan, version=1, payload={}, fingerprint="legacy"
         )

@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 import io
 import json
 import fitz
@@ -813,7 +813,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
         self.assertEqual(policy.partial_month_method, "SLAB")
         self.assertEqual(PawnMetalInterestRatePolicy.objects.count(), 2)
         page = self.tenant_get(reverse("loans:pawn_economics_setup"))
-        self.assertContains(page, "Calculation, fees and monitoring")
+        self.assertContains(page, "Business lending terms")
         self.assertContains(page, "Gold")
         self.assertContains(page, "Silver")
         self.assertContains(page, "Compound")
@@ -877,7 +877,7 @@ class LoansSetupUiTests(WorkspaceTestCase):
     def test_policy_forms_render_hindi_labels_and_linked_fields(self):
         self.client.cookies["django_language"] = "hi"
         page = self.tenant_get(reverse("loans:pawn_economics_setup"))
-        self.assertContains(page, "गणना, शुल्क और निगरानी")
+        self.assertContains(page, "व्यवसाय की ऋण शर्तें")
         self.assertContains(page, "सोना: मासिक ब्याज (%)")
         self.assertContains(page, "नीति का लागू क्षेत्र")
         self.assertContains(page, "शुल्क नीति सहेजें")

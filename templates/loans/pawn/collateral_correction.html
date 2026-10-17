@@ -2,9 +2,9 @@
 {% block title %}Correct collateral details{% endblock %}
 {% block workspace_content %}
 <div class="container py-3" style="max-width:900px">
-  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}#loan-collateral">Back to loan {{ loan.loan_number }}</a>
+  <a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}#loan-collateral">Back to loan {{ loan.display_reference }}</a>
   <h1 class="h3 mt-3">Correct collateral details</h1>
-  <p>{{ item.description }} · Loan {{ loan.loan_number }}</p>
+  <p>{{ item.description }} · Loan {{ loan.display_reference }}</p>
   <p>Correct facts entered wrongly about this same item. Principal, agreed interest, payments, custody and loan status stay unchanged. Original records and previously issued copies remain available.</p>
   <p class="small text-muted">For jewellery actually exchanged, returned or newly pledged, record the business action. Adding or removing a mistaken item needs a separate reconciliation.</p>
   {% if blockers %}<div class="alert alert-warning"><ul class="mb-0">{% for blocker in blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}

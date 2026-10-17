@@ -133,6 +133,19 @@ class SeriesAvailabilityTests(WorkspaceTestCase):
         )
         self.assertEqual(form["series"].value(), self.series.pk)
         loan, _, _, _ = self.start_review()
+        self.assertFalse(
+            PawnDraftForm(workspace=self.tenant, instance=loan)
+            .fields["series"]
+            .disabled
+        )
+        from apps.tenant_apps.loans.services.number_allocation import (
+            allocate_pawn_loan_number,
+        )
+
+        loan.loan_number = allocate_pawn_loan_number(
+            series=self.series, actor=self.owner
+        ).value
+        loan.save(update_fields=["loan_number"])
         set_series_active(self.series, is_active=False, actor=self.owner)
         edit = PawnDraftForm(workspace=self.tenant, instance=loan)
         self.assertTrue(edit.fields["series"].disabled)
@@ -252,6 +265,16 @@ class SeriesAvailabilityTests(WorkspaceTestCase):
             next_number=sequence.maximum_number
         )
         loan, path, _, page = self.start_review()
+        # Grandfather a number issued before the delayed-numbering boundary.
+        from apps.tenant_apps.loans.services.number_allocation import (
+            allocate_pawn_loan_number,
+        )
+
+        loan.loan_number = allocate_pawn_loan_number(
+            series=self.series, actor=self.owner
+        ).value
+        loan.save(update_fields=["loan_number"])
+        page = self.client.get(path)
         self.assertFalse(running_series(self.tenant).exists())
         self.assertEqual(self.confirm(path, page).status_code, 302)
         loan.refresh_from_db()

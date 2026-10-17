@@ -67,7 +67,14 @@ def correction_next_steps(loan, blockers):
             rows.append(
                 dict(
                     label="Correct the preparation draft",
-                    message="No posted fact correction is needed for an unposted draft. Review borrower, date, principal and collateral in its editor. A wrong register/product uses the reviewed replacement action on draft detail.",
+                    message=(
+                        "Review borrower, date, principal and collateral in the draft editor. "
+                        + (
+                            "An issued number keeps its register/product; use linked replacement for those changes."
+                            if loan.loan_number
+                            else "Register and product can also be corrected before the first approval; no replacement is needed."
+                        )
+                    ),
                     url=reverse(
                         "workspace_loans:pawn_loan_update",
                         kwargs={"workspace_slug": loan.workspace.slug, "pk": loan.pk},

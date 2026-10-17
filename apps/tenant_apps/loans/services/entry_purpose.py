@@ -6,10 +6,31 @@ from apps.tenant_apps.loans.models import (
     LoanLicense,
     LoanSeries,
     PawnLoanEconomicPolicy,
+    LoanEntryPreference,
 )
 
 
 def default_entry_purpose(*, workspace, series_id=None, license_id=None):
+    """Retained policy reader for existing servicing form defaults."""
+    return _entry_purpose(
+        workspace=workspace,
+        series_id=series_id,
+        license_id=license_id,
+        use_operational=False,
+    )
+
+
+def new_loan_entry_purpose(*, workspace, series_id=None, license_id=None):
+    """Independent preference for New loan presentation only."""
+    return _entry_purpose(
+        workspace=workspace,
+        series_id=series_id,
+        license_id=license_id,
+        use_operational=True,
+    )
+
+
+def _entry_purpose(*, workspace, series_id, license_id, use_operational):
     if series_id:
         series = LoanSeries.objects.filter(workspace=workspace, pk=series_id).first()
         if series is None:
@@ -30,6 +51,19 @@ def default_entry_purpose(*, workspace, series_id=None, license_id=None):
         Q(series__isnull=True, license__isnull=True),
     ):
         if scope is None:
+            continue
+        explicit = (
+            (
+                LoanEntryPreference.objects.filter(workspace=workspace)
+                .filter(scope)
+                .first()
+            )
+            if use_operational
+            else None
+        )
+        if explicit:
+            if explicit.purpose != "INHERIT":
+                return explicit.purpose
             continue
         policy = (
             rows.filter(scope).order_by("-effective_from", "-revision", "-pk").first()

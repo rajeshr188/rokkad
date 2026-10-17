@@ -211,12 +211,12 @@ def _draft_submission_redirect(request, loan, *, created):
         if created:
             messages.info(
                 request,
-                f"Draft {loan.loan_number} saved. Check the agreement before confirming payout.",
+                f"{loan.display_reference} saved. Check the agreement before confirming payout.",
             )
         else:
             messages.info(
                 request,
-                f"Draft {loan.loan_number} was already saved; this repeated form applied no changes. "
+                f"{loan.display_reference} was already saved; this repeated form applied no changes. "
                 "Check the saved agreement before confirming payout, or use Correct draft to edit it.",
             )
         return redirect(
@@ -227,12 +227,12 @@ def _draft_submission_redirect(request, loan, *, created):
     if created:
         messages.success(
             request,
-            f"Draft {loan.loan_number} created. Use Correct draft to update this same loan.",
+            f"{loan.display_reference} created. Use Correct draft to update this same loan.",
         )
     else:
         messages.info(
             request,
-            f"This form already saved loan {loan.loan_number} ({loan.get_state_display()}). "
+            f"This form already saved loan {loan.display_reference} ({loan.get_state_display()}). "
             "No changes were applied and no additional loan was created. Use Correct draft with edit access to change a saved draft.",
         )
     return redirect(
@@ -298,8 +298,8 @@ def pawn_loan_update(request, pk):
             if request.POST.get("action") == "preview":
                 economics_preview = resolve_pawn_draft_economics(
                     workspace_id=request.loans_workspace.pk,
-                    license_id=loan.license_id,
-                    series_id=loan.series_id,
+                    license_id=form.cleaned_data["series"].license_id,
+                    series_id=form.cleaned_data["series"].pk,
                     as_of_date=command.loan_date,
                     collateral=command.collateral,
                 )
@@ -314,7 +314,7 @@ def pawn_loan_update(request, pk):
             _add_pawn_draft_error(form, formset, exc)
         else:
             if request.POST.get("action") != "preview":
-                messages.success(request, f"Draft {loan.loan_number} updated.")
+                messages.success(request, f"{loan.display_reference} updated.")
                 return redirect(
                     "workspace_loans:pawn_loan_detail",
                     pk=loan.pk,
@@ -490,9 +490,10 @@ def pawn_collateral_photo_add(request, pk, item_pk):
 def pawn_loan_approve(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
     try:
-        approve_pawn_loan(loan.pk, actor=request.user)
+        approval = approve_pawn_loan(loan.pk, actor=request.user)
         messages.success(
-            request, f"{loan.loan_number} approved. Its economic payload is frozen."
+            request,
+            f"{approval.payload['loan_number']} approved. Its economic payload is frozen.",
         )
     except (PawnLifecycleError, ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
@@ -649,6 +650,8 @@ def _update_command(form, formset):
         loan_date=data["loan_date"],
         tenure_months=data["tenure_months"],
         collateral=_collateral_inputs(formset),
+        series_id=data["series"].pk,
+        product_version_id=data["product_version"].pk,
     )
 
 
@@ -670,7 +673,8 @@ def _reason_transition(request, pk, action):
             form.add_error(None, str(exc))
         else:
             messages.success(
-                request, f"{loan.loan_number}: {labels[action].lower()} completed."
+                request,
+                f"{loan.display_reference}: {labels[action].lower()} completed.",
             )
             return redirect(
                 "workspace_loans:pawn_loan_detail",

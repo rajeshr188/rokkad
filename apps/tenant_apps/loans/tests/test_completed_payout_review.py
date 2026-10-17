@@ -135,10 +135,32 @@ class CompletedFactReviewTests(WorkspaceTestCase):
         self.assertEqual(approval.payload, original)
 
     def test_unapproved_draft_uses_same_review_without_creating_approval(self):
+        self.assertIsNone(self.loan.loan_number)
         page = self.start()
         self.assertTemplateUsed(page, "loans/pawn/completed_payout.html")
         self.preview()
         self.assertEqual(self.client.post(self.url, self.post).status_code, 302)
+        self.assertFalse(self.loan.approval_snapshots.exists())
+        self.assertEqual(self.loan.loan_events.count(), 1)
+        self.loan.refresh_from_db()
+        self.assertTrue(self.loan.loan_number)
+
+    def test_unnumbered_completed_payout_can_claim_its_actual_issued_number(self):
+        self.assertIsNone(self.loan.loan_number)
+        self.start()
+        self.post["number"] = "PAPER-ORIGINAL-007"
+        page = self.preview()
+        self.assertContains(page, "PAPER-ORIGINAL-007")
+        self.loan.refresh_from_db()
+        self.assertIsNone(self.loan.loan_number)
+        before = list(m.LoanNumberSequence.objects.values_list("pk", "next_number"))
+        self.assertEqual(self.client.post(self.url, self.post).status_code, 302)
+        self.assertEqual(self.client.post(self.url, self.post).status_code, 302)
+        self.loan.refresh_from_db()
+        self.assertEqual(self.loan.loan_number, "PAPER-ORIGINAL-007")
+        self.assertEqual(
+            list(m.LoanNumberSequence.objects.values_list("pk", "next_number")), before
+        )
         self.assertFalse(self.loan.approval_snapshots.exists())
         self.assertEqual(self.loan.loan_events.count(), 1)
 

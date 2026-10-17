@@ -11,11 +11,9 @@ from django.db import transaction
 
 from apps.orgs.models import Company
 from apps.tenant_apps.loans import models as m
-from apps.tenant_apps.loans.domain import LoanDocumentKind
 from .action_access import require_loan_action
 from .pawn_draft_split import _create_split_draft, PawnDraftSplitRow
 from .license_series import assert_series_can_issue
-from .number_allocation import preview_number
 from .pawn_drafts import (
     CollateralDraftInput,
     _active_product_version,
@@ -144,7 +142,6 @@ def _proposal(loan, actor, facts):
         as_of_date=facts["loan_date"],
         collateral=inputs,
     )
-    number = preview_number(series=series, document_kind=LoanDocumentKind.PAWN_LOAN)
     state = _digest(
         dict(
             source=list(m.PawnLoan.objects.filter(pk=loan.pk).values()),
@@ -166,7 +163,7 @@ def _proposal(loan, actor, facts):
             economic_policy=resolved.economic_policy.pk,
             rates=[row.pk for row in resolved.rate_policies],
             fees=[row.pk for row in resolved.fee_policies],
-            number=number.value,
+            numbering="AT_APPROVAL",
         )
     )
     return dict(
@@ -176,7 +173,7 @@ def _proposal(loan, actor, facts):
         items=items,
         economics=resolved.economics,
         resolved=resolved,
-        number=number.value,
+        number="Assigned at approval",
         state=state,
         photo_count=sum(item.photos.count() for item in items),
     )
@@ -241,23 +238,18 @@ def replace_draft(loan_id, *, actor, values, token, confirmed=False):
         signing.loads(token, salt=SALT, max_age=1800)
     except signing.BadSignature as exc:
         raise ValueError("Review expired. Preview the replacement again.") from exc
-    # Serialize the expected number with ordinary number allocation.
+    # Protect the reviewed setup and items; no number is allocated here.
     series = m.LoanSeries.objects.filter(
         pk=facts["series_id"], workspace_id=loan.workspace_id
     ).first()
     if series is None:
         raise ValueError("Choose a replacement series in this Workspace.")
     assert_series_can_issue(series, for_update=True)
-    list(
-        m.LoanNumberSequence.objects.select_for_update().filter(
-            series_id=facts["series_id"], document_kind=LoanDocumentKind.PAWN_LOAN.value
-        )
-    )
     list(loan.collateral_items.select_for_update().order_by("pk"))
     preview = _proposal(loan, actor, facts)
     if signed["state"] != preview["state"]:
         raise ValueError(
-            "Draft, photographs, setup or expected number changed. Preview the replacement again."
+            "Draft, photographs or setup changed. Preview the replacement again."
         )
     # Ordinary draft movement preserves item/photo IDs and capture facts;
     # no bytes are recopied and no physical handover is invented.
@@ -317,7 +309,7 @@ def replace_draft(loan_id, *, actor, values, token, confirmed=False):
         )
     cancel_pawn_loan(
         loan.pk,
-        reason=f"Replaced by {replacement.loan_number}: {facts['reason']}"[:500],
+        reason=f"Replaced by {replacement.display_reference}: {facts['reason']}"[:500],
         actor=actor,
     )
     return replacement, True

@@ -5,6 +5,11 @@ from . import views
 app_name = "party"
 
 urlpatterns = [
+    path(
+        "<int:pk>/relationships/autocomplete/",
+        views.party_relationship_autocomplete,
+        name="party_relationship_autocomplete",
+    ),
     path("<int:pk>/photo/view/", views.party_profile_photo, name="party_photo"),
     path(
         "<int:pk>/documents/<int:document_pk>/download/",

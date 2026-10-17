@@ -5,7 +5,9 @@ import json
 from django.forms.utils import ErrorDict
 from django.http import QueryDict
 
-from apps.tenant_apps.loans.services.entry_purpose import default_entry_purpose
+from apps.tenant_apps.loans.services.entry_purpose import (
+    new_loan_entry_purpose as default_entry_purpose,
+)
 
 COMMON = (
     ("borrower", "borrower_id"),

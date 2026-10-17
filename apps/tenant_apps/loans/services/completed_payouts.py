@@ -255,7 +255,20 @@ def completed_payout_defaults(loan):
         values["currency_quantum"] = str(
             loan.policy_snapshot.currency_quantum.normalize()
         )
-    return dict(values, source_reference=loan.loan_number)
+    number = loan.loan_number
+    if number is None:
+        from .number_allocation import preview_number
+
+        try:
+            number = preview_number(series=loan.series, document_kind="PAWN_LOAN").value
+        except ValueError:
+            # Historical admission may use an unavailable register's actual number.
+            number = ""
+    return dict(
+        values,
+        number=number,
+        source_reference=loan.loan_number or loan.display_reference,
+    )
 
 
 def _completed_input(workspace, actor, loan_id, values):
@@ -313,7 +326,9 @@ def _completed_input(workspace, actor, loan_id, values):
         borrower_id=loan.borrower_id,
         series_id=loan.series_id,
         product_version_id=loan.product_version_id,
-        number=loan.loan_number,
+        number=loan.loan_number
+        or values.get("number")
+        or completed_payout_defaults(loan)["number"],
         date=loan.loan_date.isoformat(),
         principal=str(loan.principal_amount),
         rate=str(loan.monthly_interest_rate),
@@ -501,18 +516,26 @@ def apply_actual_contract(loan, data, *, actor, correction=False):
         data["borrower_id"],
         data["series_id"],
         data["product_version_id"],
-        data["number"],
         data["date"],
     ) != (
         loan.borrower_id,
         loan.series_id,
         loan.product_version_id,
-        loan.loan_number,
         loan.loan_date.isoformat(),
+    ) or (
+        loan.loan_number is not None and data["number"] != loan.loan_number
     ):
         raise ValueError(
             "Keep this draft's customer, series, product, number and original date. Correct its identity explicitly before recording a payout."
         )
+    if loan.loan_number is None:
+        if correction or loan.approval_snapshots.exists():
+            raise ValueError(
+                "Retained approval/correction evidence requires its original issued number."
+            )
+        # _make_contract already holds/checks the ordinary original-number claim.
+        # This records a completed fact, never an invented prospective approval.
+        loan.loan_number = data["number"]
     facts = contract_items(data)
     items = list(loan.collateral_items.select_for_update().order_by("pk"))
     if not items or len(items) != len(facts):
@@ -568,5 +591,5 @@ def apply_actual_contract(loan, data, *, actor, correction=False):
         setattr(loan, name, value)
     loan.updated_by = actor
     loan.full_clean()
-    loan.save(update_fields=[*actual, "updated_by", "updated_at"])
+    loan.save(update_fields=[*actual, "loan_number", "updated_by", "updated_at"])
     return items

@@ -140,13 +140,14 @@ class PortabilityContinuationTests(fixture.ApprovedBundleTests):
                     ),
                     actor=self.actor,
                 )
-                self.assertEqual(loan.loan_number, "C-00002")
+                self.assertIsNone(loan.loan_number)
                 approve_pawn_loan(loan.pk, actor=self.actor)
                 disburse_pawn_loan(
                     loan.pk, effective_date=timezone.localdate(), actor=self.actor
                 )
                 loan.refresh_from_db()
                 self.assertEqual(loan.state, "ACTIVE")
+                self.assertEqual(loan.loan_number, "C-00002")
                 self.assertFalse(
                     m.HistoricalLoanImport.objects.filter(loan=loan).exists()
                 )

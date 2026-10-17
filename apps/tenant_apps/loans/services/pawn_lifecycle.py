@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
+from apps.orgs.models import Company
 
 from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
@@ -54,6 +55,14 @@ def approve_pawn_loan(
     valuation_review=None,
     combined_review=None,
 ) -> PawnLoanApprovalSnapshot:
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnLifecycleError(
+            "PawnLoan transitions require an active tenant schema."
+        )
+    # Match paper admission: Workspace, loan, series, then number sequence.
+    # Taking this after the loan/series locks can deadlock historical backfill.
+    Company.all_objects.select_for_update(no_key=True).get(pk=workspace_id)
     loan = _locked_loan(loan_id)
     require_loan_action(loan, actor, "loan.approve")
     _require_transition(loan, PawnLoanState.APPROVED)
@@ -87,6 +96,11 @@ def approve_pawn_loan(
     quote_evidence = approval_quote_evidence(loan, collateral, resolved_economics)
     appraisals = _freeze_approved_appraisals(loan, collateral, actor=actor)
 
+    allocation = None
+    if loan.loan_number is None:
+        allocation = allocate_pawn_loan_number(series=loan.series, actor=actor)
+        loan.loan_number = allocation.value
+        loan.save(update_fields=["loan_number", "updated_at"])
     payload = _approval_payload(
         loan, collateral, resolved_economics, appraisals=appraisals
     )
@@ -150,6 +164,8 @@ def approve_pawn_loan(
         actor=actor,
         reason=earlier_payout_reason or "",
         metadata={
+            "loan_number": loan.loan_number,
+            "sequence_id": allocation.sequence_id if allocation else None,
             "approval_snapshot_id": snapshot.pk,
             "approval_version": version,
             "fingerprint": fingerprint,
@@ -224,7 +240,13 @@ def transfer_expired_draft_setup(
             "Replacement license and series must belong to this workspace."
         ) from exc
     assert_series_can_issue(series)
-    allocation = allocate_pawn_loan_number(series=series, actor=actor)
+    if loan.loan_number is not None:
+        raise PawnLifecycleError(
+            "An issued number cannot move registers. Use the linked draft replacement."
+        )
+    from .pawn_drafts import _require_unconnected_preparation
+
+    _require_unconnected_preparation(loan)
     old = {
         "license_id": loan.license_id,
         "license_revision_id": loan.license_revision_id,
@@ -234,7 +256,6 @@ def transfer_expired_draft_setup(
     loan.license = license
     loan.license_revision = license.revisions.order_by("-revision_number").first()
     loan.series = series
-    loan.loan_number = allocation.value
     loan.updated_by = actor
     loan.full_clean()
     loan.save(
@@ -260,7 +281,7 @@ def transfer_expired_draft_setup(
                 "license_id": license.pk,
                 "license_revision_id": loan.license_revision_id,
                 "series_id": series.pk,
-                "loan_number": allocation.value,
+                "loan_number": None,
             },
         },
     )

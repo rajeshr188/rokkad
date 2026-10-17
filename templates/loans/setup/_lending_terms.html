@@ -1,0 +1,33 @@
+{% load loans_display %}
+<section class="card card-body mb-3" id="effective-lending-terms" aria-label="Effective business lending terms">
+  <h2 class="h5">Effective lending terms</h2>
+  <p>Choose a register and agreement date to see which standing terms apply. This view changes nothing. Actual paper agreements still need source confirmation.</p>
+  <form method="get">{% include "components/setup/journey_fields.html" %}
+    {% include "components/forms/accessible.html#errors" with form=effective_terms_form %}
+    {% include "loans/setup/_policy_form.html#fields" with form=effective_terms_form %}
+    <button class="btn btn-outline-secondary" type="submit">View applicable terms</button>
+  </form>
+  {% with terms=effective_lending_terms %}{% if terms %}
+  <h3 class="h6 mt-3">{{ terms.scope }} &middot; {{ terms.day|date:"d/m/Y" }}</h3>
+  {% for error in terms.errors %}<p class="alert alert-warning">{{ error }}</p>{% endfor %}
+  <dl class="mt-3">{% for rate in terms.rates %}<dt>{{ rate.metal }}: {{ rate.value|compact_decimal }}% per month</dt><dd class="small text-body-secondary">{{ rate.source }}</dd>{% empty %}<dd>No monthly rates configured for this scope and date.</dd>{% endfor %}</dl>
+  {% if terms.policy %}<p>Standard tenure: {% if terms.policy.default_tenure_months %}{{ terms.policy.default_tenure_months }} months{% else %}choose per agreement{% endif %}. Upfront interest: {{ terms.policy.advance_interest_periods }} month(s).</p>
+  <p class="small">Prospective lending value: {{ terms.policy.get_valuation_method_display }}; maximum loan-to-value {{ terms.maximum_ltv_percent|compact_decimal }}%. Current monitoring remains separate.</p>
+  <details><summary>Calculation rules and source</summary><p class="small mt-2">{{ terms.source }}</p><dl class="row">{% for label, value in terms.terms %}<dt class="col-sm-5">{{ label }}</dt><dd class="col-sm-7">{{ value }}</dd>{% endfor %}</dl></details>{% endif %}
+  <p class="mt-3">Fees: {% for fee in terms.fees %}{{ fee.name }} — {{ fee.value|compact_decimal }} {% if fee.calculation_type == 'FIXED' %}INR{% else %}%{% endif %}{% if fee.deducted_at_disbursal %}, deducted at payout{% endif %}{% if not forloop.last %}; {% endif %}{% empty %}No fees configured{% endfor %}.</p>
+  <p>Available repayment types: {% for version in terms.products %}{{ version.product.name }}{% if not forloop.last %}; {% endif %}{% empty %}None enabled for this date{% endfor %}.</p>
+  <p class="small mb-0">Current New loan screen default: {% if terms.entry == 'PAPER' %}Record from paper{% else %}Create and pay now{% endif %}. This is today's screen preference, independent of the agreement date above.</p>
+  {% endif %}{% endwith %}
+</section>
+{% for item in narrow_forms %}
+<details data-policy-section id="change-{{ item.kind }}" class="card card-body mb-3" {% if item.form.is_bound %}open{% endif %}>
+  <summary class="h5">Change {{ item.label|lower }}</summary>
+  <p class="mt-3">{% if item.kind == 'entry' %}This changes only the initial screen. Staff can choose a different purpose for a transaction. No financial policy or interest-rate revision is created. Choose Follow broader default to remove this scope's preference.{% elif item.kind == 'rates' %}Enter only the metal rates that need changing. Calculation rules, fees and the other metals retain their settings.{% else %}Enter only the terms that need changing. Rates and fees retain their settings. A register or licence calculation override retains the other applicable calculation fields; review its scope before confirming.{% endif %}</p>
+  <form method="post" novalidate>{% csrf_token %}{% include "components/setup/journey_fields.html" %}<input type="hidden" name="action" value="{{ item.kind }}">
+    {% include "components/forms/accessible.html#errors" with form=item.form %}
+    {% include "loans/setup/_policy_form.html#fields" with form=item.form %}
+    {% include "loans/setup/_economic_policy_review.html" with economic_review=item.review economic_token=item.token economic_id=item.kind %}
+    <button class="btn btn-outline-primary" type="submit">Preview change</button>
+  </form>
+</details>
+{% endfor %}

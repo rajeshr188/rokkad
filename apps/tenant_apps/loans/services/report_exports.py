@@ -73,7 +73,7 @@ def build_party_statement_dataset(statement):
         rows.append(
             (
                 "LOAN POSITION",
-                loan_row.loan.loan_number,
+                loan_row.loan.loan_number or loan_row.loan.display_reference,
                 loan_row.loan.loan_date,
                 loan_row.status,
                 balance.principal_outstanding if balance else "ERROR",
@@ -131,7 +131,7 @@ def build_party_statement_dataset(statement):
         rows.append(
             (
                 "TRANSACTION",
-                event.loan.loan_number,
+                event.loan.loan_number or event.loan.display_reference,
                 event.effective_date,
                 activity,
                 principal,
@@ -274,7 +274,7 @@ def _portfolio_dataset(key, title, rows):
         + QUALITY_COLUMNS,
         tuple(
             (
-                row.loan.loan_number,
+                row.loan.loan_number or row.loan.display_reference,
                 row.loan.borrower.display_name,
                 row.balance.due_date if row.balance else "",
                 row.balance.principal_outstanding if row.balance else "",
@@ -305,7 +305,7 @@ def _daily(report):
         (
             row.event.effective_date,
             row.activity,
-            row.event.loan.loan_number,
+            row.event.loan.loan_number or row.event.loan.display_reference,
             row.event.loan.borrower.display_name,
             row.amount,
             row.event.pk,
@@ -336,7 +336,7 @@ def _releases_renewals(report):
         (
             row.effective_date,
             "RELEASE",
-            row.loan.loan_number,
+            row.loan.loan_number or row.loan.display_reference,
             row.release_number,
             row.settlement_amount,
             (
@@ -352,9 +352,9 @@ def _releases_renewals(report):
         (
             row.renewal_date,
             "RENEWAL",
-            row.source_loan.loan_number,
+            row.source_loan.loan_number or row.source_loan.display_reference,
             row.renewal_number,
-            row.successor_loan.loan_number,
+            row.successor_loan.loan_number or row.successor_loan.display_reference,
             (
                 "REVERSED"
                 if hasattr(row, "reversal")
@@ -404,7 +404,7 @@ def _storage(report):
         ("Loan", "Item", "Metal", "Net weight", "Custody", "Storage path", "Placement"),
         tuple(
             (
-                item.loan.loan_number,
+                item.loan.loan_number or item.loan.display_reference,
                 item.description,
                 item.metal,
                 item.net_weight,

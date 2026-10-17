@@ -40,12 +40,29 @@ LIFECYCLE_ROWS = json.loads(
     ).read_text()
 )
 MAX_ROWS = 50000
+ENTRY_ROWS = json.loads(
+    (
+        Path(settings.BASE_DIR) / "docs/contracts/fresh-business-setup-v5-rows.json"
+    ).read_text()
+)
 MAX_BYTES = 16 * 1024 * 1024
 
 
 def schema(version):
-    require(version in (1, 2, 3, 4), "Unsupported business setup contract version.")
-    return {1: ROWS, 2: GRAPH_ROWS, 3: MONITORING_ROWS, 4: LIFECYCLE_ROWS}[version]
+    require(version in (1, 2, 3, 4, 5), "Unsupported business setup contract version.")
+    return {
+        1: ROWS,
+        2: GRAPH_ROWS,
+        3: MONITORING_ROWS,
+        4: LIFECYCLE_ROWS,
+        5: ENTRY_ROWS,
+    }[version]
+
+
+def needs_version_five(workspace_id):
+    from apps.tenant_apps.loans.models import LoanEntryPreference
+
+    return LoanEntryPreference.objects.filter(workspace_id=workspace_id).exists()
 
 
 def needs_version_four(workspace_id):
@@ -194,6 +211,10 @@ def validate_tables(tables, version=1):
 
 
 def export_setup(*, workspace_id, actor, save_file, version=1):
+    require(
+        version >= 5 or not needs_version_five(workspace_id),
+        "Independent entry preferences need business setup profile 5.",
+    )
     ROWS = schema(version)
     # Financial export authorization is checked by the package orchestrator.
     tables = {label: [] for label in ROWS}

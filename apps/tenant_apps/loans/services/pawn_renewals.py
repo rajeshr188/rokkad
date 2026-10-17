@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation, ROUND_DOWN
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from apps.orgs.models import Company
 from django.utils import timezone
 
 from apps.tenant_apps.loans.services.action_access import require_loan_action
@@ -413,6 +414,11 @@ def renew_pawn_loan(
     actor=None,
     successor_product_version_id: int | None = None,
 ) -> PawnRenewalResult:
+    workspace_id = current_tenant_workspace_id()
+    if workspace_id is None:
+        raise PawnRenewalError("PawnLoan renewal requires an active tenant schema.")
+    # Successor approval shares the ordinary origination/admission lock order.
+    Company.all_objects.select_for_update(no_key=True).get(pk=workspace_id)
     source = _locked_loan(source_loan_id)
     from .recorded_collections import recording_for
 
@@ -676,6 +682,8 @@ def renew_pawn_loan(
             workflow_source="RENEWAL",
         )
     approval = approve_pawn_loan(successor.pk, actor=actor)
+    # Approval now issues the identity; downstream opening evidence must use it.
+    successor.refresh_from_db()
     successor_economics = _successor_approval_economics(successor, approval)
     successor_policy = _successor_policy_from_approval(
         successor,

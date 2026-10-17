@@ -1,17 +1,17 @@
 {% extends "base_tenant.html" %}{% load loans_display %}
 {% block title %}Replace mistaken preparation draft{% endblock %}
 {% block workspace_content %}
-<div class="container" style="max-width:950px"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to {{ loan.loan_number }}</a>
+<div class="container" style="max-width:950px"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to {{ loan.display_reference }}</a>
 <h1 class="h3 mt-3">Replace mistaken preparation draft</h1>
-<p>Use when an unpaid, unposted draft was saved under the wrong register or product. Retain and cancel the original draft and number. Its preparation history remains; the existing collateral and photographs continue on the linked replacement, without changing their identity or capture history. The replacement receives a new number and needs ordinary review and approval.</p>
+<p>Use when an unpaid, unposted draft was saved under the wrong register or product. Retain and cancel the original draft and number. Its preparation history remains; the existing collateral and photographs continue on the linked replacement, without changing their identity or capture history. The replacement stays unnumbered until approval and needs ordinary review and approval.</p>
 <p>Customer: <strong>{{ loan.borrower.display_name }} &middot; {{ loan.borrower.party_code }}</strong>. Original register: {{ loan.series }}; product: {{ loan.product_version }}.</p>
 <form method="post" novalidate>{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}{% if field.is_hidden %}{{ field }}{% elif field.name != 'confirmed' %}<div class="mb-3">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
 <button type="submit" class="btn btn-outline-primary" name="action" value="preview">Review replacement</button>
 {% if preview %}<section class="card card-body mt-4"><h2 class="h5">Review the replacement</h2>
-<p>{{ loan.loan_number }} will be retained and cancelled. Expected replacement number: <strong>{{ preview.number }}</strong> under {{ preview.series }}.</p>
+<p>{{ loan.display_reference }} will be retained and cancelled. Replacement numbering: <strong>{{ preview.number }}</strong> under {{ preview.series }}.</p>
 {% include "loans/pawn/_agreement_review.html" with agreement=preview.agreement %}
 <p>{{ preview.items|length }} existing item(s) and {{ preview.photo_count }} photograph(s) will continue on the replacement with their original identities. Original files and earlier issued copies stay available. This action records no payout, approval or physical movement.</p>
-<p class="small">The current setup for the replacement series/date supplies its terms. Changed source facts, files, policies or expected number require another review. New reviews expire after 30 minutes.</p>
+<p class="small">The current setup for the replacement series/date supplies its terms. Changed source facts, files, policies  require another review. New reviews expire after 30 minutes.</p>
 <div class="form-check">{{ form.confirmed }} {{ form.confirmed.label_tag }}{{ form.confirmed.errors }}</div>
 <button type="submit" name="action" value="confirm" class="btn btn-primary mt-3">Create replacement and cancel original draft</button></section>{% endif %}
 </form></div>

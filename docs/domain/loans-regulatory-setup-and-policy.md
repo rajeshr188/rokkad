@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [loans, license, series, numbering, policy]
 related:
   - ../adr/2026-08-09-girvi-capability-extraction-into-loans.md
@@ -12,7 +12,36 @@ related:
 
 # Loans Regulatory Setup And Policy
 
+## Business lending terms and entry preference
+
+The local setup simplification presents effective terms for a selected register
+and date, with source-aware rates, calculation rules, fees, tenure and prospective
+valuation. Narrow rate/tenure/upfront changes use the existing policy writers and
+review. A narrower calculation policy remains a complete override, which the
+operator must review; it does not acquire implicit per-field inheritance.
+
+The New loan screen default has an independent Workspace/licence/register
+preference. With no explicit preference at a scope, the existing financial-policy
+default remains a compatibility fallback. Explicit INHERIT follows the broader
+scope; the ultimate default remains direct. These current presentation choices
+do not change loan terms, number assignment, current monitoring or repayment/
+closing mode. Legacy repayment defaults retain their existing reader.
+See the [implementation and release boundary](../implementation/business-lending-terms-20261017.md).
+
 ## Current monitoring and retained entry references
+
+The local [approval numbering implementation](../implementation/approval-numbering-20261017.md)
+keeps new direct preparations unnumbered until first approval. Their existing ID
+supplies a draft reference; register/product can be corrected before issuance
+after ordinary scope, product and economic validation. Issued numbers are never
+recycled or moved, including after reopening. Existing numbered drafts and paper
+original-number claims retain their identity. Number assignment order follows
+first approval, independently of loan dates; SIMPLE combines approval/payout.
+
+Routine paper entry prefers a known setup reference applicable on the original
+date, without requiring another economic policy today. A retained current-setup
+fallback is explicitly labelled; neither proves original approval or appraisal.
+Missing references remain explicit and are not filled from monitoring thresholds.
 
 The prepared hardening release labels saved valuation/reference evidence separately
 from the effective monitoring policy. Economic entry suggestions do not select

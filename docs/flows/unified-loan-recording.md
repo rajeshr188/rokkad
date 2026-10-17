@@ -7,6 +7,22 @@ tags: [loans, paper-entry, workflow, historical-evidence, risk]
 
 # Record business when it happens or enter it afterward
 
+The local [approval numbering change](../implementation/approval-numbering-20261017.md)
+supersedes the early-numbering behavior described in the released checkpoints
+below. Save new direct preparations as `Draft #<id>`; correct entered facts,
+register/product in the same draft before first approval. Approval assigns the
+permanent number once; SIMPLE confirms approval/payout together. Reopen/cancel
+retains an issued number. Numbered register/product mistakes still use linked
+replacement, whose new preparation is unnumbered until approval. Drafts cannot
+print loan tickets or draft PDF previews. Approval enables ticket printing using
+the permanent number, even before payout; reopening disables it until reapproval.
+
+When an unnumbered preparation's cash was already handed over, the existing
+completed-payout form reviews its actual number, or suggests the next available
+one if none was issued. The completed-fact confirmation claims the reviewed
+number without a fabricated prospective approval; duplicates require review.
+Original paper numbers and historical reservations keep their existing rules.
+
 The released [counter improvements](../plans/everyday-counter-improvements-20261016.md)
 keep a compact entered-principal strip visible during entry and warn before losing
 unsaved edits. Existing direct draft saving, review/confirmation and photograph
@@ -73,6 +89,13 @@ in Calculation policies: Workspace business default, optional license override,
 then optional series override. Inherit uses the broader default; absent setup stays
 direct. The ordinary New loan screen allows an explicit per-transaction switch.
 Changing this preference does not change any saved agreement or native approval.
+
+The local [business lending terms simplification](../implementation/business-lending-terms-20261017.md)
+adds an independent New loan screen preference in that setup page. It takes
+precedence at its Workspace/licence/register scope, with explicit INHERIT and the
+retained policy value as a compatibility fallback when no preference exists.
+Changing it creates no financial-policy/rate revision and does not change the
+initial mode of repayment or closing. Number assignment is unchanged.
 
 UR-23 applies that preference through the ordinary Series field. The compact
 **Entry: From paper / Direct in Rokkad — Change** control shows the result; use

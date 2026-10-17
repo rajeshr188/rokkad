@@ -51,6 +51,7 @@ class RecordedOriginationTests(WorkspaceTestCase):
         save=True,
         advance=0,
         method="CALCULATED_METAL_VALUE",
+        number=None,
         rate=Decimal("2"),
         partial="FULL_MONTH",
     ):
@@ -72,7 +73,7 @@ class RecordedOriginationTests(WorkspaceTestCase):
             series=series,
             borrower=Party.objects.create(display_name="Borrower"),
             product_version=ensure_test_product_version(self.tenant),
-            loan_number=uuid.uuid4().hex,
+            loan_number=number or uuid.uuid4().hex,
             principal_amount=Decimal("10000"),
             monthly_interest_rate=rate,
             tenure_months=3,

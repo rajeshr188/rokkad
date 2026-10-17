@@ -487,11 +487,32 @@ class CompletedPayoutTests(WorkspaceTestCase):
 
     def use_legacy_draft(self):
         license, series = self.legacy()
-        self.draft.license = license
-        self.draft.license_revision = license.revisions.get()
-        self.draft.series = series
-        self.draft.loan_number = "OLD-0001"
-        self.draft.save()
+        # Construct the intended source identity; never renumber another issued draft.
+        self.draft = m.PawnLoan.objects.create(
+            workspace=self.tenant,
+            license=license,
+            license_revision=license.revisions.get(),
+            series=series,
+            borrower_id=self.data["borrower_id"],
+            product_version_id=self.data["product_version_id"],
+            loan_number="OLD-0001",
+            loan_date=self.day,
+            principal_amount=10000,
+            monthly_interest_rate=2,
+            tenure_months=3,
+            creation_submission_id=uuid4(),
+        )
+        self.item = m.PawnCollateralItem.objects.create(
+            loan=self.draft,
+            description="Ring",
+            metal="GOLD",
+            quantity=1,
+            gross_weight=10,
+            net_weight=9,
+            purity_percentage=90,
+            allocated_principal=10000,
+            monthly_interest_rate=2,
+        )
         self.series = series
         self.data.update(series_id=series.pk, number=self.draft.loan_number)
         self.bind()
@@ -684,7 +705,7 @@ class CompletedPayoutTests(WorkspaceTestCase):
         self.assertEqual(page.status_code, 200)
         self.assertEqual(page.context["agreement"]["date"], self.day)
         self.assertEqual(page.context["agreement"]["series"].pk, self.series.pk)
-        self.assertNotIn("number", page.context["form"].fields)
+        self.assertTrue(page.context["form"].fields["number"].disabled)
         self.assertNotIn("borrower_id", page.context["form"].fields)
         self.assertEqual(len(page.context["agreement"]["items"]), 1)
         self.assertContains(page, "Ring")

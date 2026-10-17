@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-09-09
+updated: 2026-10-17
 tags: [loans, collateral, releases, navigation]
 ---
 
@@ -25,6 +25,13 @@ appraisal and storage information. The loan page also links to its release recor
 
 ## Releases
 
+Releases is the single sidebar destination. **All releases** is the complete
+per-loan history; **Grouped submissions** is the secondary view of submissions
+saved together. **Help with closing** opens the staff guide. The prominent
+**Close / release loans** action requires release permission and write access.
+Its searchable selector contains active loans with outstanding collateral only.
+These release tools do not appear in the Collateral directory toolbar.
+
 Search by release number, loan number, borrower name or Party code. Filter by full
 or partial release, inclusive effective-date bounds, and recorded/reversed status.
 Invalid filters display errors rather than silently returning an unfiltered result.
@@ -32,8 +39,8 @@ Invalid filters display errors rather than silently returning an unfiltered resu
 Open a release to see its settlement breakdown, original recorder/time, item return
 timestamps, current custody, and release memo PDF. A reversal banner preserves the
 original record and explains that the loan holds current balances and custody.
-Perform new releases and other lifecycle actions from the loan, using its existing
-permissions and validation. These browse pages never alter loan or release evidence.
+Start a new release from the shared closing action or the active loan's detail page,
+using the same permissions and validation. Browsing never alters loan or release evidence.
 
 All lists, filter choices and details belong to the current Workspace and require
 Loans viewing permission. Direct links do not bypass membership or RLS.

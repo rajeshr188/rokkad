@@ -1,5 +1,6 @@
 {% load static %}
-<div class="app-heading"><div><h1 class="h3">Close / release loans</h1><p class="text-muted">Choose the loans and when payment and handover happened.</p></div><a class="btn btn-outline-secondary" href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}">Closing history</a></div>
+<div class="app-heading"><div><h1 class="h3">Close / release loans</h1><p class="text-muted">Choose the loans and when payment and handover happened.</p></div></div>
+{% include 'loans/closing/_navigation.html' %}
 <form method="get" action="{{ closing_action_url }}" id="closing-selection" class="card card-body mb-4">
   {% if closing_return_to %}<input type="hidden" name="return_to" value="{{ closing_return_to }}">{% endif %}
   <label class="form-label" for="closing-purpose">What are you doing?</label>
@@ -8,11 +9,12 @@
     <option value="CURRENT" {% if closing_purpose == 'CURRENT' %}selected{% endif %}>Collect payment and return collateral now</option>
     <option value="PAPER" {% if closing_purpose == 'PAPER' %}selected{% endif %}>Record a settlement already completed</option>
   </select>
-  <label class="form-label" for="closing-loans">Find loan numbers or borrowers</label>
+  <label class="form-label" for="closing-loans">Search and select loans</label>
   <select name="loans" id="closing-loans" class="form-select" multiple required data-search-url="{% url 'workspace_loans:release_batch_search' request.workspace.slug %}" data-max="{{ closing_max_loans }}">{% for selected in closing_selected_loans %}<option selected value="{{ selected.pk }}">{{ selected.loan_number }} &mdash; {{ selected.borrower.display_name }}</option>{% endfor %}</select>
+  <p id="closing-search-help" class="form-text">Type a loan number, borrower name, party code or phone, then select a matching loan. Keep searching to add more loans.</p>
   <p class="form-text">Choose up to 20 loans for a current combined payment, or 50 independent completed settlements on the same actual date. Changing this selection requires a fresh review.</p>
   <div><button class="btn btn-outline-primary mt-2" type="submit">Continue to review</button></div>
   <p id="closing-selection-changed" class="text-warning mt-2 mb-0" hidden>Selection changed. Continue to review before confirming.</p>
 </form>
 {% if closing_purpose == 'CURRENT' %}<p class="alert alert-info">Collect the reviewed amount and return the collateral now. A multiple-loan release represents one combined payment; each loan keeps its own release document.</p>{% elif closing_purpose == 'PAPER' %}<p class="alert alert-info">Use the actual settlement date, including an earlier date. No money is collected again. Confirm customer handover only when the source establishes it; otherwise custody remains unconfirmed.</p>{% endif %}
-<script src="{% static 'js/loan-closing.js' %}"></script>
+<script src="{% static 'js/loan-closing.js' %}" defer></script>

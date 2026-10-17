@@ -159,7 +159,7 @@ from .release_batch import (
     PawnReleaseBatchLine,
     PaperClosureTransition,
 )
-from .origination import LoanOriginationSettings
+from .origination import LoanOriginationSettings, LoanEntryPreference
 
 __all__ += ["PawnReleaseBatch", "PawnReleaseBatchLine"]
 

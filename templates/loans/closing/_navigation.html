@@ -1,0 +1,5 @@
+<nav class="d-flex flex-wrap gap-3 mb-3" aria-label="Release views">
+  <a href="{% url 'workspace_loans:pawn_release_list' request.workspace.slug %}" {% if request.resolver_match.url_name == 'pawn_release_list' %}aria-current="page"{% endif %}>All releases</a>
+  <a href="{% url 'workspace_loans:release_batch_list' request.workspace.slug %}" {% if request.resolver_match.url_name == 'release_batch_list' %}aria-current="page"{% endif %}>Grouped submissions</a>
+  <a href="{% url 'workspace_loans:paper_closure_guide' request.workspace.slug %}" {% if request.resolver_match.url_name == 'paper_closure_guide' %}aria-current="page"{% endif %}>Help with closing</a>
+</nav>

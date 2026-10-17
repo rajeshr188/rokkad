@@ -224,8 +224,18 @@ class PawnLoanFilter(django_filters.FilterSet):
         )
         if len(alias_ids) <= self.IMPORT_ALIAS_CANDIDATE_LIMIT:
             aliases = alias_ids
+        draft_query = Q(pk__in=[])
+        reference = value[7:] if value.casefold().startswith("draft #") else value
+        if (
+            reference != value
+            and reference.isascii()
+            and reference.isdecimal()
+            and len(reference) <= 18
+        ):
+            draft_query = Q(pk=int(reference), loan_number__isnull=True)
         return queryset.filter(
-            Q(loan_number__icontains=value)
+            draft_query
+            | Q(loan_number__icontains=value)
             | Q(borrower__display_name__icontains=value)
             | Q(borrower__party_code__icontains=value)
             | Q(borrower__primary_phone__icontains=value)

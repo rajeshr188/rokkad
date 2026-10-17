@@ -11,6 +11,10 @@
   {% else %}<p class="text-body-secondary">Choose the series and original date to load the standing agreement.</p>{% endif %}
 
   {% include "loans/pawn/_entry_monitoring.html" %}
+  {% if form.terms.reference %}<details class="small mb-3" data-paper-reference-summary>
+    <summary>Saved setup reference</summary>
+    <p class="mt-2 mb-0">{{ form.terms.reference.basis }} for {{ form.terms.reference.reference_date|date:"d/m/Y" }} is retained for compatibility. This is not proof of the original lending approval or appraisal. Current monitoring uses its separate policy above; no risk setting needs to be chosen for this entry.</p>
+  </details>{% endif %}
   {% if paper_monitoring_missing %}<p class="alert alert-warning" data-paper-monitoring-attention>Saved valuation/reference evidence needs attention. {% if can_manage_loan_setup %}<a href="{% url 'workspace_loans:pawn_economics_setup' request.workspace.slug %}#calculation-policy" target="_blank" rel="noopener">Review reference setup</a>{% endif %}</p>{% endif %}
   <details class="border rounded p-3" data-paper-additional-details {% if paper_additional_open %}open{% endif %}>
     <summary>Additional details</summary>

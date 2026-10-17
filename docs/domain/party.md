@@ -1,7 +1,7 @@
 ---
 status: active
 owner: project
-updated: 2026-10-16
+updated: 2026-10-17
 tags: [domain, party]
 ---
 
@@ -59,6 +59,14 @@ See the [retention correction](../adr/2026-09-30-retain-detached-party-and-colla
 Borrower search shows name, relation, one primary phone and one default address
 (HOME preferred, otherwise the first saved default), plus the customer code. Contact
 methods and addresses remain multiple with a primary/default per type.
+
+Relationship add/edit uses the same Party search labels and matching fields,
+through its own edit-authorized endpoint bound to the source Party and Workspace.
+Only the selected Party is rendered initially; results load in bounded pages and
+signed URL tokens survive widget-cache loss. Self-reference and foreign-Workspace
+selection are excluded in search and submission; duplicate relationships remain
+invalid. Existing relationship eligibility across Party statuses is unchanged;
+the borrower picker's active-only origination rule is not imposed on relationships.
 
 An explicit authorized repair can fill missing display selections on existing
 customers. Preserve every existing default/primary choice. With no address

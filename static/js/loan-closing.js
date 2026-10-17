@@ -20,13 +20,17 @@
     function initialize() {
       if (picker.data('select2')) picker.select2('destroy');
       picker.select2({
-        width: '100%', maximumSelectionLength: maximum(),
-        placeholder: 'Search loan number, borrower or phone',
+        width: '100%', maximumSelectionLength: maximum(), minimumInputLength: 1,
+        placeholder: 'Type to search loans',
         ajax: {url: loans.dataset.searchUrl, dataType: 'json', delay: 250,
           data: params => ({q: params.term || '', page: params.page || 1})}
       });
     }
     initialize();
+    picker.on('select2:open', () => {
+      const search = picker.data('select2').$container.find('.select2-search__field');
+      search.attr({'aria-label': 'Search loans by number or borrower', 'aria-describedby': 'closing-search-help'});
+    });
     picker.on('change', changed);
     purpose.addEventListener('change', initialize);
   }

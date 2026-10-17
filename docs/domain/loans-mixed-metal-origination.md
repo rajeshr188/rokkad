@@ -1,7 +1,7 @@
 ---
 status: active
 owner: loans
-updated: 2026-10-06
+updated: 2026-10-17
 tags: [loans, collateral, interest, ltv, disbursal]
 related:
   - ../adr/2026-08-05-pawn-loan-collateral-tranche-economics.md
@@ -77,13 +77,14 @@ mandatory; approval and renewal successors enforce the current rule. See the
 For a saved draft containing several items, the operator may select one or
 more collateral items and preview **Split to new loan**. At least one item must
 remain on the source. Confirmation moves the selected item identities and
-photographs to one newly numbered draft, recalculates both drafts independently,
-and leaves the source number unchanged. The split is atomic and creates no
+photographs to one unnumbered preparation, recalculates both drafts independently,
+and leaves the source reference and any issued number unchanged. First approval
+assigns the new official number. The split is atomic and creates no
 accounting event.
 
 The same Split screen also offers **One loan per collateral**. Choose exactly one
 recorded entry to keep on the source (the first entry is initially selected).
-Every other entry receives its own numbered draft for the same borrower, initially
+Every other entry receives its own unnumbered draft for the same borrower, initially
 using the source series, product, date and tenure. Quantity within a row stays
 together; this operation never invents separate physical pieces.
 
@@ -91,10 +92,13 @@ Review shows each resulting loan's principal, monthly/advance interest, deducted
 fees and estimated payout, with combined totals compared to the original draft.
 Separate fixed fees and rounded interest can change combined proceeds. Nothing is
 paid by splitting. Collateral identities, quantities and photographs move rather
-than being duplicated; the original loan retains its number. Confirmation checks
-the entire numbering range and current draft/economics, commits every new draft
+than being duplicated; the original loan retains its reference and any issued
+number. Confirmation checks current draft/economics, commits every new draft
 together or none, and returns the same loans on an identical retry. Completion
 links to all resulting loans. Existing selected-item grouping remains available.
+No counter range is reserved or promised for these preparations. Later approvals
+must each have available numbering capacity and receive numbers in approval order.
+See the [numbering boundary](../adr/2026-10-17-loan-number-at-approval.md).
 
 ## Invariants
 

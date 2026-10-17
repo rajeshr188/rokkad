@@ -1,11 +1,11 @@
 {% extends "base_tenant.html" %}
 {% load loans_display static i18n counter_navigation %}
-{% block title %}{{ action_label }} · {{ loan.loan_number }}{% endblock %}
+{% block title %}{{ action_label }} · {{ loan.display_reference }}{% endblock %}
 {% block workspace_content %}
 <div class="loan-workflow-grid" hx-history="false"><div class="loan-workflow-main">
 <div class="row justify-content-center">
   <div class="col-12">
-    <a class="small text-decoration-none" href="{% counter_url 'workspace_slug_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
+    <a class="small text-decoration-none" href="{% counter_url 'workspace_slug_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.display_reference }}</a>
     <h1 class="h3 mt-2 mb-1">{{ action_label }}</h1>
     <p class="text-muted mb-4">{{ description }}</p>
     {% include "components/forms/accessible.html#errors" %}

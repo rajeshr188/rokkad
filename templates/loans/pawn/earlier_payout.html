@@ -1,9 +1,9 @@
 {% extends "base_tenant.html" %}
 {% load loans_display %}
-{% block title %}Record completed payout · {{ loan.loan_number }}{% endblock %}
+{% block title %}Record completed payout · {{ loan.display_reference }}{% endblock %}
 {% block workspace_content %}
 <section hx-history="false">
-<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.loan_number }}</a>
+<a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">&larr; {{ loan.display_reference }}</a>
 <h1 class="h3 mt-3">Record completed payout</h1>
 <p>This loan has retained native approval or reversed-payout evidence. Review it here without replacing the original evidence or creating another loan.</p>
 <div class="alert alert-info"><strong>Actual payout date: {{ loan.loan_date|date:"d/m/Y" }}</strong><p class="mb-0">Use this only when the borrower already received the money on that date. This records the earlier payout; it does not pay again. Today's recording time and your signed-in identity will be retained separately.</p></div>

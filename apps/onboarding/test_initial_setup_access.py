@@ -107,6 +107,20 @@ class InitialBusinessSetupAccessTests(TestCase):
             self.url("workspace_loans:pawn_economics_setup"), data, follow=True
         )
         self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context["configuration_review"])
+        with workspace_context(self.workspace.pk):
+            self.assertFalse(
+                PawnLoanEconomicPolicy.objects.filter(workspace=self.workspace).exists()
+            )
+        data.update(
+            economic_confirm="1",
+            economic_acknowledged="on",
+            economic_review_token=response.context["configuration_review_token"],
+        )
+        response = self.client.post(
+            self.url("workspace_loans:pawn_economics_setup"), data, follow=True
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.redirect_chain,
             [(self.url("workspace_slug_settings_setup") + "?step=terms&path=new", 302)],

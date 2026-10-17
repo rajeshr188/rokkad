@@ -114,6 +114,7 @@ def search(request):
             Q(loan_number__icontains=query)
             | Q(borrower__display_name__icontains=query)
             | Q(borrower__primary_phone__icontains=query)
+            | Q(borrower__party_code__icontains=query)
         )
     page = Paginator(loans, 20).get_page(request.GET.get("page", 1))
     return JsonResponse(

@@ -91,23 +91,57 @@ def paper_entry_terms(*, workspace, series, day, metal, principal=None):
         messages.append(
             "Configured fees exceed the supported deducted document charge. Enter the actual supported charge as an exception."
         )
-    try:
-        reference = resolve_pawn_loan_economic_policy(
-            workspace_id=workspace.pk,
-            license_id=series.license_id,
-            series_id=series.pk,
-            as_of_date=timezone.localdate(),
-        )
-        values.update(
-            monitoring_method=reference.valuation_method,
-            monitoring_ltv=reference.maximum_ltv_ratio,
-            monitoring_reason=f"Saved valuation fallback/reference from economic policy {reference.pk}, revision {reference.revision}; current monitoring follows its separate policy. No original approval is claimed.",
-        )
-    except PawnEconomicPolicyError:
+    reference = paper_valuation_reference(workspace=workspace, series=series, day=day)
+    if reference:
+        values.update(reference["values"])
+    else:
         messages.append(
             "Choose the saved valuation fallback/reference; no economic reference setup is available."
         )
-    return dict(values=values, messages=messages, sources=sources)
+    return dict(values=values, messages=messages, sources=sources, reference=reference)
+
+
+def paper_valuation_reference(*, workspace, series, day):
+    """Known configuration reference, independently of current monitoring.
+
+    Prefer the already applicable dated setup; expired historical setup need not
+    be recreated today just to record paper. The retained current-setup fallback
+    remains explicit compatibility evidence, never an original lending decision.
+    Missing both leaves reference entry explicit instead of manufacturing a limit.
+    """
+    if series.workspace_id != workspace.pk:
+        raise ValueError("Select a series in this Workspace.")
+    for reference_day in dict.fromkeys((day, timezone.localdate())):
+        try:
+            policy = resolve_pawn_loan_economic_policy(
+                workspace_id=workspace.pk,
+                license_id=series.license_id,
+                series_id=series.pk,
+                as_of_date=reference_day,
+            )
+        except PawnEconomicPolicyError:
+            continue
+        basis = (
+            "Dated setup reference"
+            if reference_day == day
+            else "Entry-day setup fallback"
+        )
+        reason = (
+            f"{basis}: economic policy {policy.pk}, revision {policy.revision}, "
+            f"effective {reference_day.isoformat()}. Current monitoring is separate; "
+            "original approval/appraisal is not established."
+        )
+        return dict(
+            policy_id=policy.pk,
+            basis=basis,
+            reference_date=reference_day,
+            values=dict(
+                monitoring_method=policy.valuation_method,
+                monitoring_ltv=policy.maximum_ltv_ratio,
+                monitoring_reason=reason,
+            ),
+        )
+    return None
 
 
 def paper_source_license_revision(*, workspace, series, day):

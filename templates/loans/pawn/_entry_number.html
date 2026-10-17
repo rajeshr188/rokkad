@@ -1,10 +1,10 @@
 {% load i18n %}
   <div class="small mt-2">
-  {% if loan %}<div>Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Allocated permanently from {{ loan.license.license_number }} / {{ loan.series.pawn_display_name }} when this draft was first saved.</div>
+  {% if loan %}<div>{% if loan.loan_number %}Official loan number: <strong class="font-monospace">{{ loan.loan_number }}</strong></div><div class="small text-muted">Previously assigned; retained on reopening and cancellation.{% else %}Draft reference: <strong>{{ loan.display_reference }}</strong></div><div class="small text-muted">No official number assigned. It will be assigned at agreement approval.{% endif %}</div>
   {% else %}
     <div class="small text-body-secondary">{% translate "Expected loan number" %}</div>
     <div id="expected-loan-number" class="fw-semibold mt-1" role="status" aria-live="polite" data-select-message="{% translate 'Select a series to see its expected loan number.' %}" data-unavailable-message="{% translate 'Number unavailable' %}">{% if selected_number_preview.value %}{{ selected_number_preview.value }}{% elif selected_number_preview.error %}{{ selected_number_preview.error }}{% else %}{% translate "Select a series to see its expected loan number." %}{% endif %}</div>
-    <p class="small text-body-secondary mb-0 mt-2">{% translate "Assigned when you save. Another loan saved first may change this number." %}</p>
+    <p class="small text-body-secondary mb-0 mt-2">{% translate "Unreserved preview only. Assigned at agreement approval; another approval may take this number first." %}</p>
     {{ number_previews|json_script:"loan-number-previews" }}
-    <noscript><p class="small">{% translate "Enable JavaScript to update the preview when changing series. The official number is assigned on save." %}</p></noscript>
+    <noscript><p class="small">{% translate "Enable JavaScript to update the preview when changing series. The official number is assigned at agreement approval." %}</p></noscript>
   {% endif %}</div>

@@ -468,6 +468,148 @@ class ClosingWorkflowTests(batch_fixtures.ReleaseBatchTests):
             kwargs={"workspace_slug": self.tenant.slug},
         )
 
+    def test_release_navigation_has_one_destination_and_contextual_views(self):
+        import re
+        from django.utils.html import strip_tags
+
+        routes = (
+            "pawn_release_list",
+            "release_batch_list",
+            "paper_closure_guide",
+            "loan_closing_create",
+        )
+        for route in routes:
+            response = self.client.get(
+                reverse("workspace_loans:" + route, args=[self.tenant.slug])
+            )
+            self.assertEqual(response.status_code, 200)
+            html = response.content.decode()
+            sidebars = re.findall(
+                r'<nav[^>]*aria-label="Workspace navigation"[^>]*>(.*?)</nav>',
+                html,
+                re.S,
+            )
+            self.assertTrue(sidebars)
+            for sidebar in sidebars:
+                releases = re.findall(
+                    r'<a([^>]*href="[^"]*/loans/releases/[^"]*"[^>]*)>(.*?)</a>',
+                    sidebar,
+                    re.S,
+                )
+                self.assertEqual(len(releases), 1)
+                self.assertEqual(strip_tags(releases[0][1]).strip(), "Releases")
+                self.assertIn("active", releases[0][0])
+            self.assertContains(response, 'aria-label="Release views"')
+            self.assertContains(response, ">All releases</a>")
+            self.assertContains(response, ">Grouped submissions</a>")
+            self.assertContains(response, ">Help with closing</a>")
+        collateral = self.client.get(
+            reverse("workspace_loans:pawn_collateral_list", args=[self.tenant.slug])
+        )
+        self.assertNotContains(collateral, 'aria-label="Release views"')
+        self.assertNotContains(collateral, ">Close / release loans</a>")
+        viewer = get_user_model().objects.create_user(username="release-history-viewer")
+        role, _ = Role.objects.get_or_create(name="Viewer")
+        Membership.objects.create(company=self.tenant, user=viewer, role=role)
+        self.client.force_login(viewer)
+        for route in routes[:3]:
+            response = self.client.get(
+                reverse("workspace_loans:" + route, args=[self.tenant.slug])
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertNotContains(
+                response, 'class="btn btn-primary" href="' + self.entry()
+            )
+
+    def test_all_releases_includes_standalone_and_completed_group(self):
+        self.release_first_for_navigation()
+        standalone = self.loans[0].releases.get()
+        preview = preview_paper_closures(
+            workspace=self.tenant,
+            actor=self.owner,
+            loan_ids=[self.loans[1].pk],
+            closure_date=date(2026, 7, 18),
+        )
+        command = dict(
+            workspace=self.tenant,
+            actor=self.owner,
+            request_key=uuid4(),
+            quote_token=preview["token"],
+            confirmed=True,
+            paper_reference="Book",
+            rows=[
+                dict(
+                    loan_id=self.loans[1].pk,
+                    amount=str(preview["rows"][0]["amount"]),
+                    basis="PAPER_SETTLEMENT",
+                    paid_by="",
+                    number="",
+                    interest_concession="0",
+                    concession_reason="",
+                )
+            ],
+        )
+        batch = complete_paper_closures(**command)
+        history = self.client.get(
+            reverse("workspace_loans:pawn_release_list", args=[self.tenant.slug])
+        )
+        self.assertEqual(
+            {row.record.pk for row in history.context["table"].rows},
+            {standalone.pk, batch.lines.get().release_id},
+        )
+        grouped = self.client.get(
+            reverse("workspace_loans:release_batch_list", args=[self.tenant.slug])
+        )
+        self.assertEqual([row.pk for row in grouped.context["page"]], [batch.pk])
+        self.assertContains(grouped, "Standalone releases are in All releases")
+
+    def test_loan_picker_searches_active_loans_by_number_borrower_code_and_phone(self):
+        from apps.tenant_apps.party.models import Party
+        from apps.orgs.models import Company
+        from apps.tenancy.context import without_workspace_context, workspace_context
+
+        loan = self.loans[0]
+        Party.objects.filter(pk=loan.borrower_id).update(primary_phone="+919876543210")
+        loan.borrower.refresh_from_db()
+        search = reverse(
+            "workspace_loans:release_batch_search", args=[self.tenant.slug]
+        )
+        for term in (
+            loan.loan_number,
+            loan.borrower.display_name,
+            loan.borrower.party_code,
+            "987654",
+        ):
+            response = self.client.get(search, {"q": term})
+            self.assertEqual(
+                [row["id"] for row in response.json()["results"]], [loan.pk]
+            )
+        other = Company.objects.create(
+            name="Search foreign", owner=self.owner, creator=self.owner
+        )
+        with without_workspace_context(), workspace_context(other.pk):
+            Party.objects.create(display_name="Borrower foreign")
+        self.assertEqual(
+            self.client.get(search, {"q": "foreign"}).json()["results"], []
+        )
+        self.release_first_for_navigation()
+        remaining = self.client.get(search).json()["results"]
+        self.assertEqual([row["id"] for row in remaining], [self.loans[1].pk])
+
+    def release_first_for_navigation(self):
+        from apps.tenant_apps.loans.services.pawn_release import (
+            release_pawn_loan_in_full,
+        )
+
+        loan = self.loans[0]
+        quote = preview_pawn_loan_full_release(loan.pk)
+        release_pawn_loan_in_full(
+            loan.pk,
+            settlement_amount=quote.minimum_settlement,
+            request_key=str(uuid4()),
+            actor=self.owner,
+        )
+
     def weekly_loan(self):
         license, series = self._configured_setup()
         # An ordinary, more-specific configuration before approval freezes it.

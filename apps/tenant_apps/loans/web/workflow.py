@@ -159,6 +159,12 @@ class EarlierPayoutForm(forms.Form):
 
 
 class CompletedPayoutForm(forms.Form):
+    number = forms.CharField(
+        max_length=64,
+        required=False,
+        label="Loan number for this completed payout",
+        help_text="Keep the number already issued, if any. Otherwise the next available number is suggested for review. It is claimed only when these completed facts are confirmed; another loan may take the suggestion first.",
+    )
     source_reference = forms.CharField(
         max_length=160, label="Original ticket or payout reference"
     )
@@ -211,8 +217,11 @@ class CompletedPayoutForm(forms.Form):
     )
     confirmed_rule = forms.BooleanField(initial=True, widget=forms.HiddenInput)
 
-    def __init__(self, *args, approval_evidence=(), **kwargs):
+    def __init__(self, *args, approval_evidence=(), unnumbered=False, **kwargs):
         super().__init__(*args, **kwargs)
+        if not unnumbered:
+            self.fields["number"].widget = forms.HiddenInput()
+            self.fields["number"].disabled = True
         self.fields["reviewed_evidence"].required = bool(approval_evidence)
         for name, field in self.fields.items():
             field.widget.attrs["class"] = (
@@ -306,7 +315,12 @@ def _completed_payout_review(request, loan):
         defaults = completed_payout_defaults(loan)
     except (ValueError, ValidationError) as exc:
         error = str(exc)
-    form = CompletedPayoutForm(post, initial=defaults, approval_evidence=evidence)
+    form = CompletedPayoutForm(
+        post,
+        initial=defaults,
+        approval_evidence=evidence,
+        unnumbered=loan.loan_number is None,
+    )
     intent = (
         post.get("intent_token", "") if post is not None else ""
     ) or new_recording_intent(

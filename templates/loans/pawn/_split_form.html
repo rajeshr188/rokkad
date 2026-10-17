@@ -7,7 +7,7 @@
     <div class="mt-3" data-split-selection="selected">
       <label class="form-label">Choose collateral to move into one new loan</label>
       {{ form.collateral_items }}{{ form.collateral_items.errors }}
-      <p class="small text-body-secondary mb-0">At least one entry must stay on {{ loan.loan_number }}.</p>
+      <p class="small text-body-secondary mb-0">At least one entry must stay on {{ loan.display_reference }}.</p>
     </div>
     <div class="mt-3" data-split-selection="each">
       <label class="form-label" for="{{ form.retained_collateral.id_for_label }}">{{ form.retained_collateral.label }}</label>
@@ -27,7 +27,7 @@
       <div class="table-responsive"><table class="table align-middle">
         <thead><tr><th>Loan</th><th>Collateral</th><th>Principal</th><th>Monthly interest</th><th>Advance interest</th><th>Deducted fees</th><th>Estimated payout</th></tr></thead>
         <tbody>
-          <tr><th>{{ loan.loan_number }} <span class="small fw-normal">(retained)</span></th><td>{% for item in preview.remaining_items %}{{ item.description }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
+          <tr><th>{{ loan.display_reference }} <span class="small fw-normal">(retained)</span></th><td>{% for item in preview.remaining_items %}{{ item.description }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
             {% with economics=preview.source_economics.economics %}{% include "loans/pawn/_split_economics_cells.html" %}{% endwith %}</tr>
           {% for row in preview.new_drafts %}<tr><th>{{ row.number_preview }}</th><td>{% for item in row.items %}{{ item.description }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</td>
             {% with economics=row.economics.economics %}{% include "loans/pawn/_split_economics_cells.html" %}{% endwith %}</tr>{% endfor %}

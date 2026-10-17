@@ -772,7 +772,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         url = reverse("loans:pawn_loan_list")
         headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TARGET": "loan-results"}
         fragment = self.client.get(url, **headers)
-        self.assertContains(fragment, loan.loan_number)
+        self.assertContains(fragment, loan.display_reference)
         self.assertContains(fragment, 'id="loan-results"')
         self.assertNotContains(fragment, 'id="loan-search-form"')
         self.assertEqual(fragment["X-Rokkad-Fragment"], "loan-results")
@@ -819,7 +819,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 self.assertContains(response, f'href="#id_{field}"')
                 self.assertContains(response, "Check the filters to see matching loans")
                 self.assertNotContains(response, "No matching loans")
-                self.assertNotContains(response, loan.loan_number)
+                self.assertNotContains(response, loan.display_reference)
 
     def test_loan_directory_read_only_member_has_no_new_loan_action(self):
         from django.contrib.auth.models import Permission
@@ -1093,7 +1093,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(PawnLoan.objects.get().loan_number, "PL-A-00001")
+        self.assertIsNone(PawnLoan.objects.get().loan_number)
         self.assertEqual(PawnCollateralPhoto.objects.count(), 1)
 
     @override_settings(
@@ -1186,6 +1186,15 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        # Previously issued drafts retain their locked scope.
+        from apps.tenant_apps.loans.services.number_allocation import (
+            allocate_pawn_loan_number,
+        )
+
+        loan.loan_number = allocate_pawn_loan_number(
+            series=series, actor=self.owner
+        ).value
+        loan.save(update_fields=["loan_number"])
         item = loan.collateral_items.get()
         payload = self._payload(license, series)
         for field in ("series", "product_version", "collateral-0-photograph"):
@@ -1294,7 +1303,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
 
         detail = self.client.get(reverse("loans:pawn_loan_detail", args=[loan.pk]))
-        self.assertContains(detail, loan.loan_number)
+        self.assertContains(detail, loan.display_reference)
         self.assertContains(detail, "Recommended next step")
         self.assertContains(detail, "data-loan-dates")
         self.assertContains(detail, "Draft created")
@@ -1309,8 +1318,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(ticket.status_code, 409)
 
         edit = self.client.get(reverse("loans:pawn_loan_update", args=[loan.pk]))
-        self.assertContains(edit, "Official loan number")
-        self.assertContains(edit, loan.loan_number)
+        self.assertContains(edit, "Draft reference")
+        self.assertContains(edit, loan.display_reference)
         self.assertContains(edit, "Use camera/webcam")
         self.assertContains(edit, "loans/collateral_camera.js")
         self.assertContains(edit, 'capture="environment"')
@@ -1518,7 +1527,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         sequence = LoanNumberSequence.objects.get(
             series=source.series, document_kind="PAWN_LOAN"
         )
-        self.assertEqual(sequence.next_number, 2)
+        self.assertEqual(sequence.next_number, 1)
         self.assertEqual(len(preview.new_drafts), 9)
         loans = split_pawn_draft(
             source.pk,
@@ -1528,7 +1537,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
         self.assertEqual(
             [loan.loan_number for loan in loans],
-            [f"PL-A-{index:05d}" for index in range(2, 11)],
+            [None] * 9,
         )
         source.refresh_from_db()
         self.assertEqual(source.loan_number, number)
@@ -1551,7 +1560,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             sum(loan.principal_amount for loan in (source, *loans)), Decimal("55000")
         )
         sequence.refresh_from_db()
-        self.assertEqual(sequence.next_number, 11)
+        self.assertEqual(sequence.next_number, 1)
         replay = split_pawn_draft(
             source.pk,
             **arguments,
@@ -1561,7 +1570,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual([loan.pk for loan in replay], [loan.pk for loan in loans])
         self.assertEqual(PawnLoan.objects.count(), 10)
         sequence.refresh_from_db()
-        self.assertEqual(sequence.next_number, 11)
+        self.assertEqual(sequence.next_number, 1)
 
     def test_split_preview_shows_per_loan_fixed_charges(self):
         from apps.tenant_apps.loans.models import PawnLoanFeePolicy
@@ -1622,26 +1631,22 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertEqual(PawnLoan.objects.count(), 1)
         self.assertEqual(LoanChangeLog.objects.count(), logs)
         self.assertEqual(
-            source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 2
+            source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 1
         )
         for item in items:
             item.refresh_from_db()
             self.assertEqual(item.loan_id, source.pk)
             self.assertEqual(item.photos.count(), 1)
 
-    def test_batch_split_requires_enough_numbers_without_consuming_any(self):
-        from apps.tenant_apps.loans.services.number_allocation import (
-            SequenceExhaustedError,
-        )
-
+    def test_batch_split_does_not_reserve_numbers_for_unapproved_preparations(self):
         source, items, arguments = self._split_source()
         sequence = source.series.number_sequences.get(document_kind="PAWN_LOAN")
         sequence.maximum_number = 2
         sequence.save()
-        with self.assertRaisesMessage(SequenceExhaustedError, "needs 2 new numbers"):
-            preview_pawn_draft_split(source.pk, **arguments)
+        preview = preview_pawn_draft_split(source.pk, **arguments)
+        self.assertEqual(len(preview.new_drafts), 2)
         sequence.refresh_from_db()
-        self.assertEqual(sequence.next_number, 2)
+        self.assertEqual(sequence.next_number, 1)
         self.assertEqual(PawnLoan.objects.count(), 1)
 
     def test_batch_split_rejects_changed_item_economics_and_number_preview(self):
@@ -1674,15 +1679,14 @@ class PawnDraftUiTests(WorkspaceTestCase):
         LoanNumberSequence.objects.filter(
             series=source.series, document_kind="PAWN_LOAN"
         ).update(next_number=3)
-        with self.assertRaisesMessage(PawnDraftSplitError, "changed after preview"):
-            split_pawn_draft(
-                source.pk,
-                **arguments,
-                expected_fingerprint=preview.fingerprint,
-                actor=self.owner,
-            )
-        self.assertEqual(PawnLoan.objects.count(), 1)
-        self.assertEqual(source.collateral_items.count(), 3)
+        split_pawn_draft(
+            source.pk,
+            **arguments,
+            expected_fingerprint=preview.fingerprint,
+            actor=self.owner,
+        )
+        self.assertEqual(PawnLoan.objects.count(), 3)
+        self.assertEqual(source.collateral_items.count(), 1)
 
     def test_batch_split_rejects_empty_all_foreign_or_multiple_retained_entries(self):
         from apps.tenant_apps.loans.services.pawn_draft_split import PawnDraftSplitError
@@ -1701,7 +1705,9 @@ class PawnDraftUiTests(WorkspaceTestCase):
                 preview_pawn_draft_split(
                     source.pk, **{**arguments, "collateral_item_ids": selected}
                 )
-        PawnLoan.objects.filter(pk=source.pk).update(state="APPROVED")
+        PawnLoan.objects.filter(pk=source.pk).update(
+            loan_number="LEGACY-SPLIT", state="APPROVED"
+        )
         with self.assertRaisesMessage(PawnDraftSplitError, "Only a draft"):
             preview_pawn_draft_split(source.pk, **arguments)
 
@@ -1768,7 +1774,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(response, "Split completed")
         self.assertEqual(PawnLoan.objects.count(), 3)
         self.assertEqual(
-            source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 4
+            source.series.number_sequences.get(document_kind="PAWN_LOAN").next_number, 1
         )
         LoanSeries.objects.filter(pk=source.series_id).update(is_active=False)
         response = self.client.post(url, data, follow=True)
@@ -2506,6 +2512,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         item = loan.collateral_items.get()
         for version, day, status, amount in (
@@ -2625,6 +2632,8 @@ class PawnDraftUiTests(WorkspaceTestCase):
         issues = self.client.get(url, {"section": "issues", "page": "2"})
         self.assertContains(issues, "Findings apply only to these loans")
         self.assertNotContains(issues, "No operational issues detected.")
+        for existing in PawnLoan.objects.filter(workspace=self.tenant):
+            self._numbered_fixture(existing)
         PawnLoan.objects.update(state="ACTIVE")
         export = self.client.get(
             reverse("loans:pawn_loan_report_export", args=["active", "csv"]),
@@ -2703,6 +2712,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(
             state="ACTIVE",
             loan_date=date(2026, 1, 1),
@@ -2730,6 +2740,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         future = PawnLoanEvent.objects.create(
             loan=loan,
@@ -2842,54 +2853,93 @@ class PawnDraftUiTests(WorkspaceTestCase):
         )
 
     def test_unknown_and_cross_workspace_loan_sources_are_not_exposed(self):
-        license, series = self._configured_setup()
-        # This fixture deliberately moves between workspaces. Browser-created
-        # loans now have an immutable workspace/submission identity.
-        from apps.tenant_apps.loans.services.pawn_drafts import (
-            create_pawn_draft_with_photos,
+        # Build the foreign graph in its own Workspace; identities cannot move.
+        from apps.tenancy.context import without_workspace_context, workspace_context
+        from apps.tenant_apps.loans.services import (
+            CreatePawnDraftCommand,
+            CollateralDraftInput,
+            create_pawn_draft,
         )
 
-        def internal_submission(command, *, actor, token, photos):
-            return (
-                create_pawn_draft_with_photos(command, actor=actor, photos=photos),
-                True,
-            )
-
-        with patch(
-            "apps.tenant_apps.loans.web.pawn_draft_actions.submit_new_draft",
-            side_effect=internal_submission,
-        ):
-            self.client.post(
-                reverse("loans:pawn_loan_create"), self._payload(license, series)
-            )
-        loan = PawnLoan.objects.get()
-        item = loan.collateral_items.get()
-        event = PawnLoanEvent.objects.create(
-            loan=loan,
-            event_kind="REPAYMENT",
-            effective_date=date(2026, 8, 2),
-            payload={
-                "values": {"principal": "1.00", "interest": "0", "fees": "0"},
-                "repayment": {"amount_received": "1.00"},
-            },
-            payload_fingerprint="p12-cross-workspace-event",
-            idempotency_key="p12-cross-workspace-event",
-            created_by=self.owner,
-        )
-        other_workspace = Company(
+        other_workspace = Company.objects.create(
             name=f"P12 Foreign {uuid.uuid4().hex[:8]}",
             schema_name=f"p12_foreign_{uuid.uuid4().hex[:8]}",
             owner=self.owner,
             creator=self.owner,
         )
-        other_workspace.save()
-        # Consume the earlier creation message before moving the fixture out of scope.
-        self.client.get(reverse("loans:pawn_loan_list"))
-        PawnLoan.objects.filter(pk=loan.pk).update(workspace=other_workspace)
-        LoanLicense.objects.filter(pk=license.pk).update(workspace=other_workspace)
+        from apps.tenancy.testing import start_workspace_trial
 
+        start_workspace_trial(other_workspace)
+        original_workspace = self.tenant
+        try:
+            with without_workspace_context(), workspace_context(other_workspace.pk):
+                Membership.objects.get_or_create(
+                    user=self.owner,
+                    company=other_workspace,
+                    defaults={"role": Role.objects.get_or_create(name="Owner")[0]},
+                )
+                self.tenant = other_workspace
+                from apps.tenant_apps.loans.services.product_catalog import (
+                    _seed_default_loan_products,
+                )
+
+                product = _seed_default_loan_products()[0]
+                type(product).objects.filter(pk=product.pk).update(status="ACTIVE")
+                borrower = Party.objects.create(display_name="Foreign privacy borrower")
+                license, series = self._configured_setup()
+                loan = create_pawn_draft(
+                    CreatePawnDraftCommand(
+                        workspace_id=other_workspace.pk,
+                        borrower_id=borrower.pk,
+                        license_id=license.pk,
+                        series_id=series.pk,
+                        product_version_id=product.pk,
+                        principal_amount=Decimal("10000"),
+                        monthly_interest_rate=Decimal("2"),
+                        loan_date=date(2026, 7, 18),
+                        tenure_months=3,
+                        collateral=(
+                            CollateralDraftInput(
+                                description="Foreign ring",
+                                metal="GOLD",
+                                gross_weight=Decimal("10"),
+                                net_weight=Decimal("9"),
+                                purity_percentage=Decimal("91.6"),
+                                latest_appraised_value=Decimal("50000"),
+                                allocated_principal=Decimal("10000"),
+                            ),
+                        ),
+                    ),
+                    actor=self.owner,
+                )
+                item = loan.collateral_items.get()
+                from apps.tenant_apps.loans.services import append_collateral_photo
+
+                append_collateral_photo(
+                    item.pk,
+                    actor=self.owner,
+                    upload=SimpleUploadedFile(
+                        "privacy.jpg",
+                        b"\xff\xd8\xff\xe0fixture",
+                        content_type="image/jpeg",
+                    ),
+                )
+                event = PawnLoanEvent.objects.create(
+                    loan=loan,
+                    event_kind="REPAYMENT",
+                    effective_date=date(2026, 8, 2),
+                    payload={
+                        "values": {"principal": "1.00", "interest": "0", "fees": "0"},
+                        "repayment": {"amount_received": "1.00"},
+                    },
+                    payload_fingerprint="p12-cross-workspace-event",
+                    idempotency_key="p12-cross-workspace-event",
+                    created_by=self.owner,
+                )
+        finally:
+            self.tenant = original_workspace
         for query in (
-            {"q": loan.loan_number},
+            {"q": loan.display_reference},
             {"license": license.pk},
             {"series": series.pk},
         ):
@@ -2904,7 +2954,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             # string. That is not a returned loan identity or financial row.
             from django.utils.html import strip_tags
 
-            self.assertNotIn(loan.loan_number, strip_tags(page.content.decode()))
+            self.assertNotIn(loan.display_reference, strip_tags(page.content.decode()))
             self.assertNotContains(page, 'class="directory-name"')
             self.assertEqual(page["X-Rokkad-Fragment"], "loan-results")
             exported = self.client.get(
@@ -3223,6 +3273,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         loan.refresh_from_db()
         disbursal, _ = record_loan_event(
@@ -3306,6 +3357,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         notice = SimpleNamespace(
             get_notice_kind_display=lambda: "Repayment Reminder",
@@ -3370,6 +3422,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         response = self.client.post(
             reverse("loans:pawn_loan_release_partial", args=[loan.pk]),
@@ -3386,6 +3439,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         collateral = loan.collateral_items.get()
         quote = SimpleNamespace(
@@ -3473,6 +3527,7 @@ class PawnDraftUiTests(WorkspaceTestCase):
             reverse("loans:pawn_loan_create"), self._payload(license, series)
         )
         loan = PawnLoan.objects.get()
+        self._numbered_fixture(loan)
         PawnLoan.objects.filter(pk=loan.pk).update(state="ACTIVE")
         collateral = loan.collateral_items.get()
         result = SimpleNamespace(
@@ -3624,6 +3679,20 @@ class PawnDraftUiTests(WorkspaceTestCase):
         self.assertContains(page, "I confirm the source settlement")
         self.assertContains(page, "Use camera/webcam")
         self.assertContains(page, "Capture collateral photograph")
+
+    def _numbered_fixture(self, loan):
+        # View-only mocks below represent a retained, previously numbered loan.
+        # Do not forge an active state with an unnumbered preparation.
+        if loan.loan_number is None:
+            from apps.tenant_apps.loans.services.number_allocation import (
+                allocate_pawn_loan_number,
+            )
+
+            loan.loan_number = allocate_pawn_loan_number(
+                series=loan.series, actor=self.owner
+            ).value
+            loan.save(update_fields=["loan_number"])
+        return loan
 
     def _configured_setup(self):
         license = LoanLicense.objects.create(

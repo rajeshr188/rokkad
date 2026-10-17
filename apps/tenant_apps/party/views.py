@@ -107,6 +107,18 @@ def party_merge_autocomplete(request, pk):
     )
 
 
+@never_cache
+@party_action_required("edit")
+def party_relationship_autocomplete(request, pk):
+    from .widgets import PartyRelationshipAutocompleteWidget
+
+    party = get_object_or_404(Party, pk=pk, workspace=request.workspace)
+    return _party_autocomplete_response(
+        request,
+        PartyRelationshipAutocompleteWidget(from_party=party, data_url=request.path),
+    )
+
+
 def _party_detail_url(request, party, tab="overview"):
     url = reverse(
         "workspace_slug_party_detail",

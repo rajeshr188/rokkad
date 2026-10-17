@@ -33,6 +33,57 @@ from . import test_recorded_origination as origins, test_recorded_history as his
     },
 )
 class PaperEntrySimplificationTests(WorkspaceTestCase):
+    def test_dated_reference_does_not_require_economic_setup_today(self):
+        from datetime import timedelta
+        from unittest.mock import patch
+
+        today = self.day + timedelta(days=10)
+        m.PawnLoanEconomicPolicy.objects.filter(workspace=self.tenant).update(
+            effective_until=self.day
+        )
+        before = list(m.PawnLoanEconomicPolicy.objects.values())
+        with patch("django.utils.timezone.localdate", return_value=today):
+            result = paper_entry_terms(
+                workspace=self.tenant, series=self.series, day=self.day, metal="GOLD"
+            )
+        self.assertEqual(result["reference"]["basis"], "Dated setup reference")
+        self.assertEqual(
+            result["values"]["monitoring_method"], "CALCULATED_METAL_VALUE"
+        )
+        self.assertIn(
+            "original approval/appraisal is not established",
+            result["values"]["monitoring_reason"],
+        )
+        self.assertEqual(list(m.PawnLoanEconomicPolicy.objects.values()), before)
+
+    def test_missing_reference_stays_explicit_without_using_monitoring_thresholds(self):
+        from unittest.mock import patch
+        from apps.tenant_apps.loans.services.paper_entry_terms import (
+            paper_valuation_reference,
+        )
+        from apps.tenant_apps.loans.services.economic_policies import (
+            PawnEconomicPolicyError,
+        )
+
+        with patch(
+            "apps.tenant_apps.loans.services.paper_entry_terms.resolve_pawn_loan_economic_policy",
+            side_effect=PawnEconomicPolicyError("No saved configuration"),
+        ):
+            self.assertIsNone(
+                paper_valuation_reference(
+                    workspace=self.tenant, series=self.series, day=self.day
+                )
+            )
+            result = paper_entry_terms(
+                workspace=self.tenant, series=self.series, day=self.day, metal="GOLD"
+            )
+        self.assertNotIn("monitoring_ltv", result["values"])
+        self.assertNotIn("monitoring_method", result["values"])
+        self.assertIsNone(result["reference"])
+        self.assertTrue(
+            any("saved valuation fallback" in message for message in result["messages"])
+        )
+
     setup_tenant = classmethod(origins.RecordedOriginationTests.setup_tenant.__func__)
     make_snapshot = origins.RecordedOriginationTests.make_snapshot
     prepare_history = histories.RecordedHistoryTests.prepare_history
@@ -236,7 +287,7 @@ class PaperEntrySimplificationTests(WorkspaceTestCase):
             "CALCULATED_METAL_VALUE",
         )
         self.assertIn(
-            "Saved valuation fallback/reference",
+            "Dated setup reference",
             loan.disbursal_snapshot.evidence["recording"]["monitoring"]["reason"],
         )
         self.assertFalse(loan.approval_snapshots.exists())

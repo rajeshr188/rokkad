@@ -19,6 +19,25 @@ def get_pawn_loan_series_navigation(loan: PawnLoan) -> PawnLoanSeriesNavigation:
         workspace_id=loan.workspace_id,
         series_id=loan.series_id,
     )
+    if loan.loan_number is None:
+        # Unissued preparations navigate among preparations by date and stable ID.
+        drafts = series_loans.filter(loan_number__isnull=True)
+        return PawnLoanSeriesNavigation(
+            previous=drafts.filter(
+                Q(loan_date__lt=loan.loan_date)
+                | Q(loan_date=loan.loan_date, pk__lt=loan.pk)
+            )
+            .order_by("-loan_date", "-pk")
+            .first(),
+            next=drafts.filter(
+                Q(loan_date__gt=loan.loan_date)
+                | Q(loan_date=loan.loan_date, pk__gt=loan.pk)
+            )
+            .order_by("loan_date", "pk")
+            .first(),
+        )
+    # Issued register navigation never mixes unnumbered preparation rows into a book.
+    series_loans = series_loans.filter(loan_number__isnull=False)
     if loan.loan_date is None:
         return PawnLoanSeriesNavigation(
             previous=series_loans.filter(

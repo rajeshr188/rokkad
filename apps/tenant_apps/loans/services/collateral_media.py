@@ -299,7 +299,7 @@ def _label_pdf(item, qr_target):
     pdf = canvas.Canvas(buffer, pagesize=page_size)
     width, height = page_size
     pdf.setFont("Helvetica-Bold", 11)
-    pdf.drawString(6 * mm, height - 9 * mm, item.loan.loan_number)
+    pdf.drawString(6 * mm, height - 9 * mm, item.loan.display_reference)
     pdf.setFont("Helvetica", 8)
     identifier = f"CI-{str(item.public_id).replace('-', '')[:12].upper()}"
     rows = (

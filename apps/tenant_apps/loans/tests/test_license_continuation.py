@@ -352,7 +352,7 @@ class LicenseContinuationTests(OpeningImportFixture):
                 ),
                 actor=self.actor,
             )
-            self.assertEqual(draft.loan_number, "C00521")
+            self.assertIsNone(draft.loan_number)
             self.assertEqual(draft.series_id, self.legacy_series.pk)
             self.assertEqual(
                 draft.license_revision_id,
@@ -366,6 +366,8 @@ class LicenseContinuationTests(OpeningImportFixture):
                 actor=self.actor,
             )
             approve_pawn_loan(draft.pk, actor=self.actor)
+            draft.refresh_from_db()
+            self.assertEqual(draft.loan_number, "C00521")
             result = disburse_pawn_loan(
                 draft.pk, effective_date=draft.loan_date, actor=self.actor
             )

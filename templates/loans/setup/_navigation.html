@@ -6,7 +6,7 @@
   {% if 'workspace.transfer' in workflow_actions %}<a {% url 'workspace_loans:loan_workflow_settings' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Workflow</a>{% endif %}
   <a {% url 'workspace_slug_settings_numbering' workspace_slug=request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Lending setup</a>
   <a  {% url 'workspace_loans:license_list' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}#license-register">Licenses &amp; numbering</a>
-  <a  {% url 'workspace_loans:pawn_economics_setup' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Interest &amp; fees</a>
+  <a  {% url 'workspace_loans:pawn_economics_setup' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Business lending terms</a>
   <a {% url 'workspace_loans:origination_settings' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Loan entry</a>
   <a  {% url 'workspace_loans:loan_product_list' request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Loan products</a>
   {% if request.workspace.owner_id == request.user.pk %}<a {% url 'workspace_portability:loan_upload' workspace_slug=request.workspace.slug as setup_target %}href="{% setup_url setup_target %}">Import Loans</a>{% endif %}

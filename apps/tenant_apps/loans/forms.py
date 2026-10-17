@@ -183,8 +183,8 @@ class PawnDraftForm(forms.Form):
                     "tenure_months": instance.tenure_months,
                 }
             )
-            self.fields["series"].disabled = True
-            self.fields["product_version"].disabled = True
+            self.fields["series"].disabled = instance.loan_number is not None
+            self.fields["product_version"].disabled = instance.loan_number is not None
         elif not self.is_bound:
             self._select_single_options()
         for field in self.fields.values():

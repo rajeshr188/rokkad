@@ -2,7 +2,7 @@
 {% load loans_display %}
 {% block title %}Correct agreement details{% endblock %}
 {% block workspace_content %}
-<div class="container py-3" style="max-width:1000px;overflow-wrap:anywhere"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.loan_number }}</a>
+<div class="container py-3" style="max-width:1000px;overflow-wrap:anywhere"><a href="{% url 'workspace_loans:pawn_loan_detail' request.workspace.slug loan.pk %}">Back to loan {{ loan.display_reference }}</a>
 <h1 class="h3 mt-3">Correct agreement details</h1>
 <p>Correct a transcription error in the original date, principal or rate. Rokkad retains the previous contract and recalculates existing receipts. This records no new payout, collection or jewellery movement.</p>
 {% include "loans/pawn/_correction_next_steps.html" %}

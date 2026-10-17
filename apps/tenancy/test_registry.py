@@ -10,7 +10,7 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
     def test_registry_accounts_for_every_surviving_business_model(self):
         models = workspace_owned_models()
 
-        self.assertEqual(len(models), 155)
+        self.assertEqual(len(models), 156)
         self.assertEqual(
             {model._meta.app_label for model in models},
             {
@@ -34,7 +34,7 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
     def test_rls_rollout_registry_covers_every_surviving_model(self):
         labels = {model._meta.label_lower for model in rls_protected_models()}
 
-        self.assertEqual(len(labels), 155)
+        self.assertEqual(len(labels), 156)
         self.assertIn("platform_whatsapp.attempt", labels)
         self.assertIn("platform_whatsapp.receiptlink", labels)
         self.assertIn("platform_whatsapp.setuprequest", labels)
@@ -49,6 +49,7 @@ class WorkspaceModelRegistryTests(SimpleTestCase):
         self.assertIn("loans.khataseriesstatuschange", labels)
         self.assertIn("orgs.workspacestorageusage", labels)
         self.assertIn("loans.loanoriginationsettings", labels)
+        self.assertIn("loans.loanentrypreference", labels)
         self.assertEqual(
             {label.split(".", 1)[0] for label in labels},
             {

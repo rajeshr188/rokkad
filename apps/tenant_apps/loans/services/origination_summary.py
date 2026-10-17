@@ -220,7 +220,7 @@ def native_origination_summary(loan, economics, *, historical_context=None):
     return dict(
         customer=loan.borrower,
         series=loan.series,
-        number=loan.loan_number,
+        number=loan.display_reference,
         product=loan.product_version,
         calculation_terms=rules,
         term_sources=sources,

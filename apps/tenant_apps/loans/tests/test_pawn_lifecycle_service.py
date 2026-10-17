@@ -184,26 +184,28 @@ class PawnLifecycleServiceTests(WorkspaceTestCase):
             reopen_pawn_loan(self.loan.pk, reason="Not allowed", actor=self.actor)
         self.assertEqual(self.loan.change_log.count(), 3)
 
-    def test_expired_setup_transfer_allocates_new_number_and_requires_reapproval(self):
+    def test_expired_numbered_setup_requires_linked_replacement_without_renumbering(
+        self,
+    ):
         approve_pawn_loan(self.loan.pk, actor=self.actor)
         reopen_pawn_loan(self.loan.pk, reason="License expired", actor=self.actor)
+        self.loan.refresh_from_db()
+        original = self.loan.loan_number
         self.license.is_active = False
         self.license.save(update_fields=["is_active"])
         replacement_license, replacement_series = self._setup("B", "PL-B-")
-
-        transfer_expired_draft_setup(
-            self.loan.pk,
-            license_id=replacement_license.pk,
-            series_id=replacement_series.pk,
-            reason="Move to replacement license",
-            actor=self.actor,
-        )
+        with self.assertRaisesMessage(PawnLifecycleError, "linked draft replacement"):
+            transfer_expired_draft_setup(
+                self.loan.pk,
+                license_id=replacement_license.pk,
+                series_id=replacement_series.pk,
+                reason="Move to replacement license",
+                actor=self.actor,
+            )
         self.loan.refresh_from_db()
-        self.assertEqual(self.loan.state, PawnLoanState.DRAFT.value)
-        self.assertEqual(self.loan.loan_number, "PL-B-00001")
+        self.assertEqual(self.loan.loan_number, original)
+        self.assertEqual(self.loan.series_id, self.series.pk)
         self.assertEqual(self.loan.approval_snapshots.count(), 1)
-        approve_pawn_loan(self.loan.pk, actor=self.actor)
-        self.assertEqual(self.loan.approval_snapshots.count(), 2)
 
     def _setup(self, code, prefix):
         license = LoanLicense.objects.create(

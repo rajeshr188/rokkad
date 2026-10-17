@@ -163,8 +163,7 @@ class ClosedPositionBatchTests(RecordedOriginationTests):
         self,
     ):
         manifest, token = self.review_batch()
-        loan = self.make_snapshot(save=False).loan
-        m.PawnLoan.objects.filter(pk=loan.pk).update(loan_number="p-0011")
+        self.make_snapshot(save=False, number="p-0011")
         with self.assertRaises(ValueError):
             self.apply_batch(manifest, token)
         self.assertFalse(

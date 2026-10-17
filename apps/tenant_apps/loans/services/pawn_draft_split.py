@@ -7,19 +7,16 @@ from apps.orgs.models import Company
 
 from .action_access import require_loan_action
 from apps.tenant_apps.loans.domain import (
-    LoanDocumentKind,
     PawnLoanEventKind,
     PawnLoanState,
 )
 from apps.tenant_apps.loans.models import (
     LoanChangeLog,
-    LoanNumberSequence,
     LoanProductVersion,
     LoanSeries,
     PawnLoan,
     current_tenant_workspace_id,
 )
-from apps.tenant_apps.loans.services.number_allocation import preview_numbers
 from apps.tenant_apps.loans.services.license_series import assert_series_can_issue
 from apps.tenant_apps.loans.services.pawn_drafts import (
     CollateralDraftInput,
@@ -134,9 +131,8 @@ def preview_pawn_draft_split(
         collateral=tuple(_input(item) for item in remaining),
     )
     groups = tuple((item,) for item in selected) if split_each else (selected,)
-    numbers = preview_numbers(
-        series=series, document_kind=LoanDocumentKind.PAWN_LOAN, count=len(groups)
-    )
+    # Preparations do not reserve or promise official numbers.
+    assert_series_can_issue(series)
     new_drafts = tuple(
         PawnDraftSplitRow(
             items=group,
@@ -147,9 +143,9 @@ def preview_pawn_draft_split(
                 as_of_date=loan_date,
                 collateral=tuple(_input(item) for item in group),
             ),
-            number_preview=number.value,
+            number_preview="Assigned at approval",
         )
-        for group, number in zip(groups, numbers, strict=True)
+        for group in groups
     )
     original_economics = resolve_pawn_draft_economics(
         workspace_id=workspace_id,
@@ -284,17 +280,12 @@ def split_pawn_draft(
             }
             result = tuple(loans[pk] for pk in details["new_loan_ids"])
             return result if split_each else result[0]
-    # Hold the destination sequence through preview and all allocations.
+    # Lock setup and items; preparations do not allocate numbers.
     if series.workspace_id != workspace_id:
         raise PawnDraftSplitError(
             "The destination Series must belong to this workspace."
         )
     assert_series_can_issue(series, for_update=True)
-    list(
-        LoanNumberSequence.objects.select_for_update().filter(
-            series=series, document_kind=LoanDocumentKind.PAWN_LOAN.value
-        )
-    )
     list(source.collateral_items.select_for_update().order_by("pk"))
     preview = preview_pawn_draft_split(
         source.pk,

@@ -87,7 +87,7 @@ def allocate_number(
 
 
 def allocate_pawn_loan_number(*, series: LoanSeries, actor=None) -> NumberAllocation:
-    """The draft service uses this at draft creation, never at approval."""
+    """Assign an official identity at approval; retain the existing locked allocator."""
     return allocate_number(
         series=series,
         document_kind=LoanDocumentKind.PAWN_LOAN,

@@ -37,11 +37,13 @@ PROFILE = "rokkad-business-package/1"
 GRAPH_PROFILE = "rokkad-business-package/2"
 MONITORING_PROFILE = "rokkad-business-package/3"
 LIFECYCLE_PROFILE = "rokkad-business-package/4"
+ENTRY_PROFILE = "rokkad-business-package/5"
 SETUP_VERSIONS = {
     PROFILE: 1,
     GRAPH_PROFILE: 2,
     MONITORING_PROFILE: 3,
     LIFECYCLE_PROFILE: 4,
+    ENTRY_PROFILE: 5,
 }
 PROFILES = set(SETUP_VERSIONS)
 SALT = "fresh-business-package-review-v1"
@@ -196,7 +198,8 @@ def write_package(*, workspace_id, actor, directory, _consistent_snapshot=False)
             (root / "media" / checksum).write_bytes(data)
         return files[checksum]
 
-    lifecycle = setup.needs_version_four(workspace_id)
+    entry_preferences = setup.needs_version_five(workspace_id)
+    lifecycle = entry_preferences or setup.needs_version_four(workspace_id)
     monitoring = lifecycle or setup.needs_version_three(workspace_id)
     graph = (
         monitoring
@@ -207,9 +210,17 @@ def write_package(*, workspace_id, actor, directory, _consistent_snapshot=False)
         )
     )
     profile = (
-        LIFECYCLE_PROFILE
-        if lifecycle
-        else MONITORING_PROFILE if monitoring else GRAPH_PROFILE if graph else PROFILE
+        ENTRY_PROFILE
+        if entry_preferences
+        else (
+            LIFECYCLE_PROFILE
+            if lifecycle
+            else (
+                MONITORING_PROFILE
+                if monitoring
+                else GRAPH_PROFILE if graph else PROFILE
+            )
+        )
     )
     tables = setup.export_setup(
         workspace_id=workspace_id,

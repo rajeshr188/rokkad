@@ -26,9 +26,6 @@ from apps.tenant_apps.loans.models import (
     current_tenant_workspace_id,
 )
 from apps.tenant_apps.loans.services.license_series import assert_series_can_issue
-from apps.tenant_apps.loans.services.number_allocation import (
-    allocate_pawn_loan_number,
-)
 from apps.tenant_apps.loans.services.collateral_media import (
     _append_collateral_photo,
     validate_collateral_photo,
@@ -82,6 +79,8 @@ class UpdatePawnDraftCommand:
     loan_date: date
     tenure_months: int
     collateral: tuple[CollateralDraftInput, ...]
+    series_id: int | None = None
+    product_version_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -222,7 +221,7 @@ def _create_pawn_draft(
         series=series,
         borrower=borrower,
         product_version=product_version,
-        loan_number="PENDING-ALLOCATION",
+        loan_number=None,
         state=PawnLoanState.DRAFT.value,
         principal_amount=principal_amount,
         monthly_interest_rate=monthly_interest_rate,
@@ -234,8 +233,6 @@ def _create_pawn_draft(
     loan.full_clean(exclude={"loan_number"})
     collateral = _validated_collateral(loan, command.collateral, resolved=resolved)
 
-    allocation = allocate_pawn_loan_number(series=series, actor=actor)
-    loan.loan_number = allocation.value
     loan.full_clean()
     loan.save()
     for item in collateral:
@@ -248,7 +245,7 @@ def _create_pawn_draft(
         actor=actor,
         metadata={
             "loan_number": loan.loan_number,
-            "sequence_id": allocation.sequence_id,
+            "numbering": "AT_APPROVAL",
             "collateral_count": len(collateral),
             "draft": _draft_snapshot(loan, collateral),
         },
@@ -275,6 +272,36 @@ def update_pawn_draft(
     if loan.state != PawnLoanState.DRAFT.value:
         raise PawnDraftError("Only a draft PawnLoan can be edited.")
 
+    series_id = command.series_id if command.series_id is not None else loan.series_id
+    product_id = (
+        command.product_version_id
+        if command.product_version_id is not None
+        else loan.product_version_id
+    )
+    scope_changed = (series_id, product_id) != (loan.series_id, loan.product_version_id)
+    if scope_changed and loan.loan_number is not None:
+        raise PawnDraftError(
+            "An issued number keeps its register and product. Use the linked draft replacement."
+        )
+    before = _draft_snapshot(loan, tuple(loan.collateral_items.all()))
+    if scope_changed:
+        _require_unconnected_preparation(loan)
+        try:
+            series = LoanSeries.objects.select_related("license").get(
+                pk=series_id, workspace_id=workspace_id
+            )
+        except LoanSeries.DoesNotExist as exc:
+            raise PawnDraftError("Series must belong to the active workspace.") from exc
+        assert_series_can_issue(series)
+        loan.series = series
+        loan.license = series.license
+        loan.license_revision = series.license.revisions.order_by(
+            "-revision_number"
+        ).first()
+    # Date and tenure edits must also obey the selected product's availability.
+    loan.product_version = _active_product_version(
+        workspace_id, product_id, command.loan_date, command.tenure_months
+    )
     borrower = _active_party(command.borrower_id)
     _require_interest_override_access(
         loan.workspace, actor, command.collateral, loan.collateral_items.all()
@@ -307,7 +334,6 @@ def update_pawn_draft(
     candidate._state.adding = False
     candidate.full_clean()
     collateral = _validated_collateral(candidate, command.collateral, resolved=resolved)
-    before = _draft_snapshot(loan, tuple(loan.collateral_items.all()))
 
     loan.borrower = borrower
     loan.principal_amount = principal_amount
@@ -317,6 +343,10 @@ def update_pawn_draft(
     loan.updated_by = actor
     loan.save(
         update_fields=[
+            "license",
+            "license_revision",
+            "series",
+            "product_version",
             "borrower",
             "principal_amount",
             "monthly_interest_rate",
@@ -377,6 +407,31 @@ def update_pawn_draft(
         metadata={"before": before, "after": after},
     )
     return loan
+
+
+def _require_unconnected_preparation(loan):
+    from apps.tenant_apps.loans import models as m
+
+    if (
+        loan.approval_snapshots.exists()
+        or loan.loan_events.exists()
+        or m.PawnLoanRenewal.objects.filter(source_loan=loan).exists()
+        or m.PawnLoanRenewal.objects.filter(successor_loan=loan).exists()
+        or m.FundingLoanDraftCollateral.objects.filter(
+            collateral_item__loan=loan
+        ).exists()
+        or m.FundingPledgeItem.objects.filter(collateral_item__loan=loan).exists()
+        or loan.collateral_items.exclude(custody_state="IN_VAULT").exists()
+        or m.PawnCollateralStorageMovement.objects.filter(
+            collateral_item__loan=loan
+        ).exists()
+        or m.PawnCollateralCustodyEvent.objects.filter(
+            collateral_item__loan=loan
+        ).exists()
+    ):
+        raise PawnDraftError(
+            "Connected approval, funding or custody evidence requires its supported recovery workflow."
+        )
 
 
 def _delete_draft_collateral(item):
@@ -530,6 +585,8 @@ def _draft_snapshot(loan, collateral):
         "borrower_id": loan.borrower_id,
         "license_id": loan.license_id,
         "license_revision_id": loan.license_revision_id,
+        "series_id": loan.series_id,
+        "product_version_id": loan.product_version_id,
         "principal_amount": str(loan.principal_amount),
         "monthly_interest_rate": str(loan.monthly_interest_rate),
         "loan_date": loan.loan_date.isoformat(),

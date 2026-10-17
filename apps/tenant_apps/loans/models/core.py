@@ -684,7 +684,7 @@ class PawnLoan(models.Model):
         on_delete=models.PROTECT,
         related_name="pawn_loans",
     )
-    loan_number = models.CharField(max_length=64)
+    loan_number = models.CharField(max_length=64, null=True, blank=True, default=None)
     state = models.CharField(
         max_length=16,
         choices=enum_choices(PawnLoanState),
@@ -728,6 +728,11 @@ class PawnLoan(models.Model):
             models.UniqueConstraint(
                 fields=("workspace", "loan_number"),
                 name="loans_pawn_workspace_number_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(loan_number__isnull=True, state__in=("DRAFT", "CANCELLED"))
+                | (Q(loan_number__isnull=False) & ~Q(loan_number="")),
+                name="loans_pawn_number_stage",
             ),
             models.CheckConstraint(
                 condition=Q(principal_amount__gt=0),
@@ -838,15 +843,20 @@ class PawnLoan(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            original_product_version_id = (
+            original = (
                 type(self)
                 .objects.filter(pk=self.pk)
-                .values_list("product_version_id", flat=True)
+                .values("product_version_id", "loan_number", "state")
                 .first()
             )
             if (
-                original_product_version_id is not None
-                and self.product_version_id != original_product_version_id
+                original
+                and original["product_version_id"] is not None
+                and self.product_version_id != original["product_version_id"]
+                and not (
+                    original["loan_number"] is None
+                    and original["state"] == self.state == "DRAFT"
+                )
             ):
                 raise ValidationError(
                     {"product_version": "A loan's product version is immutable."}
@@ -854,8 +864,12 @@ class PawnLoan(models.Model):
         self.clean()
         return super().save(*args, **kwargs)
 
+    @property
+    def display_reference(self):
+        return self.loan_number or (f"Draft #{self.pk}" if self.pk else "Unsaved draft")
+
     def __str__(self):
-        return self.loan_number
+        return self.display_reference
 
 
 class PawnCollateralItem(WorkspaceOwnedModel):

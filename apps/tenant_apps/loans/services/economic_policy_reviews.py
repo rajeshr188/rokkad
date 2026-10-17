@@ -19,6 +19,8 @@ from .action_access import require_setup_administration
 from .economic_policies import (
     create_pawn_economic_configuration,
     create_pawn_series_interest_rates,
+    create_pawn_loan_economic_policy,
+    create_pawn_metal_interest_rate_policy,
     resolve_pawn_loan_economic_policy,
     resolve_pawn_metal_interest_rate_policy,
     PawnEconomicPolicyError,
@@ -74,7 +76,7 @@ def _values(values):
     }
 
 
-def _state(workspace):
+def _state(workspace, *, include_entry=True):
     return _digest(
         {
             model.__name__: list(
@@ -87,6 +89,7 @@ def _state(workspace):
                 m.LoanLicense,
                 m.LoanSeries,
             )
+            + ((m.LoanEntryPreference,) if include_entry else ())
         }
     )
 
@@ -129,9 +132,35 @@ def _candidate(model, *, workspace, actor, license, series, day, **fields):
     return row
 
 
+def _amended_policy(workspace, values):
+    license, series = _scope(workspace, values)
+    before = resolve_pawn_loan_economic_policy(
+        workspace_id=workspace.pk,
+        license_id=license.pk if license else None,
+        series_id=series.pk if series else None,
+        as_of_date=values["effective_from"],
+    )
+    allowed = {"default_tenure_months", "advance_interest_periods"}
+    changes = {key: values[key] for key in allowed if values.get(key) is not None}
+    if not changes:
+        raise ValueError("Enter a tenure or upfront-interest change.")
+    unexpected = set(values) - allowed - {"license", "series", "effective_from"}
+    if unexpected:
+        raise ValueError("Choose only the supported agreement terms for this action.")
+    return (
+        {key: getattr(before, key) for key in POLICY_REVIEW_FIELDS}
+        | changes
+        | {
+            "license": license,
+            "series": series,
+            "effective_from": values["effective_from"],
+        }
+    )
+
+
 def preview_economic_change(*, workspace, actor, kind, values):
     _authorize(workspace, actor)
-    if kind not in {"configuration", "series_rates"}:
+    if kind not in {"configuration", "series_rates", "rates", "terms", "entry"}:
         raise ValueError("Choose a supported configuration change.")
     license, series = _scope(workspace, values)
     if kind == "series_rates" and series is None:
@@ -147,12 +176,22 @@ def preview_economic_change(*, workspace, actor, kind, values):
         as_of_date=day,
     )
     changes = []
-    if not any(values.get(field) is not None for field in RATE_FIELDS):
+    if kind == "rates" and set(values) - {
+        *RATE_FIELDS,
+        "license",
+        "series",
+        "effective_from",
+    }:
+        raise ValueError("Choose only monthly rates for this action.")
+    policy_values = _amended_policy(workspace, values) if kind == "terms" else values
+    if kind in {"configuration", "series_rates", "rates"} and not any(
+        values.get(field) is not None for field in RATE_FIELDS
+    ):
         raise ValueError("Enter at least one metal rate for the review.")
-    if kind == "configuration":
+    if kind in {"configuration", "terms"}:
         fields = {
             key: value
-            for key, value in values.items()
+            for key, value in policy_values.items()
             if key not in {*RATE_FIELDS, "license", "series", "effective_from"}
         }
         fields["default_entry_purpose"] = (
@@ -183,6 +222,39 @@ def preview_economic_change(*, workspace, actor, kind, values):
                         after=str(new),
                     )
                 )
+    if kind == "entry":
+        if day != timezone.localdate() or set(values) - {
+            "license",
+            "series",
+            "effective_from",
+            "purpose",
+        }:
+            raise ValueError(
+                "Entry preferences apply now and change only the screen default."
+            )
+        candidate_entry = m.LoanEntryPreference(
+            workspace=workspace,
+            license=license,
+            series=series,
+            purpose=values.get("purpose"),
+            updated_by=actor,
+        )
+        # The current scope may already have a row; uniqueness is enforced on save.
+        candidate_entry.full_clean(validate_unique=False, validate_constraints=False)
+        from .entry_purpose import new_loan_entry_purpose as default_entry_purpose
+
+        previous = default_entry_purpose(
+            workspace=workspace,
+            license_id=license.pk if license else None,
+            series_id=series.pk if series else None,
+        )
+        changes.append(
+            dict(
+                field="Default New loan screen",
+                before=previous,
+                after=values["purpose"],
+            )
+        )
     for field, metal in RATE_FIELDS.items():
         value = values.get(field)
         if value is None:
@@ -242,7 +314,9 @@ def preview_economic_change(*, workspace, actor, kind, values):
                     if values.get(field) is not None
                 ]
             )
-        elif kind == "series_rates":
+        elif kind in {"series_rates", "rates", "entry"}:
+            continue
+        if kind == "entry":
             continue
         for row in rows.select_related("license", "series").order_by("pk")[:21]:
             shadowing.append(
@@ -267,7 +341,7 @@ def preview_economic_change(*, workspace, actor, kind, values):
                 )
             }
         )
-        if kind == "configuration"
+        if kind in {"configuration", "terms"}
         else []
     )
     review = dict(
@@ -284,9 +358,12 @@ def preview_economic_change(*, workspace, actor, kind, values):
         drafts=loans.filter(state="DRAFT").count(),
         saved=loans.exclude(state__in=("DRAFT", "CANCELLED")).count(),
         warnings=warnings,
-        full_override=kind == "configuration" and license is not None,
+        full_override=kind in {"configuration", "terms"} and license is not None,
+        entry_preference=kind == "entry",
         current_source=(
-            policy_source(before) if kind == "configuration" and before else None
+            policy_source(before)
+            if kind in {"configuration", "terms"} and before
+            else None
         ),
         proposed_terms=(
             [
@@ -297,7 +374,7 @@ def preview_economic_change(*, workspace, actor, kind, values):
                 )
                 if row[0] != "Capability limits"
             ]
-            if kind == "configuration"
+            if kind in {"configuration", "terms"}
             else []
         ),
     )
@@ -308,6 +385,7 @@ def preview_economic_change(*, workspace, actor, kind, values):
             kind=kind,
             values=_values(values),
             state=_state(workspace),
+            state_version=2,
             date=timezone.localdate().isoformat(),
         ),
         salt=SALT,
@@ -352,8 +430,13 @@ def confirm_economic_change(
     except signing.BadSignature as exc:
         raise ValueError("Review expired. Preview the change again.") from exc
     if (
-        signed.get("state") != _state(workspace)
+        signed.get("state")
+        != _state(workspace, include_entry=signed.get("state_version") == 2)
         or signed.get("date") != timezone.localdate().isoformat()
+        or (
+            signed.get("state_version") != 2
+            and m.LoanEntryPreference.objects.filter(workspace=workspace).exists()
+        )
     ):
         raise ValueError(
             "Setup changed since review. Preview the current scope and terms again."
@@ -375,11 +458,61 @@ def confirm_economic_change(
             )
             if row is not None
         ]
-    else:
+    elif kind == "series_rates":
         result = create_pawn_series_interest_rates(
             workspace=workspace, actor=actor, **values
         )
         ids = [row.pk for row in result]
+    elif kind == "rates":
+        license, series = _scope(workspace, values)
+        ids = [
+            create_pawn_metal_interest_rate_policy(
+                workspace=workspace,
+                actor=actor,
+                license=license,
+                series=series,
+                metal=metal,
+                monthly_interest_rate=values[field],
+                effective_from=values["effective_from"],
+            ).pk
+            for field, metal in RATE_FIELDS.items()
+            if values.get(field) is not None
+        ]
+    elif kind == "terms":
+        result = create_pawn_loan_economic_policy(
+            workspace=workspace, actor=actor, **_amended_policy(workspace, values)
+        )
+        ids = [result.pk]
+    else:
+        license, series = _scope(workspace, values)
+        old = (
+            m.LoanEntryPreference.objects.filter(
+                workspace=workspace, license=license, series=series
+            )
+            .values("purpose")
+            .first()
+        )
+        row, _ = m.LoanEntryPreference.objects.update_or_create(
+            workspace=workspace,
+            license=license,
+            series=series,
+            defaults={"purpose": values["purpose"], "updated_by": actor},
+        )
+        ids = [row.pk]
+        PreferenceAuditLog.objects.create(
+            scope="workspace",
+            workspace=workspace,
+            key="loans.entry.default",
+            changed_by=actor,
+            old_value=json.dumps(old),
+            new_value=json.dumps(
+                dict(
+                    license_id=license.pk if license else None,
+                    series_id=series.pk if series else None,
+                    purpose=row.purpose,
+                )
+            ),
+        )
     PreferenceAuditLog.objects.create(
         scope="workspace",
         workspace=workspace,

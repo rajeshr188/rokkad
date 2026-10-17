@@ -130,8 +130,8 @@ def export_loan_directory(*, workspace, loan_filter, as_of_date):
             if balance:
                 totals = [total + value for total, value in zip(totals, amounts)]
             values = (
-                "Loan",
-                loan.loan_number,
+                "Preparation" if loan.loan_number is None else "Loan",
+                loan.display_reference,
                 loan.borrower.display_name,
                 loan.borrower.party_code,
                 loan.license.license_number,

@@ -595,7 +595,13 @@ class NumberAllocationConcurrencyTests(TransactionTestCase):
             self.assertEqual(PawnLoan.objects.filter(borrower=borrower).count(), 3)
             self.assertEqual(
                 self.series.number_sequences.get(document_kind="PAWN_LOAN").next_number,
-                4,
+                1,
+            )
+            self.assertEqual(
+                PawnLoan.objects.filter(
+                    borrower=borrower, loan_number__isnull=True
+                ).count(),
+                3,
             )
             # This class intentionally skips database flush. Remove only this
             # test's unpaid fixture graph so --keepdb cannot leak draft rows

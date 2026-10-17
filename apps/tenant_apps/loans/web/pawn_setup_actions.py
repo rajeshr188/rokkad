@@ -21,6 +21,19 @@ from apps.tenant_apps.loans.web.pawn_read_helpers import (
 @loans_action_required("data.edit")
 def pawn_loan_transfer_setup(request, pk):
     loan = _pawn_loan_for_workspace(request, pk)
+    if loan.state == "DRAFT":
+        destination = (
+            "pawn_loan_replace_draft" if loan.loan_number else "pawn_loan_update"
+        )
+        messages.info(
+            request,
+            "Review the draft under the correct register. Any issued number stays in its original history.",
+        )
+        return redirect(
+            "workspace_loans:" + destination,
+            pk=loan.pk,
+            workspace_slug=request.workspace.slug,
+        )
     form = PawnSetupTransferForm(
         request.POST or None, workspace=request.loans_workspace
     )

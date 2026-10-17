@@ -103,6 +103,7 @@ MODEL_NAMES = (
     "PawnReleaseBatchLine",
     "PaperClosureTransition",
     "LoanOriginationSettings",
+    "LoanEntryPreference",
     "HistoricalLoanImport",
     "PledgeBook",
     "PledgeBookReview",

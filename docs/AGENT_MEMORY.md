@@ -44,6 +44,13 @@ unknown handover custody and existing evidence/retry contracts. See the
 The owner explicitly left JSK WH02306 unchanged after the diagnostic review;
 workflow work is not authorization to correct its recorded release.
 
+The release navigation has one Releases destination: complete per-loan history,
+secondary grouped submissions and contextual closing help. Groups are retained
+submission evidence, not complete release history. Closing selection searches
+active loans with outstanding collateral; relationship selection searches Parties
+under its own edit permission and source/Workspace-bound token. Reuse the existing
+Select2/Party search patterns rather than introducing another selector framework.
+
 Direct, earlier-paper and supported imported/opening loans share PawnLoan
 servicing capabilities. Entry method describes source evidence; it must not
 invent a separate later lifecycle. Number reservations and historical ranges
@@ -61,8 +68,9 @@ different evidence/dependency gates. Never substitute a raw model update.
 
 The [origination review/recovery decision](adr/2026-10-17-origination-review-and-safe-recovery.md)
 keeps standing setup, frozen agreements and monitoring separate. Unposted mistaken
-register/product recovery creates a new numbered draft and explicitly cancels/links
-the old one; it preserves item/photo identity and cannot move a posted agreement.
+register/product recovery for an issued draft explicitly cancels/links the old
+identity to an unnumbered replacement, preserving item/photo identity. New
+unnumbered preparations correct scope normally; no posted agreement can move.
 Portable preparation references remain source-local evidence. The owner confirms
 all current paper agreements use full monthly interest; do not invent a weekly
 paper agreement or silently replace a different saved rule. See the
@@ -90,6 +98,29 @@ Loans graphs; supported admission/restore services enforce their own gates.
 Historical evidence-only archives do not imply an operational loan. Restored
 closed positions must not invent opening grace or financial events. See
 [portability constraints](domain/loans-portability-constraints.md).
+
+The approved [business lending terms change](implementation/business-lending-terms-20261017.md)
+uses the existing policy resolvers and narrow rate/tenure/upfront-interest actions.
+Independent New loan screen defaults use LoanEntryPreference with scoped legacy
+fallback; they do not append financial policies or select repayment/closing mode.
+The retained policy-default reader preserves existing repayment form behaviour.
+New preferences need setup/package profile 5 and the Loans 0093/data_portability
+0032 boundary; old published profiles remain unchanged. The owner approved
+[approval numbering](adr/2026-10-17-loan-number-at-approval.md) after confirming
+numbers are used externally only after payout. The local Loans 0094 implementation
+keeps new drafts unnumbered (`Draft #<id>`); first approval issues the permanent
+number, retained on reopen/cancel. SIMPLE combines this with payout. EXTENDED
+numbers at approval. Original-number claims and existing numbered drafts retain
+their identity. Completed-payout admission can review/claim a number for an
+unnumbered preparation without inventing a prospective approval. Drafts cannot print
+loan tickets or draft PDF previews; approval enables tickets with the permanent
+number, even before payout. Exact recovery must match the schema/guard boundary.
+
+Paper entry now prefers a known dated setup reference; it need not recreate
+economic setup today merely to retain that reference. Current setup remains an
+explicit compatibility fallback, and missing references remain unknown/explicit.
+Current monitoring resolves independently; do not manufacture a historical
+appraisal or reference limit from monitoring thresholds.
 
 ## Monitoring and valuation
 
