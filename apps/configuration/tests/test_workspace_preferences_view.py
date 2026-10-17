@@ -60,7 +60,7 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
         with self.assertRaises(Resolver404):
             resolve("/dynamic_preferences/global/")
 
-    def test_data_reader_can_find_archive_and_reports_without_settings(self):
+    def test_data_reader_can_find_releases_and_reports_without_settings(self):
         request = self.request()
         request.path = "/w/acme/"
         request.resolver_match = SimpleNamespace(url_name="workspace_slug_dashboard")
@@ -68,8 +68,11 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
             "components/navigation/sidebar.html",
             {"request": request, "user_permissions": {"data.view"}},
         )
-        self.assertIn("Completed closures", html)
-        self.assertIn("/w/acme/loans/releases/paper/guide/", html)
+        self.assertIn("Releases", html)
+        self.assertEqual(html.count('href="/w/acme/loans/releases/"'), 1)
+        self.assertNotIn("Completed closures", html)
+        self.assertNotIn("/loans/releases/paper/guide/", html)
+        self.assertNotIn("Release batches", html)
         self.assertIn("Reports", html)
         self.assertNotIn("workspace-settings-nav", html)
         self.assertNotIn("Preferences", html)
@@ -80,6 +83,7 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
             "components/navigation/sidebar.html",
             {"request": request, "user_permissions": set()},
         )
+        self.assertNotIn("/loans/releases/", html)
         self.assertNotIn("Completed closures", html)
         self.assertNotIn("/loans/releases/paper/guide/", html)
         self.assertNotIn("Release batches", html)

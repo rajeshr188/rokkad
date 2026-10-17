@@ -46,3 +46,16 @@ credentials; its database and scratch artifacts are excluded from the release.
 
 Release source, exact CI, production preflight, recovery, backup, migration and
 promotion results will be recorded here as they are verified.
+
+The initial candidate is `ce1b14fe` (formatting baseline `80c2712b`). Its Linux
+boundary suite found one stale sidebar assertion for Completed closures. The
+follow-up checks one Releases destination and continued data-view authorization;
+all five local preference/navigation tests pass. Formatting is separate again.
+
+The schema-only production rehearsal identified a legacy ownership mismatch:
+`public.portability_business_package_guard()` belongs to the bootstrap role,
+whereas ordinary production migrations use `rokkad_prod_owner`. Promotion must
+align this one invoker-security function with the existing migration owner and
+verify that ownership alignment alone preserves its definition. Application
+runtime authority is unchanged. The rehearsal uses schema and migration metadata
+only, with zero customer rows, and checks upgrade/reverse/re-upgrade before release.
