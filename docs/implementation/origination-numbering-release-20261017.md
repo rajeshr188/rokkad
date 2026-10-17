@@ -59,3 +59,10 @@ align this one invoker-security function with the existing migration owner and
 verify that ownership alignment alone preserves its definition. Application
 runtime authority is unchanged. The rehearsal uses schema and migration metadata
 only, with zero customer rows, and checks upgrade/reverse/re-upgrade before release.
+
+The exact-source `b8bad4dd` CI run completed 2,813 Loans tests with one stale
+assertion: the owner preflight expected a composite foreign-key error when moving
+a parent loan between Workspaces. Loans 0094 now rejects that move earlier through
+the stronger parent-identity trigger. The assertion follows that guard; independent
+adversarial tests still exercise the composite references. No application or
+migration behavior was relaxed. A new complete exact-source run is required.

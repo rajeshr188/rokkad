@@ -16,6 +16,9 @@ rehearsal, the existing approved encrypted backup job and a coordinated reader
 switch are release gates. See the
 [release record](implementation/origination-numbering-release-20261017.md).
 Unrelated source work and production customer agreements remain preserved.
+The first full Linux Loans run completed 2,813 tests with one stale error
+assertion; the parent-identity guard correctly rejects the forbidden move earlier.
+The assertion is being reconciled and full CI repeated before promotion.
 
 ## Local implementation: approval numbering and remaining origination simplification
 

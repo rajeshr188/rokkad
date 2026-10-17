@@ -433,7 +433,7 @@ class RiskEvidenceDatabaseTests(TransactionTestCase):
                 lambda: m.PawnLoan.objects.filter(pk=loan.pk).update(
                     workspace=self.foreign
                 ),
-                constraint="loans_risk_snapshot_loan_scope_fk",
+                message="Loan identity cannot move Workspaces",
             )
             before = list(m.LoanRiskEvent.objects.order_by("pk").values())
         output = StringIO()
