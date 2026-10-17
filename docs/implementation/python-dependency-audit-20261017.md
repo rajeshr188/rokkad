@@ -27,10 +27,22 @@ must pass before release acceptance. Review manifests/results remain ignored
 under `.tmp/dependency-review-20261017/`.
 
 The owner requested an installed-package usage/update review, synchronized
-requirements and an assessment of uv, Black and other linters. This is local
-source/environment work. The verified [production release](counter-release-20261016.md)
-remains unchanged. [Machine-readable evidence](python-dependency-audit-20261017.inventory.json)
+requirements and an assessment of uv, Black and other linters. The audit starts
+as local source/environment work, preserving the then-current
+[production release](counter-release-20261016.md).
+[Machine-readable evidence](python-dependency-audit-20261017.inventory.json)
 preserves each initial package/version, static import paths and observed PyPI versions.
+
+## Release acceptance
+
+The later owner-authorized [17 October release](jsk-wh-original-rate-release-20261017.md)
+includes this independently reviewed dependency/tooling change. All seven exact-source
+CI jobs pass, including 2,717 Loans tests, plus clean-image dependency integrity,
+production-copy rehearsal and exact encrypted application recovery. Compatible web,
+monitoring and scheduled readers use the verified image with Django 6.1.2.
+The broader workflow remains proposed; the separately approved
+[main fast-forward](canonical-main-20261017.md) does not activate protection or
+grant future deployment/data-repair authority.
 
 ## What is actually used
 

@@ -142,8 +142,7 @@ or new merge/release policy are active merely because the guide exists.
 
 Python 3.14 and PostgreSQL 16 development/CI baseline; use pinned direct
 runtime requirements plus the uv-generated universal `requirements.lock`.
-Current local requirements advance Django to 6.1.2; production stays on its verified
-release until a reviewed deployment. Development tools have separate pinned
+The 17 October verified release uses Django 6.1.2. Development tools have separate pinned
 requirements/constraints and must not enter application images. Use project-local
 uv/Black/Ruff, `scripts/check_dependencies.py --installed` and
 `scripts/check_python_quality.py` (Ruff correctness plus changed-file Black).
@@ -157,9 +156,12 @@ Never test against normal business databases or run competing suites on one DB.
 See [testing](implementation/testing-and-migrations.md) and
 [container/CI](implementation/container-and-ci.md).
 
-Maintained integration is `work/loan-servicing-contract-ld01`; main remains a
-historical remote default until an explicitly reviewed transition. CI includes
-integration pushes, PRs and manual dispatch. Preserve checkpoints and dirty trees.
+Maintained integration and the remote default are `main`, following the owner's
+reviewed [fast-forward transition](implementation/canonical-main-20261017.md).
+`work/loan-servicing-contract-ld01` retains the verified application checkpoint
+through handover. CI includes main/integration pushes, PRs and manual dispatch.
+The main pointer does not deploy production or change existing feature branches,
+upstreams, protection or production/data authority. Preserve checkpoints and dirty trees.
 Local pruning uses a self-contained, restore-verified recovery bundle; keep
 unmerged history and dirty worktrees. See [retention decisions](implementation/repository-retention-20261017.md).
 Static source lives in `static/`/app static folders; `staticfiles/` is collected

@@ -48,8 +48,9 @@ python manage.py test <affected.test.module> --settings django_project.settings.
 ```
 
 Run relevant lifecycle, permission, accounting and RLS checks for behavioral
-changes. CI runs on pull requests, main/rls-mvp and the maintained integration
-branch `work/loan-servicing-contract-ld01`; manual dispatch remains available.
+changes. Current integration/default is `main`; create new task branches from it.
+CI runs on pull requests, main/rls-mvp and the retained handover checkpoint
+`work/loan-servicing-contract-ld01`; manual dispatch remains available.
 Do not move the remote default branch or remove release/checkpoint refs as cleanup.
 
 VS Code automatic pytest/unittest discovery is disabled: use Django with explicit

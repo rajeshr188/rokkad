@@ -94,6 +94,7 @@ deduction at 1.1% and the existing document charges; no new cash is proposed.
 
 The disposable database is
 `test_rokkad_aggregate_correction_20261017`; adversarial DML uses a non-superuser,
-non-bypass role. No production database writes or deployment have occurred.
-The owner now requests the actual scoped all-active correction. Exact-source CI,
-compatible release/recovery and isolated production-data rehearsal precede apply.
+non-bypass role. The later authorized release passes all seven exact-source CI
+jobs, compatible recovery and isolated production-data rehearsal before applying
+all 826 corrections. See the [release acceptance](jsk-wh-original-rate-release-20261017.md)
+for deployed versions, preservation, retry, risk and backup evidence.

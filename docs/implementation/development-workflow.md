@@ -19,15 +19,15 @@ the default branch, grant new production/data permissions or undo existing appro
 Rokkad already has domain safeguards, isolated tests, CI groups, migration/runtime
 role separation and detailed release evidence. What is missing is a concise common
 path from an incoming request to a reviewed change and a known production artifact.
-The [dependency audit](python-dependency-audit-20261017.md) is currently local work,
-including tooling/CI edits; those new gates are not enforced remotely until committed,
-pushed and successfully run. This guide also remains proposed until adopted.
+The [dependency audit](python-dependency-audit-20261017.md) is independently reviewed,
+committed and covered by all seven exact-source CI jobs and the verified 17 October
+release. This guide remains proposed until adopted.
 
-The maintained integration branch is currently `work/loan-servicing-contract-ld01`.
-`main` is a historical remote default, not the assumed current development source.
-[Status](../STATUS.md) records the verified production commit/image separately.
-Do not change either fact by convention alone. A later transition to a protected
-`main` should explicitly reconcile histories, CI targets, open work and release refs.
+The maintained integration branch and GitHub default are `main`, following the
+owner-approved [fast-forward transition](canonical-main-20261017.md).
+`work/loan-servicing-contract-ld01` retains the verified application checkpoint
+through handover. [Status](../STATUS.md) records the production commit/image
+separately. Protection and broader workflow adoption remain separate decisions.
 
 The proposed normal path is:
 
@@ -47,13 +47,13 @@ Implementation complete, merged and deployed are separate states. A PR can be re
 without being selected for production. A production release may combine several
 reviewed changes, but its contents and compatibility boundary must be explicit.
 
-## Canonical-main transition preflight (17 October, proposed)
+## Canonical-main transition (17 October, completed)
 
-GitHub still selects main. At cleanup revision `693031a7`, origin/main points to
+GitHub retains main as its default. At cleanup revision `693031a7`, origin/main pointed to
 `84653457` (20 February 2024), with zero unique commits and 709 commits on the
-maintained branch. The issue is the stale default baseline, not the name main.
-Prefer retaining main and advancing it to a verified integration tree, rather
-than making a long-lived task branch name the permanent default.
+maintained branch. The owner selected retaining main and advancing the stale
+default baseline to the verified integration history. The final application
+candidate is `b0d57294`, plus checked documentation/release evidence.
 
 Changing a default/pointer does not merge, rebase or delete other branches, alter
 existing local upstream settings, or represent a customer Workspace/data migration.
@@ -63,15 +63,15 @@ local name was pruned. Origin/tenants_workspace has one unique commit and rls ha
 feature: review applicability to today's architecture before transplanting old code.
 Dirty feature worktrees and checkpoint/release refs remain independent.
 
-Before advancing main: verify the exact candidate's CI, preserve the original tip
-(already in the restore-verified cleanup bundle), inspect remote rules/protection,
-open PR targets and all main-triggered automation, and reconcile active work.
-An ordinary fast-forward is possible from the checked ancestor; respect any PR
-requirement and test the resulting merge revision if that changes its identity.
-Never force-push or bypass protection to achieve the transition. Keep the old
-integration ref through the handover, update guidance, and verify fresh clone/PR/CI
-behavior. Production promotion remains a separately authorized immutable-image
-release. No default, main pointer or protection setting is changed by this proposal.
+The transition verifies the exact candidate's CI, preserves the original tip
+(already in the restore-verified cleanup bundle), inspects remote rules/protection,
+open PR targets and main-triggered automation, and preserves active work.
+An ordinary fast-forward advances the checked ancestor; no protection bypass,
+force-push or history rewrite is involved. The old integration ref stays through
+handover, while current guidance uses main. The default remains main and protection
+settings stay unchanged. Production promotion remains a separately authorized
+immutable-image release. The [execution record](canonical-main-20261017.md)
+records the concrete scope; this does not adopt every proposed workflow policy.
 
 ## 1. Start with a bounded task
 

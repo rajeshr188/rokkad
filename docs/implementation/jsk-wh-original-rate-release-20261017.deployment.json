@@ -1,0 +1,149 @@
+{
+  "profile": "jsk-wh-original-rate-release-acceptance/1",
+  "application_source_revision": "b0d572940dd2ed3f33f8e860d6a1a3ba6202e1b2",
+  "source_manifest_sha256": "02861687724ae71edddd0628cf62eecea3d7e0b8398f27158e731a9ce5e25005",
+  "image_id": "sha256:00d351bd154c1f68d27d6c5d72302a6b2beb4352e830d8708979d7c62053de98",
+  "ci": {
+    "url": "https://github.com/rajeshr188/rokkad/actions/runs/38986792573",
+    "head_sha": "b0d572940dd2ed3f33f8e860d6a1a3ba6202e1b2",
+    "jobs": {
+      "Python dependencies and quality": "success",
+      "boundary": "success",
+      "billing": "success",
+      "loans": "success",
+      "portability": "success",
+      "rates": "success",
+      "foundation": "success"
+    },
+    "loans_tests": 2717,
+    "loans_test_seconds": 2624.028
+  },
+  "local_verification": {
+    "final_correction_cases": 49,
+    "passed": true,
+    "seconds": 108.24,
+    "earlier_overlapping_servicing_cases": 100,
+    "earlier_overlapping_portability_cases": 213,
+    "counts_are_not_additive": true
+  },
+  "rehearsal": {
+    "passed": true,
+    "restored_tables": 222,
+    "restored_rows": 1160810,
+    "original_business_tables_unchanged_before_repair": true,
+    "created": 826,
+    "idempotent_retry_unchanged": true,
+    "retry_existing": 826,
+    "invariants": {
+      "passed": true,
+      "groups": 72,
+      "original_evidence_unchanged": true,
+      "unselected_loans_unchanged": true,
+      "selected_identity_principal_physical_facts_unchanged": true
+    },
+    "source_financial_rows_preserved_after_worker": true
+  },
+  "application_recovery": {
+    "remote_encrypted_image_downloaded_decrypted_loaded": true,
+    "exact_image_id": "sha256:00d351bd154c1f68d27d6c5d72302a6b2beb4352e830d8708979d7c62053de98",
+    "production_container_restarted": false,
+    "private_key_on_server": false,
+    "transient_application_image_removed": true
+  },
+  "deployment": {
+    "state": "PASS",
+    "completed_at": "2026-10-17T01:31:12.843000+00:00",
+    "migrations": [
+      "loans.0092_aggregate_checkpoint_corrections",
+      "data_portability.0031_aggregate_correction_profile"
+    ],
+    "migration_seconds": 4.88,
+    "write_pause_and_switch_seconds": 495.49,
+    "live_affected_financial_evidence_preserved": true,
+    "restricted_runtime": true,
+    "owner_startup_refused": true,
+    "compatible_scheduled_readers": 4,
+    "sealed_checkpoint_remote_verified": true,
+    "paused_balance_parity": true,
+    "configuration_preserved": true,
+    "static_assets_verified": true,
+    "operator_financial_posts": true,
+    "operator_messages_created": false,
+    "customer_identity_or_number_changed": false,
+    "loan_financial_corrections_applied": 826
+  },
+  "cohort_verification": {
+    "passed": true,
+    "read_only": true,
+    "restricted": true,
+    "corrected_loans": 826,
+    "opening_corrections": 824,
+    "native_corrections": 2,
+    "active_wh_at_wrong_rate": 0
+  },
+  "risk_refresh": {
+    "passed": true,
+    "cohort": 826,
+    "counts": {
+      "selected": 766,
+      "refreshed": 766,
+      "current": 826
+    },
+    "error_counts": {},
+    "seconds": 134.217,
+    "monitoring_policy_unchanged": true,
+    "no_financial_posts": true,
+    "no_messages_created": true
+  },
+  "health": {
+    "passed": true,
+    "image_id": "sha256:00d351bd154c1f68d27d6c5d72302a6b2beb4352e830d8708979d7c62053de98",
+    "source_revision": "b0d572940dd2ed3f33f8e860d6a1a3ba6202e1b2",
+    "exact_runtime_files_per_reader": [
+      1947,
+      1947
+    ],
+    "public_https": true,
+    "active_timers": 6,
+    "new_reader_error_lines": {
+      "rokkad-production-web-1": 0,
+      "rokkad-production-monitoring-1": 0
+    },
+    "protected_configuration_preserved": true,
+    "runtime": {
+      "restricted": true,
+      "no_pending_migrations": true,
+      "contract": "LOAN_RISK_SNAPSHOT_V13"
+    },
+    "features": {
+      "passed": true,
+      "read_only": true,
+      "restricted": true,
+      "workspaces": 3,
+      "screens": 12,
+      "collection_parity_samples": 6,
+      "daily_components_reconcile": true
+    },
+    "free_gib": 6.544
+  },
+  "backups": {
+    "pre_success": true,
+    "post_success": true,
+    "pre_sha256": "d0d195cc390064d80bd633565832d7b9b757c8fc83dc9a31a053477bd476f8be",
+    "post_sha256": "8c237161ec0bda0537b23395d9e7e068e76159df0ac28b86275b7fd3507e4610",
+    "pre_actual_recovery": true,
+    "post_actual_recovery": true,
+    "pre_remote_download_verified": true,
+    "post_remote_download_verified": true
+  },
+  "cleanup": {
+    "passed": true,
+    "isolated_database_removed": true,
+    "plaintext_dumps_removed": 2,
+    "encrypted_recovery_retained": true,
+    "source_and_acceptance_evidence_retained": true,
+    "transient_environments_absent": true,
+    "production_database_untouched": true,
+    "free_gib": 8.253
+  }
+}

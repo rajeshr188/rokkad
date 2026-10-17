@@ -1,12 +1,12 @@
 ---
-status: correction-preparation
+status: completed
 owner: loans
 updated: 2026-10-17
 tags: [loans, corrections, legacy, interest, review]
 related: [../implementation/jsk-wh-interest-verification-20261016.md, ../contracts/loan-agreement-correction-v1.md]
 ---
 
-# JSK WH original-rate correction: confirmed basis and preparation
+# JSK WH original-rate correction: confirmed basis and execution
 
 The owner confirms 1.1% monthly was intended from each original date. The earlier
 17 October instruction selected paper/payment-record review with uncertain
@@ -129,7 +129,9 @@ The completed preparation includes the confirmed expanded selection, all 824 pur
 old/new calculations and local service/reader support. The final 49-case correction
 selection passes; earlier overlapping selections pass 100 servicing and 213
 portability cases. See the [implementation record](../implementation/aggregate-checkpoint-corrections-20261017.md).
-No financial correction or compatibility deployment has been performed. The owner
-has now requested the actual all-active correction and confirmed the two native
-advance/proceeds basis. Compatible release and isolated production-data rehearsal
-must precede application; a pure proposal is not a service confirmation token.
+The owner requested the actual all-active correction and confirmed the two native
+advance/proceeds basis. The compatible release and isolated production-data
+rehearsal precede the successful 826-loan production application. The full retry
+is unchanged, original evidence and unselected loans are preserved, and post-release
+rate/risk/backup checks pass. See the [release acceptance](../implementation/jsk-wh-original-rate-release-20261017.md).
+A pure proposal remains distinct from an authorized signed service confirmation.
