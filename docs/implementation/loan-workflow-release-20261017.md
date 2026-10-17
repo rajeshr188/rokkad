@@ -42,10 +42,14 @@ The combined regression selection passes 481 tests in 599.014 seconds. All 18
 origination browser page/viewport checks also pass. The first exact-source Linux
 CI run identified a guided-onboarding test still expecting immediate setup save;
 it now verifies that review writes nothing, retains guided navigation, and saves
-only after acknowledgement with the signed review token. All 19 onboarding tests
+only after acknowledgement with the signed review token. All 20 onboarding tests
 pass locally. Its formatting-only baseline is separate in `1c383fcb`.
-Final exact-revision Linux CI and closing browser checks remain required before
-promotion. Prior independent selections are overlapping evidence:
+The same older assumption in the first-loan operator fixture is updated through
+an explicit review and acknowledged confirmation; all 17 operator journey tests
+pass. Its formatting-only baseline is separate in `e6f5127f`. All 12 closing
+browser checks pass, including selection invalidation and both detail layouts.
+Final exact-revision Linux CI remains required before promotion.
+Prior independent selections are overlapping evidence:
 368 origination regression tests, 88 final origination checks, 106 closing checks,
 18 origination and 12 closing desktop/mobile page checks. They are not added into
 one unique test count.
@@ -67,5 +71,11 @@ promotion and preserve the predecessor for code rollback. Release acceptance mus
 not post a loan transaction or turn unknown collateral/history into healthy risk.
 
 This checkpoint records preparation only. No production service has been switched.
+The candidate has passed 24 restricted read-only screens across three Workspaces,
+an empty migration plan, and 15 financial/release-quote comparisons covering three
+saved-contract profiles within one exported PostgreSQL snapshot. Monitoring-policy
+and grace evidence fingerprints also match. Separate static collection preserves
+the live volume; encrypted application-only recovery verifies the exact image.
+These gates must bind to the final committed candidate before switching.
 Private snapshots, logs and deployment helpers live in ignored
 `.tmp/loan-workflow-release-20261017/` and the matching protected server directory.

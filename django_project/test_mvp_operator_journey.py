@@ -29,6 +29,7 @@ from apps.tenant_apps.loans.models import (
     LoanSeries,
     PawnLoan,
     PawnLoanRelease,
+    PawnLoanEconomicPolicy,
 )
 from apps.tenant_apps.loans.selectors import get_pawn_loan_balance
 from apps.tenant_apps.party.models import Party, PartyContactMethod
@@ -192,28 +193,40 @@ class MVPOperatorJourneyTests(TransactionTestCase):
                 "maximum_number": "10000",
             },
         )
-        self._post(
-            self._loan_url("pawn_economics_setup"),
-            {
-                "action": "configuration",
-                "configuration-license": "",
-                "configuration-valuation_method": "LATEST_APPRAISAL",
-                "configuration-maximum_ltv_ratio": "0.80",
-                "configuration-advance_interest_periods": "1",
-                "configuration-interest_method": "SIMPLE",
-                "configuration-partial_month_method": "FULL_MONTH",
-                "configuration-partial_month_cutoff_days": "15",
-                "configuration-partial_month_lower_fraction": "0.5",
-                "configuration-capitalization_interval_periods": "12",
-                "configuration-rounding_method": "PER_ACCRUAL_PERIOD",
-                "configuration-currency_quantum": "0.01",
-                "configuration-gold_monthly_interest_rate": "2",
-                "configuration-silver_monthly_interest_rate": "4",
-                "configuration-effective_from": (
-                    self.today - timedelta(days=1)
-                ).isoformat(),
-            },
+        configuration = {
+            "action": "configuration",
+            "configuration-license": "",
+            "configuration-valuation_method": "LATEST_APPRAISAL",
+            "configuration-maximum_ltv_ratio": "0.80",
+            "configuration-advance_interest_periods": "1",
+            "configuration-interest_method": "SIMPLE",
+            "configuration-partial_month_method": "FULL_MONTH",
+            "configuration-partial_month_cutoff_days": "15",
+            "configuration-partial_month_lower_fraction": "0.5",
+            "configuration-capitalization_interval_periods": "12",
+            "configuration-rounding_method": "PER_ACCRUAL_PERIOD",
+            "configuration-currency_quantum": "0.01",
+            "configuration-gold_monthly_interest_rate": "2",
+            "configuration-silver_monthly_interest_rate": "4",
+            "configuration-effective_from": (
+                self.today - timedelta(days=1)
+            ).isoformat(),
+        }
+        url = self._loan_url("pawn_economics_setup")
+        review = self.client.post(
+            url,
+            configuration,
+            HTTP_X_CSRFTOKEN=self.client.cookies["csrftoken"].value,
         )
+        self.assertContains(review, "Review configuration change")
+        with workspace_context(self.workspace.pk):
+            self.assertFalse(PawnLoanEconomicPolicy.objects.exists())
+        configuration.update(
+            economic_confirm="1",
+            economic_acknowledged="on",
+            economic_review_token=review.context["configuration_review_token"],
+        )
+        self._post(url, configuration)
         self._post(self._loan_url("loan_product_seed_defaults"))
         with workspace_context(self.workspace.pk):
             self.product = LoanProductVersion.objects.get(product__code="GOLD-BULLET")
