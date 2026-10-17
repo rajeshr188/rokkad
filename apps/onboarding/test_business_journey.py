@@ -495,7 +495,22 @@ class BusinessJourneyTests(WorkspaceTestCase):
             "configuration-currency_quantum": ".01",
         }
         response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 302, getattr(response, "context", None))
+        self.assertContains(response, "Review configuration change")
+        self.assertFalse(
+            PawnLoanEconomicPolicy.objects.filter(workspace=self.tenant).exists()
+        )
+        self.assertFalse(
+            PawnMetalInterestRatePolicy.objects.filter(workspace=self.tenant).exists()
+        )
+        self.assertContains(response, 'name="setup_step" value="terms"')
+        self.assertContains(response, 'name="setup_path" value="new"')
+        data.update(
+            economic_confirm="1",
+            economic_acknowledged="on",
+            economic_review_token=response.context["configuration_review_token"],
+        )
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, self.url + "?step=terms&path=new")
         self.assertEqual(
             list(

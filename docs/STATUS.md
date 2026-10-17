@@ -7,6 +7,11 @@ tags: [status, architecture]
 
 # Status
 
+The combined loan-workflow candidate passes 481 local regression tests, 18
+origination browser checks and the guided-onboarding review/save integration.
+Final exact-revision CI and production qualification remain release gates; see
+the [joint release record](implementation/loan-workflow-release-20261017.md).
+
 Current delivery and open work only. The full prior chronology, including old
 release gates, test counts, migration/import approvals and source/customer-specific
 limits, is preserved in the [17 October context snapshot](archive/context/2026-10-17/INDEX.md).

@@ -38,8 +38,14 @@ monitoring policies, actual settlement dates, custody and duplicate submissions
 are checked. A replaced preparation draft can be reviewed, paid and closed through
 the shared UI while the cancelled original retains its number and zero postings.
 
-The broader combined regression/browser suite and exact-revision Linux CI are
-required before promotion. Prior independent selections are overlapping evidence:
+The combined regression selection passes 481 tests in 599.014 seconds. All 18
+origination browser page/viewport checks also pass. The first exact-source Linux
+CI run identified a guided-onboarding test still expecting immediate setup save;
+it now verifies that review writes nothing, retains guided navigation, and saves
+only after acknowledgement with the signed review token. All 19 onboarding tests
+pass locally. Its formatting-only baseline is separate in `1c383fcb`.
+Final exact-revision Linux CI and closing browser checks remain required before
+promotion. Prior independent selections are overlapping evidence:
 368 origination regression tests, 88 final origination checks, 106 closing checks,
 18 origination and 12 closing desktop/mobile page checks. They are not added into
 one unique test count.
