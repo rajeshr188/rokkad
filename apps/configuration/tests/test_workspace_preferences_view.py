@@ -21,19 +21,38 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
 
     def test_both_bookmarks_show_guidance_and_reject_writes(self):
         for view in (WorkspacePreferenceBuilder, CompanyPreferenceBuilder):
-            with self.subTest(view=view.__name__), patch("apps.configuration.views.get_object_or_404", return_value=self.workspace), patch("apps.configuration.views._assert_workspace_access") as access:
+            with (
+                self.subTest(view=view.__name__),
+                patch(
+                    "apps.configuration.views.get_object_or_404",
+                    return_value=self.workspace,
+                ),
+                patch("apps.configuration.views._assert_workspace_access") as access,
+            ):
                 response = view.as_view()(self.request(), workspace_id=13)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.context_data["workspace"], self.workspace)
                 self.assertNotIn("form", response.context_data)
-                access.assert_called_once_with(response._request, self.workspace, {"workspace_settings"})
+                access.assert_called_once_with(
+                    response._request, self.workspace, {"workspace_settings"}
+                )
                 response = view.as_view()(self.request("post"), workspace_id=13)
                 self.assertEqual(response.status_code, 405)
 
     def test_denied_user_cannot_read_or_post_to_either_route(self):
         for view in (WorkspacePreferenceBuilder, CompanyPreferenceBuilder):
             for method in ("get", "post"):
-                with self.subTest(view=view.__name__, method=method), patch("apps.configuration.views.get_object_or_404", return_value=self.workspace), patch("apps.configuration.views._assert_workspace_access", side_effect=PermissionDenied):
+                with (
+                    self.subTest(view=view.__name__, method=method),
+                    patch(
+                        "apps.configuration.views.get_object_or_404",
+                        return_value=self.workspace,
+                    ),
+                    patch(
+                        "apps.configuration.views._assert_workspace_access",
+                        side_effect=PermissionDenied,
+                    ),
+                ):
                     with self.assertRaises(PermissionDenied):
                         view.as_view()(self.request(method), workspace_id=13)
 
@@ -45,16 +64,22 @@ class WorkspacePreferencesViewTests(SimpleTestCase):
         request = self.request()
         request.path = "/w/acme/"
         request.resolver_match = SimpleNamespace(url_name="workspace_slug_dashboard")
-        html = render_to_string("components/navigation/sidebar.html", {"request":request,"user_permissions":{"data.view"}})
+        html = render_to_string(
+            "components/navigation/sidebar.html",
+            {"request": request, "user_permissions": {"data.view"}},
+        )
         self.assertIn("Completed closures", html)
-        self.assertIn('/w/acme/loans/releases/paper/guide/', html)
+        self.assertIn("/w/acme/loans/releases/paper/guide/", html)
         self.assertIn("Reports", html)
         self.assertNotIn("workspace-settings-nav", html)
         self.assertNotIn("Preferences", html)
 
     def test_user_without_data_view_does_not_get_record_links(self):
         request = self.request()
-        html = render_to_string("components/navigation/sidebar.html", {"request":request,"user_permissions":set()})
+        html = render_to_string(
+            "components/navigation/sidebar.html",
+            {"request": request, "user_permissions": set()},
+        )
         self.assertNotIn("Completed closures", html)
-        self.assertNotIn('/loans/releases/paper/guide/', html)
+        self.assertNotIn("/loans/releases/paper/guide/", html)
         self.assertNotIn("Release batches", html)
